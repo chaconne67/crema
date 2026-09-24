@@ -366,7 +366,7 @@ async function askQuickModel({ system, content, signal }) {
       sessionKey: "agent-client:aux",
       system,
       // Titles are unique in Hermes; a named session is never auto-titled (which would outlive the delete below).
-      sessionTitle: `Agent Client 보조 ${id}`,
+      sessionTitle: `Crema 보조 ${id}`,
     });
     let text = "";
     for await (const chunk of readResponseBody(response)) text += chunk;

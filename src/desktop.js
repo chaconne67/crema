@@ -89,8 +89,8 @@ export function hermesSessionId(sessionId) {
 // Sent with every chat turn: Hermes' built-in hint for API clients assumes plain text ("no markdown")
 // and tells it to avoid MEDIA: tags, but this app renders Markdown and shows MEDIA: images in place.
 export const REPLY_FORMAT_INSTRUCTION = [
-  "[Agent Client 표시 안내]",
-  "이 대화는 Agent Client 데스크톱 앱에 표시된다. 앱은 답변을 마크다운(GFM)으로 렌더링한다. 그래서 API 서버 안내 중 '렌더링을 알 수 없으니 일반 텍스트로 쓰고 마크다운을 쓰지 말라'는 부분과 'MEDIA: 태그 대신 파일 경로를 적으라'는 부분은 이 대화에 해당하지 않는다. 이 안내를 따른다.",
+  "[Crema 표시 안내]",
+  "이 대화는 Crema 데스크톱 앱에 표시된다. 앱은 답변을 마크다운(GFM)으로 렌더링한다. 그래서 API 서버 안내 중 '렌더링을 알 수 없으니 일반 텍스트로 쓰고 마크다운을 쓰지 말라'는 부분과 'MEDIA: 태그 대신 파일 경로를 적으라'는 부분은 이 대화에 해당하지 않는다. 이 안내를 따른다.",
   "",
   "사용자가 답을 훑어보고 핵심을 바로 찾을 수 있게 마크다운으로 구조를 잡는다.",
   "- 결론과 꼭 알아야 할 내용(결과, 원인, 해야 할 일, 주의할 점)은 **굵게** 표시한다. 한 문단에 한두 곳만 굵게 한다. 많이 굵게 하면 무엇이 중요한지 오히려 흐려진다.",
@@ -235,7 +235,7 @@ export function createDesktopHost() {
 
     /** Native yes/no box; inside Tauri window.confirm returns a Promise, which always reads as "yes". */
     confirm(message, okLabel) {
-      return confirmDialog(message, { title: "Agent Client", kind: "warning", okLabel, cancelLabel: "취소" }).catch(
+      return confirmDialog(message, { title: "Crema", kind: "warning", okLabel, cancelLabel: "취소" }).catch(
         () => false,
       );
     },

@@ -140,7 +140,7 @@ async fn enable_local_api() -> Result<(), String> {
       text.push('\n');
     }
     text.push_str(&format!(
-      "\n# Agent Client local connection\nAPI_SERVER_KEY={key}\nAPI_SERVER_HOST=127.0.0.1\nAPI_SERVER_PORT={LOCAL_PORT}\n"
+      "\n# Crema local connection\nAPI_SERVER_KEY={key}\nAPI_SERVER_HOST=127.0.0.1\nAPI_SERVER_PORT={LOCAL_PORT}\n"
     ));
     std::fs::write(&env_path, text).map_err(|_| "local_config".to_string())?;
   }

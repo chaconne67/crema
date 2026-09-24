@@ -1,17 +1,17 @@
-# Agent Client
+# Crema
 
 Hermes 에이전트와 대화하는 Windows 데스크톱 앱입니다. 폴더(프로젝트)마다 대화를 나눠 두고, 에이전트가 그 폴더에서 일하게 할 수 있습니다.
 
 ## 다운로드
 
-**[Windows 설치 파일 받기 (AgentClient-setup-x64.exe)](https://github.com/chaconne67/crema/releases/latest/download/AgentClient-setup-x64.exe)**
+**[Windows 설치 파일 받기 (Crema-setup-x64.exe)](https://github.com/chaconne67/crema/releases/latest/download/Crema-setup-x64.exe)**
 
 - 모든 버전과 변경 내용: [Releases](https://github.com/chaconne67/crema/releases)
 - 지원: Windows 10·11 64비트
 
 ## 설치
 
-1. 받은 `AgentClient-setup-x64.exe`를 실행합니다.
+1. 받은 `Crema-setup-x64.exe`를 실행합니다.
 2. "Windows의 PC 보호" 창이 뜨면 **추가 정보 → 실행**을 누릅니다. 설치 파일에 아직 코드 서명이 없어서 나오는 경고입니다.
 3. 설치가 끝나면 PC에 Hermes가 있는지 확인합니다.
    - **있으면** 그대로 씁니다. 기존 Hermes와 설정은 건드리지 않습니다.
@@ -24,6 +24,8 @@ iex (irm https://hermes-agent.nousresearch.com/install.ps1)
 ```
 
 함께 설치되는 Hermes는 이 앱과 함께 검증한 버전(`a25cf4d`)으로 고정되어 있습니다.
+
+이전 이름인 **Agent Client**(0.1.0)를 설치했다면, Crema를 설치한 뒤 Windows 설정 → 앱에서 Agent Client를 제거하세요. 대화 기록과 설정은 Crema에서 그대로 이어집니다.
 
 ## 처음 실행할 때
 
@@ -46,7 +48,7 @@ iex (irm https://hermes-agent.nousresearch.com/install.ps1)
 
 ## 제거
 
-Windows 설정 → 앱에서 **Agent Client**를 제거합니다. Hermes는 따로 설치된 프로그램이라 함께 지워지지 않습니다.
+Windows 설정 → 앱에서 **Crema**를 제거합니다. Hermes는 따로 설치된 프로그램이라 함께 지워지지 않습니다.
 
 ## 개발
 

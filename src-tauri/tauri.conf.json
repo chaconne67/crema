@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Agent Client",
-  "version": "0.1.0",
+  "productName": "Crema",
+  "version": "0.1.1",
   "identifier": "local.agentclient.prototype",
   "build": {
     "frontendDist": "../dist",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Agent Client",
+        "title": "Crema",
         "width": 1100,
         "height": 820,
         "resizable": true,

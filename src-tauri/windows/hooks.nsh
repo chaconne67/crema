@@ -1,4 +1,4 @@
-﻿; Installs Hermes after Agent Client when this PC has none, where the app looks for it
+﻿; Installs Hermes after Crema when this PC has none, where the app looks for it
 ; (HERMES_HOME, else %LOCALAPPDATA%\hermes). Uses Hermes' official Windows installer,
 ; pinned to the Hermes version this app was tested with.
 !define HERMES_COMMIT "a25cf4d77d46733767b91d5a410e701f4596541e"
