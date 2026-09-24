@@ -1,0 +1,3040 @@
+@font-face {
+  font-family: "Codex HCR";
+  src:
+    local("HCR Dotum"),
+    local("함초롬돋움"),
+    local("HCR");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Codex HCR";
+  src:
+    local("HCR Dotum Bold"),
+    local("함초롬돋움 굵게");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+  --accent: #339cff;
+  --accent-strong: #0b6fd6;
+  --settings-width: 348px;
+  --sidebar-width: 264px;
+  --theme-sidebar-surface: #f6f6f6;
+  --row-hover: rgb(0 0 0 / 5%);
+  --row-active: rgb(0 0 0 / 8%);
+  --theme-surface: #fdfdfd;
+  --theme-ink: #202020;
+  /* In use: the user's system colors (settings.js applyAppearance) over the theme's. */
+  --sidebar-surface: var(--system-bg, var(--theme-sidebar-surface));
+  --surface: var(--theme-surface);
+  --ink: var(--system-ink, var(--theme-ink));
+  --muted: #6f6f6f;
+  --soft-muted: #757575;
+  --hairline: #dedede;
+  --bubble: #f2f2f2;
+  --inline-code: #e9e9e9;
+  --code-surface: #f7f7f7;
+  --error: #b42318;
+  --on: #f97316;
+  --ok: #16a34a;
+  --selection: #d9ecff;
+  --focus: #006fc9;
+  --font-ui: "Codex HCR", "HCR Dotum", "Malgun Gothic", system-ui, sans-serif;
+  --font-body: "Codex HCR", "HCR Dotum", "Malgun Gothic", system-ui, sans-serif;
+  --system-size: 16px;
+  --scrollbar-size: 10px;
+  --font-code: "Nanum Gothic Coding", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --content-width: 920px;
+  --body-size: clamp(1rem, 0.963rem + 0.16vw, 1.0625rem);
+  --body-leading: 1.7;
+  --body-tracking: -0.012em;
+  font-family: var(--font-ui);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+/* Dark grays follow MagicPath's dark mode: a darker sidebar beside a lighter work area, cards a step darker. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --theme-sidebar-surface: #1c1c1c;
+  --row-hover: rgb(255 255 255 / 4%);
+  --row-active: rgb(255 255 255 / 6%);
+  --theme-surface: #2b2b2b;
+  --theme-ink: #ffffff;
+  --muted: #c8c8c8;
+  --soft-muted: #878787;
+  --hairline: #333333;
+  --bubble: #222222;
+  --inline-code: #3a3a3a;
+  --code-surface: #222222;
+  --error: #ff8c82;
+  --on: #fb923c;
+  --ok: #4ade80;
+  --selection: #174d78;
+  --focus: #68b7ff;
+  --accent-strong: #2f8ae6;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+html {
+  background: var(--surface);
+  font-size: var(--system-size);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-width: 280px;
+  overflow: hidden;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 1rem;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+::selection {
+  background: var(--selection);
+}
+
+.workspace {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  height: 100dvh;
+}
+
+.workspace.sidebar-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.workspace.sidebar-hidden .sidebar {
+  display: none;
+}
+
+.app-shell {
+  display: grid;
+  min-width: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  background: var(--surface);
+  transition: padding-right 180ms ease;
+}
+
+.app-shell.settings-open {
+  padding-right: var(--settings-width);
+}
+
+.app-bar {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 10px 4px 8px;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  background: var(--soft-muted);
+  border-radius: 50%;
+}
+
+[data-connection="connected"] .status-dot {
+  background: var(--ok);
+}
+
+[data-connection="error"] .status-dot {
+  background: var(--error);
+}
+
+[data-connection="error"] [data-status-label] {
+  color: var(--error);
+}
+
+.app-bar-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.icon-button {
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  place-items: center;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.icon-button svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+}
+
+.icon-button:hover:not(:disabled) {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.icon-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.text-button {
+  min-height: 36px;
+  padding: 0 10px;
+  color: var(--accent-strong);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.text-button[hidden] {
+  display: none;
+}
+
+.text-button:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.text-button.danger {
+  color: var(--error);
+}
+
+.text-button.danger:hover {
+  background: color-mix(in srgb, var(--error) 9%, transparent);
+}
+
+.conversation-scroll {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
+  padding: 12px 20px 34px;
+}
+
+.conversation-content,
+.empty-state,
+.composer,
+.composer-context {
+  width: min(100%, var(--content-width));
+  margin-inline: auto;
+}
+
+.conversation-content {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.empty-state {
+  display: flex;
+  min-height: 58vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--soft-muted);
+  font-size: 1.04em;
+}
+
+.empty-state[hidden] {
+  display: none;
+}
+
+.empty-state p {
+  margin: 0;
+}
+
+.turn {
+  width: 100%;
+}
+
+.turn-user {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.user-message-stack {
+  display: flex;
+  width: fit-content;
+  max-width: 66.7%;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.user-message {
+  width: fit-content;
+  max-width: 100%;
+  padding: 13px 19px 14px;
+  overflow-wrap: anywhere;
+  background: var(--bubble);
+  border-radius: 20px;
+}
+
+.message-meta {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 7px 0 0;
+  color: var(--muted);
+  font-size: 0.78em;
+  letter-spacing: -0.01em;
+}
+
+.assistant-message {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.work-status {
+  width: 100%;
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: 0.9em;
+  letter-spacing: -0.01em;
+}
+
+.work-status[hidden] {
+  display: none;
+}
+
+.work-divider {
+  width: 100%;
+  height: 1px;
+  margin-top: 9px;
+  background: var(--hairline);
+}
+
+.markdown {
+  color: var(--body-ink, var(--ink));
+  font-family: var(--font-body);
+  font-size: var(--body-size);
+  font-weight: 400;
+  line-height: var(--body-leading);
+  letter-spacing: var(--body-tracking);
+  overflow-wrap: break-word;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown p {
+  margin: 0;
+}
+
+.markdown p + p {
+  margin-top: 0.84em;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4 {
+  margin: 1.28em 0 0.52em;
+  color: var(--ink);
+  font-weight: 700;
+  line-height: 1.38;
+  letter-spacing: -0.022em;
+}
+
+.markdown h1 {
+  font-size: 1.42em;
+}
+
+.markdown h2 {
+  font-size: 1.24em;
+}
+
+.markdown h3,
+.markdown h4 {
+  font-size: 1.08em;
+}
+
+/* The chosen body weight (모양 → 본문 → 굵기) for conversation text; bold is a weight the font really has above it. */
+.markdown {
+  font-weight: var(--body-weight, 400);
+}
+
+.markdown strong {
+  font-weight: var(--strong-weight, 700);
+}
+
+.segmented[hidden] {
+  display: none;
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 0.68em 0;
+  padding-left: 1.45em;
+}
+
+.markdown li {
+  padding-left: 0.08em;
+}
+
+.markdown li + li {
+  margin-top: 0.22em;
+}
+
+.markdown li > ul,
+.markdown li > ol {
+  margin-block: 0.22em;
+}
+
+.markdown blockquote {
+  margin: 0.9em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+  border-left: 3px solid var(--hairline);
+}
+
+.markdown a {
+  color: color-mix(in srgb, var(--accent) 82%, var(--ink));
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+.markdown code {
+  font-family: var(--font-code);
+  font-size: 0.9em;
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: 0;
+  font-variant-ligatures: none;
+}
+
+.markdown :not(pre) > code {
+  padding: 0.13em 0.42em 0.17em;
+  background: var(--inline-code);
+  border-radius: 6px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.code-block {
+  width: 100%;
+  margin: 0.9em 0;
+  overflow: hidden;
+  background: var(--code-surface);
+  border: 1px solid var(--hairline);
+  border-radius: 13px;
+}
+
+.code-toolbar {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 0 14px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--hairline);
+  font-family: var(--font-ui);
+  font-size: 0.75em;
+  letter-spacing: 0;
+}
+
+.code-language {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code-copy-button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 1em;
+}
+
+.code-copy-button:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.code-block pre {
+  max-width: 100%;
+  margin: 0;
+  padding: 15px 16px 17px;
+  overflow-x: auto;
+  tab-size: 2;
+}
+
+.code-block pre code {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  color: var(--ink);
+  white-space: pre;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal {
+  color: #7b3fc6;
+}
+
+.hljs-string,
+.hljs-attr,
+.hljs-template-variable {
+  color: #168443;
+}
+
+.hljs-number,
+.hljs-symbol,
+.hljs-built_in {
+  color: #006fa6;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: var(--muted);
+}
+
+.hljs-title,
+.hljs-function,
+.hljs-section {
+  color: #b75c00;
+}
+
+:root[data-theme="dark"] .hljs-keyword,
+:root[data-theme="dark"] .hljs-selector-tag,
+:root[data-theme="dark"] .hljs-literal {
+  color: #c792ea;
+}
+
+:root[data-theme="dark"] .hljs-string,
+:root[data-theme="dark"] .hljs-attr,
+:root[data-theme="dark"] .hljs-template-variable {
+  color: #8bd49c;
+}
+
+:root[data-theme="dark"] .hljs-number,
+:root[data-theme="dark"] .hljs-symbol,
+:root[data-theme="dark"] .hljs-built_in {
+  color: #82aaff;
+}
+
+:root[data-theme="dark"] .hljs-title,
+:root[data-theme="dark"] .hljs-function,
+:root[data-theme="dark"] .hljs-section {
+  color: #ffcb6b;
+}
+
+.table-scroll {
+  width: 100%;
+  margin: 0.9em 0;
+  overflow-x: auto;
+  border: 1px solid var(--hairline);
+  border-radius: 11px;
+}
+
+.markdown table {
+  width: 100%;
+  min-width: 460px;
+  border-collapse: collapse;
+  font-size: 0.92em;
+}
+
+.markdown th,
+.markdown td {
+  padding: 9px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.markdown th {
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+  font-weight: 700;
+}
+
+.markdown tr:last-child td {
+  border-bottom: 0;
+}
+
+.markdown hr {
+  height: 1px;
+  margin: 1.2em 0;
+  background: var(--hairline);
+  border: 0;
+}
+
+.markdown input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+.assistant-footer {
+  display: flex;
+  justify-content: flex-start;
+  min-height: 44px;
+  margin-top: 8px;
+}
+
+.assistant-footer[hidden] {
+  display: none;
+}
+
+.message-copy-button {
+  display: inline-grid;
+  width: 44px;
+  height: 44px;
+  padding: 12px;
+  place-items: center;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.message-copy-button svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.65;
+}
+
+.message-copy-button:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.message-error {
+  margin: 12px 0 0;
+  color: var(--error);
+  font-size: 0.9em;
+  line-height: 1.55;
+}
+
+.message-error[hidden] {
+  display: none;
+}
+
+/* Side padding = the conversation's padding + its scrollbar gutter, so the composer and the text above share one column. */
+.composer-shell {
+  position: relative;
+  padding: 6px calc(20px + var(--scrollbar-size)) 18px;
+  background: var(--surface);
+}
+
+/* Where the work happens: project, connection, branch — quiet chips above the composer. */
+.composer-context {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px 6px;
+}
+
+.context-chip {
+  display: inline-flex;
+  min-width: 0;
+  height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.context-chip:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.context-chip[hidden] {
+  display: none;
+}
+
+.context-chip svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.context-chip .chip-icon {
+  display: inline-grid;
+}
+
+.context-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The project is the anchor of the strip. */
+[data-project-name] {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.context-chip.is-empty [data-project-name] {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.context-chip .chip-chevron {
+  width: 13px;
+  height: 13px;
+  color: var(--soft-muted);
+}
+
+.context-chip .status-dot {
+  width: 6px;
+  height: 6px;
+}
+
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 8px 8px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+  box-shadow: 0 6px 24px color-mix(in srgb, #000 7%, transparent);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.composer:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--hairline));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent),
+    0 6px 24px color-mix(in srgb, #000 7%, transparent);
+}
+
+.composer textarea {
+  width: 100%;
+  min-height: 30px;
+  max-height: 168px;
+  margin: 0;
+  padding: 4px 6px 6px;
+  resize: none;
+  overflow-y: auto;
+  color: var(--ink);
+  caret-color: var(--accent);
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font-family: var(--font-body);
+  font-size: var(--body-size);
+  line-height: 1.55;
+  letter-spacing: var(--body-tracking);
+}
+
+.composer textarea::placeholder {
+  color: var(--soft-muted);
+  opacity: 1;
+}
+
+/* Send/stop: a solid ink circle (inverted in the dark theme); the one strong action. */
+.composer-action {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  margin-left: 4px;
+  padding: 0;
+  place-items: center;
+  color: var(--surface);
+  background: var(--ink);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 120ms ease, transform 120ms ease;
+}
+
+.composer-action:hover {
+  background: color-mix(in srgb, var(--ink) 80%, var(--surface));
+}
+
+.composer-action:active {
+  transform: scale(0.94);
+}
+
+.composer-action:focus-visible {
+  outline: 0;
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.send-button:hover svg {
+  transform: translateY(-1px);
+}
+
+/* Nothing to send yet: quiet grey, no lift. */
+.composer.is-empty .send-button {
+  color: var(--soft-muted);
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  box-shadow: none;
+  cursor: default;
+  transform: none;
+}
+
+.composer.is-empty .send-button svg {
+  transform: none;
+}
+
+.composer-action[hidden] {
+  display: none;
+}
+
+.send-button svg {
+  width: 17px;
+  height: 17px;
+  transition: transform 150ms ease;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.stop-button span {
+  width: 11px;
+  height: 11px;
+  background: currentColor;
+  border-radius: 3px;
+}
+
+.composer textarea:focus-visible {
+  outline: 0;
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+summary:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* After a mouse click, no keyboard ring even if a key is pressed next (see main.js). */
+html[data-pointer] :focus-visible {
+  outline: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 600px) {
+  :root {
+    --body-size: 1rem;
+    --body-leading: 1.66;
+    --body-tracking: -0.01em;
+  }
+
+  .conversation-scroll {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .conversation-content {
+    gap: 25px;
+  }
+
+  .user-message-stack {
+    max-width: 88%;
+  }
+
+  .user-message {
+    padding: 11px 15px 12px;
+    border-radius: 18px;
+  }
+
+  .composer-shell {
+    padding-right: calc(16px + var(--scrollbar-size));
+    padding-left: calc(16px + var(--scrollbar-size));
+  }
+
+  .markdown table {
+    min-width: 420px;
+  }
+}
+
+/* Settings: a side panel so changes preview on the live conversation. */
+.settings-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  width: var(--settings-width);
+  flex-direction: column;
+  color: var(--ink);
+  background: var(--surface);
+  border-left: 1px solid var(--hairline);
+  box-shadow: -10px 0 30px color-mix(in srgb, #000 5%, transparent);
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  letter-spacing: -0.005em;
+  line-height: 1.5;
+}
+
+.settings-panel[hidden] {
+  display: none;
+}
+
+.settings-head {
+  display: flex;
+  min-height: 60px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px 8px 16px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.settings-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* Rounded-square marks: the panel title and every section share one visual language. */
+.settings-mark,
+.section-icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.settings-mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+}
+
+.section-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+}
+
+.settings-mark svg,
+.section-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
+.section-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.settings-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding: 14px 14px 28px;
+}
+
+/* Each section is its own card; spacing between cards replaces divider lines. */
+.settings-section {
+  background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--ink) 6%, transparent);
+  border-radius: 14px;
+}
+
+.section-toggle {
+  display: flex;
+  width: 100%;
+  min-height: 50px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  /* Inner radius of the 14px card across its 1px border. */
+  border-radius: 13px;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+/* Open, the heading is the card's top: only its top corners round. */
+.section-toggle[aria-expanded="true"] {
+  border-radius: 13px 13px 0 0;
+}
+
+.section-toggle:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+
+.section-toggle h3 {
+  flex: none;
+}
+
+/* Current value, so a collapsed section still tells what is set. */
+.section-summary {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: var(--soft-muted);
+  font-size: 0.75rem;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.section-toggle > svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--soft-muted);
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  transition: transform 150ms ease;
+}
+
+.section-toggle[aria-expanded="false"] > svg {
+  transform: rotate(-90deg);
+}
+
+.section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px 16px;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.section-body[hidden] {
+  display: none;
+}
+
+.settings-section h3 {
+  margin: 0;
+  color: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+
+/* Field names sit one level below section titles. */
+.settings-section label,
+.field-label {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.section-body > :first-child {
+  margin-top: 0;
+}
+
+.settings-panel input:not([type="range"]):not([type="checkbox"]),
+.dropdown-button {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  font: inherit;
+}
+
+/* App-drawn select (see dropdown.js): chevron with breathing room, rounded list. */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-button {
+  display: flex;
+  align-items: center;
+  padding-right: 38px;
+  text-align: left;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236f6f6f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 14px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  cursor: pointer;
+}
+
+.dropdown-button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:root[data-theme="dark"] .dropdown-button {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c8c8c8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+.settings-panel input:not([type="range"]):not([type="checkbox"]):focus,
+.dropdown-button:focus-visible,
+.dropdown-button[aria-expanded="true"] {
+  border-color: var(--accent-strong);
+  outline: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.connection-line {
+  margin: 0;
+  color: var(--muted);
+}
+
+.connection-line[data-state="connected"] {
+  color: var(--ink);
+}
+
+.connection-line[data-state="error"] {
+  color: var(--error);
+}
+
+.key-saved {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 0 12px;
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  border-radius: 10px;
+}
+
+.key-saved[hidden],
+.key-form[hidden] {
+  display: none;
+}
+
+.key-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.field-note:empty {
+  display: none;
+}
+
+.primary-button,
+.secondary-button {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.primary-button {
+  color: #ffffff;
+  background: var(--accent-strong);
+  border: 0;
+}
+
+.secondary-button {
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--hairline);
+}
+
+.primary-button[hidden],
+.secondary-button[hidden],
+.remote-only[hidden],
+.provider-add[hidden],
+.provider-add [hidden] {
+  display: none;
+}
+
+/* Provider section: signed-in list, then the add form; every group uses the section's 8px rhythm. */
+.provider-section,
+.provider-add,
+.field-group,
+.provider-step,
+.device-login {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.provider-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.provider-list li {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.provider-list li:last-child {
+  border-bottom: 0;
+}
+
+/* The one point of colour: ON right after a connected Provider's name. */
+.provider-on {
+  margin-left: 6px;
+  color: var(--on);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.provider-method,
+.provider-status {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+/* Adding a Provider is this section's action: solid ink with light text (inverted in dark theme). */
+.add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--surface);
+  background: var(--ink);
+  border-color: var(--ink);
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.add-button:hover {
+  background: color-mix(in srgb, var(--ink) 80%, var(--surface));
+  border-color: color-mix(in srgb, var(--ink) 80%, var(--surface));
+}
+
+.add-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2.2;
+}
+
+.provider-status {
+  margin: 0;
+}
+
+.provider-status:empty {
+  display: none;
+}
+
+.provider-status[data-tone="error"] {
+  color: var(--error);
+}
+
+.provider-add {
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+}
+
+.provider-add .field-group > label:first-child {
+  margin-top: 0;
+}
+
+.device-code {
+  padding: 10px;
+  text-align: center;
+  font-family: "Nanum Gothic Coding", monospace;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  border-radius: 10px;
+  user-select: all;
+}
+
+.link-button {
+  padding: 0;
+  color: var(--accent-strong);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+}
+
+.primary-button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.remote-only {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.connection-details summary {
+  min-height: 36px;
+  padding: 8px 0;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.connection-details[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-section .check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+.check-row input {
+  accent-color: var(--accent-strong);
+}
+
+.segmented {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: 4px;
+  padding: 4px;
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  /* Concentric with the 8px buttons across the 4px inset. */
+  border-radius: 12px;
+}
+
+.segmented button {
+  min-height: 32px;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.segmented button[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--surface);
+  /* Hairline all around plus a tight shadow, so the inset reads the same on every side. */
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #000 7%, transparent),
+    0 1px 1px color-mix(in srgb, #000 6%, transparent);
+  font-weight: 700;
+}
+
+/* Slider + typed value; every value box shares one width so numbers and units line up. */
+.range-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Thin track filled up to --fill, small white knob; the native slider looked heavy. */
+.settings-panel input[type="range"] {
+  --fill: 50%;
+  width: 100%;
+  height: 22px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+}
+
+.settings-panel input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: linear-gradient(
+    to right,
+    var(--accent-strong) var(--fill),
+    color-mix(in srgb, var(--ink) 12%, transparent) var(--fill)
+  );
+  border-radius: 999px;
+}
+
+.settings-panel input[type="range"]::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  background: #ffffff;
+  border: 1px solid color-mix(in srgb, #000 16%, transparent);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px color-mix(in srgb, #000 18%, transparent);
+  appearance: none;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.settings-panel input[type="range"]:hover::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+.settings-panel input[type="range"]:focus-visible {
+  outline: 0;
+}
+
+.settings-panel input[type="range"]:active::-webkit-slider-thumb,
+.settings-panel input[type="range"]:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.12);
+  box-shadow:
+    0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 1px 3px color-mix(in srgb, #000 18%, transparent);
+}
+
+.range-value {
+  display: flex;
+  height: 32px;
+  align-items: center;
+  padding: 0 10px 0 8px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  font-family: var(--font-code);
+  font-size: 0.8125rem;
+}
+
+.range-value:focus-within {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.settings-panel .range-value input[data-range-input] {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  flex: 1;
+  padding: 0;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.settings-panel .range-value input[data-range-input]:focus {
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+}
+
+/* Fixed-width unit column so px, 배, and em start at the same x. */
+.range-unit {
+  width: 2.2em;
+  flex: none;
+  padding-left: 5px;
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+}
+
+.section-body > .text-button,
+.provider-add > .text-button {
+  align-self: flex-start;
+  margin-top: 8px;
+  margin-left: -10px;
+}
+
+@media (max-width: 760px) {
+  .app-shell.settings-open {
+    padding-right: 0;
+  }
+
+  .settings-panel {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+
+/* Sidebar: projects (folders) with their chats, then loose chats. */
+.sidebar {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  height: 100dvh;
+  background: var(--sidebar-surface);
+  border-right: 1px solid var(--hairline);
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  letter-spacing: -0.005em;
+}
+
+.sidebar-top {
+  padding: 10px 8px 6px;
+}
+
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 8px 20px;
+}
+
+.sidebar-heading {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding: 0 4px 0 10px;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.sidebar-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sidebar-empty {
+  margin: 2px 10px;
+  color: var(--soft-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.sidebar-row {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  border-radius: 8px;
+}
+
+.sidebar-list .sidebar-row {
+  margin-bottom: 2px;
+}
+
+.sidebar-row:hover {
+  background: var(--row-hover);
+}
+
+.sidebar-row.active {
+  background: var(--row-active);
+}
+
+.sidebar-command,
+.sidebar-row .row-main {
+  display: flex;
+  min-width: 0;
+  min-height: 34px;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.sidebar-command {
+  width: 100%;
+}
+
+/* Names line up with 새 대화 and the project name: row inset 10px + 16px icon + 8px gap. */
+.chat-row.nested .row-main {
+  padding-left: 34px;
+}
+
+/* Chat name fills the row so its status mark sits at the right end. */
+.chat-row .row-label {
+  flex: 1;
+}
+
+.chat-row .row-main {
+  color: color-mix(in srgb, var(--ink) 86%, transparent);
+}
+
+.chat-row.active .row-main {
+  color: var(--ink);
+}
+
+.row-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  color: var(--muted);
+}
+
+.row-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sidebar svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.row-action {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  place-items: center;
+  margin-right: 3px;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.row-action svg {
+  width: 15px;
+  height: 15px;
+}
+
+.sidebar-row:hover .row-action,
+.sidebar-row:focus-within .row-action,
+.row-action.visible {
+  opacity: 1;
+}
+
+.row-action:hover {
+  color: var(--ink);
+  background: var(--row-active);
+}
+
+.app-bar-start {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 760px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workspace .sidebar,
+  .sidebar-resizer {
+    display: none;
+  }
+}
+
+.session-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.session-divider::before,
+.session-divider::after {
+  height: 1px;
+  flex: 1;
+  background: var(--hairline);
+  content: "";
+}
+
+
+/* Toolbar inside the composer: menu, attach, access on the left; model, voice, send on the right. */
+.composer-toolbar {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 2px;
+}
+
+.toolbar-spacer {
+  flex: 1;
+}
+
+.tool-button {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  place-items: center;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.tool-button[hidden] {
+  display: none;
+}
+
+.tool-button svg,
+.access-chip svg,
+.command-menu svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.tool-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.tool-button:hover,
+.tool-button[aria-expanded="true"],
+.tool-chip:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.mic-button[data-state="recording"] {
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 10%, transparent);
+  animation: recording-pulse 1.4s ease-in-out infinite;
+}
+
+.mic-button[data-state="busy"] {
+  cursor: progress;
+  opacity: 0.55;
+}
+
+@keyframes recording-pulse {
+  50% {
+    background: color-mix(in srgb, var(--error) 18%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mic-button[data-state="recording"] {
+    animation: none;
+  }
+}
+
+/* Hermes' approval mode; orange only when it runs commands without asking. */
+.access-chip {
+  display: inline-flex;
+  height: 32px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  transition: background-color 120ms ease;
+}
+
+.access-chip:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+/* Shown while the empty draft holds a predicted next input. */
+.suggest-hint {
+  color: var(--soft-muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.suggest-hint[hidden] {
+  display: none;
+}
+
+.suggest-hint kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 0.6875rem;
+}
+
+.recording-time {
+  color: var(--error);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.recording-time[hidden] {
+  display: none;
+}
+
+.access-chip[hidden] {
+  display: none;
+}
+
+.access-chip[data-mode="off"],
+.access-chip[data-mode="off"][aria-expanded="true"] {
+  color: var(--on);
+}
+
+.access-chip svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Model and reasoning effort; the effort one tone quieter. */
+.tool-chip {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 260px;
+  height: 32px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 0 10px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  transition: background-color 120ms ease;
+}
+
+.model-chip-name {
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+}
+
+.model-chip-fast {
+  display: inline-grid;
+}
+
+.model-chip-fast[hidden] {
+  display: none;
+}
+
+.model-chip-detail {
+  color: var(--muted);
+}
+
+.model-chip-detail:empty {
+  display: none;
+}
+
+.tool-chip .chip-chevron {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  color: var(--soft-muted);
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+/* Draft attachments and queued turns sit above the text. */
+.composer-attachments,
+.composer-queue {
+  display: flex;
+  gap: 8px;
+  padding: 0 2px 6px;
+}
+
+.composer-attachments {
+  flex-wrap: wrap;
+}
+
+.composer-queue {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.composer-attachments[hidden],
+.composer-queue[hidden] {
+  display: none;
+}
+
+.draft-attachment {
+  position: relative;
+  display: inline-flex;
+  max-width: 240px;
+  height: 40px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 32px 0 10px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  font-size: 0.8125rem;
+}
+
+.draft-attachment > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.draft-attachment > svg,
+.attachment-chip svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  color: var(--muted);
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.draft-attachment.is-image {
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.draft-attachment.is-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.draft-remove {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  padding: 0;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.draft-attachment.is-image .draft-remove {
+  top: 4px;
+  right: 4px;
+  transform: none;
+}
+
+.draft-remove:hover {
+  color: var(--ink);
+}
+
+.draft-remove svg {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2.4;
+}
+
+.queued-turn {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px 0 10px;
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  border-radius: 9px;
+  font-size: 0.8125rem;
+}
+
+.queued-label {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.queued-text {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queued-turn .draft-remove {
+  position: static;
+  transform: none;
+}
+
+/* Sent attachments under a request bubble. */
+.message-attachments {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.attachment-chip {
+  display: inline-flex;
+  max-width: 260px;
+  height: 26px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  color: var(--muted);
+  background: var(--bubble);
+  border-radius: 8px;
+  font-size: 0.75rem;
+}
+
+.attachment-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-message[hidden] {
+  display: none;
+}
+
+.context-chip[aria-expanded="true"],
+.tool-chip[aria-expanded="true"],
+.access-chip[aria-expanded="true"] {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+/* Command menu and pickers open above the composer. */
+.command-menu {
+  position: absolute;
+  bottom: calc(100% - 2px);
+  /* Lines up with the composer's left edge. */
+  left: max(20px, calc((100% - var(--content-width)) / 2));
+  z-index: 5;
+  width: min(calc(100% - 40px), 460px);
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px color-mix(in srgb, #000 12%, transparent);
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  letter-spacing: -0.005em;
+}
+
+.command-menu[hidden] {
+  display: none;
+}
+
+.menu-title,
+.menu-heading {
+  padding: 8px 10px 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.menu-title {
+  color: var(--ink);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.menu-item {
+  display: grid;
+  width: 100%;
+  min-height: 38px;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.menu-item:hover,
+.menu-item.active {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+/* In the command menu the highlight follows the mouse and the keys: one row at a time. */
+.command-menu .menu-item:hover:not(.active) {
+  background: transparent;
+}
+
+.menu-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* A row's one-line explanation of what choosing it does. */
+.menu-description {
+  display: block;
+  margin-top: 1px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+  text-overflow: ellipsis;
+}
+
+.menu-item.has-description {
+  min-height: 48px;
+  padding-block: 6px;
+}
+
+.menu-item:disabled {
+  color: var(--soft-muted);
+  cursor: default;
+}
+
+.menu-item:disabled .menu-description {
+  color: var(--soft-muted);
+}
+
+/* A fact, not a choice: no hover, no pointer. */
+.menu-search {
+  width: 100%;
+  height: 34px;
+  margin: 2px 0 6px;
+  padding: 0 10px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  outline: 0;
+  font: inherit;
+}
+
+.menu-search:focus {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--hairline));
+}
+
+.menu-note,
+.menu-empty {
+  margin: 6px 10px 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.menu-icon {
+  display: inline-grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+.menu-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.menu-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-hint {
+  color: var(--soft-muted);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+}
+
+/* Result card for commands such as /status (not saved to the chat). */
+.notice-card {
+  padding: 14px 16px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 3%, var(--surface));
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.notice-card.error {
+  border-color: color-mix(in srgb, var(--error) 45%, var(--hairline));
+}
+
+.notice-title {
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.notice-card dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 16px;
+  margin: 0;
+}
+
+.notice-card dt {
+  color: var(--muted);
+}
+
+.notice-card dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.notice-card p {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.notice-card.error p {
+  color: var(--error);
+}
+
+.menu-back {
+  display: flex;
+  width: 100%;
+  min-height: 34px;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+  padding: 4px 10px 4px 6px;
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+}
+
+.menu-back:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.menu-back svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--muted);
+}
+
+.dropdown-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  z-index: 10;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px color-mix(in srgb, #000 12%, transparent);
+}
+
+.dropdown.up .dropdown-list {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.dropdown-list[hidden] {
+  display: none;
+}
+
+.dropdown-list svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.dropdown-list .menu-item {
+  min-height: 36px;
+  grid-template-columns: 18px minmax(0, 1fr);
+}
+
+.dropdown-list .menu-hint {
+  display: none;
+}
+
+.dropdown-list .menu-item[aria-selected="true"] .menu-label {
+  font-weight: 700;
+}
+
+/* Thin rounded scrollbars without arrow buttons; the track stops short of rounded corners. */
+::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+::-webkit-scrollbar-button {
+  display: none;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ink) 22%, transparent);
+  background-clip: padding-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--ink) 38%, transparent);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.dropdown-list::-webkit-scrollbar-track,
+.command-menu::-webkit-scrollbar-track {
+  margin-block: 10px;
+}
+
+/* Model picker button: model (with ⚡ for fast) on the left, sign-in on the right. */
+.model-picker .dropdown-button {
+  gap: 8px;
+}
+
+.model-name {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.model-provider {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: var(--soft-muted);
+  font-size: 0.75rem;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Model menu: Provider rows fold; their models sit indented under them. */
+.menu-item.menu-parent .menu-label {
+  font-weight: 700;
+}
+
+.menu-icon .menu-chevron {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+  transition: transform 120ms ease;
+}
+
+.menu-item.open .menu-chevron {
+  transform: rotate(90deg);
+}
+
+.menu-item.menu-child {
+  padding-left: 22px;
+}
+
+.menu-label svg.zap {
+  margin-left: 5px;
+  vertical-align: -2px;
+}
+
+svg.zap {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  fill: #f5a524;
+  stroke: #d98a0b;
+  stroke-linejoin: round;
+  stroke-width: 1.2;
+}
+
+/* A command Hermes holds until the user allows or denies it ("승인 요청" mode). */
+.approval-card {
+  margin: 12px 0;
+  padding: 14px 16px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--on) 5%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--on) 45%, var(--hairline));
+  border-radius: 12px;
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.approval-title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.approval-reason {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.approval-command {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  overflow-x: auto;
+  background: var(--code-surface);
+  border-radius: 8px;
+  font-family: var(--font-code);
+  font-size: 0.8125rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.approval-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.approval-actions button {
+  min-width: 64px;
+  padding: 6px 14px;
+  font: inherit;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.approval-deny {
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--hairline);
+}
+
+.approval-deny:hover:not(:disabled) {
+  background: var(--row-hover);
+}
+
+.approval-allow {
+  color: var(--surface);
+  background: var(--ink);
+  border: 1px solid var(--ink);
+}
+
+.approval-allow:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.approval-actions button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* An image Hermes produced (`MEDIA:<path>` in a reply), shown in place of the path. */
+.media-image {
+  margin: 12px 0;
+}
+
+.media-image img {
+  display: block;
+  max-width: min(100%, 560px);
+  max-height: 560px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+}
+
+.media-image figcaption {
+  color: var(--muted);
+  font-size: 0.875rem;
+  word-break: break-all;
+}
+
+/* The open chat's name next to the sidebar button; clicking it (or Ctrl+Alt+R) renames the chat. */
+.chat-title {
+  min-width: 0;
+  max-width: min(520px, 60vw);
+  overflow: hidden;
+  padding: 6px 8px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chat-title:hover {
+  background: var(--row-hover);
+}
+
+.rename-dialog {
+  width: min(560px, calc(100vw - 32px));
+  padding: 28px 28px 24px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 18px;
+  box-shadow: 0 16px 48px color-mix(in srgb, #000 18%, transparent);
+  font-family: var(--font-ui);
+}
+
+.rename-dialog::backdrop {
+  background: color-mix(in srgb, #000 25%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.rename-dialog h2 {
+  margin: 0 0 18px;
+  font-size: 1.375rem;
+  font-weight: 700;
+}
+
+.rename-dialog input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  font: inherit;
+  font-size: 1rem;
+}
+
+.rename-dialog input:focus {
+  border-color: var(--accent);
+  outline: 2px solid color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.rename-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.rename-actions button {
+  min-width: 64px;
+  padding: 8px 16px;
+  font: inherit;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+[data-rename-cancel] {
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--hairline);
+}
+
+[data-rename-cancel]:hover {
+  background: var(--row-hover);
+}
+
+.rename-save {
+  color: var(--surface);
+  background: var(--ink);
+  border: 1px solid var(--ink);
+}
+
+.rename-save:hover {
+  opacity: 0.85;
+}
+
+/* 굵기 names its weight (보통, 아주 굵게…) where other sliders show a short unit. */
+[data-range-input="weight"] + .range-unit {
+  width: auto;
+  white-space: nowrap;
+}
+
+/* Project folder icon: a button that opens the folder color popup. */
+.folder-color-button {
+  width: 28px;
+  height: 28px;
+  margin-left: 4px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.folder-color-button:hover {
+  background: var(--row-hover);
+}
+
+.project-row .row-main {
+  padding-left: 2px;
+}
+
+.folder-color-popup {
+  position: fixed;
+  z-index: 40;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px color-mix(in srgb, #000 16%, transparent);
+  font-family: var(--font-ui);
+}
+
+.folder-color-title {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.folder-color-swatches {
+  display: grid;
+  grid-template-columns: repeat(5, 24px);
+  gap: 8px;
+}
+
+.folder-swatch {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: var(--swatch);
+  border: 2px solid transparent;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px var(--surface);
+  cursor: pointer;
+}
+
+.folder-swatch.selected,
+.folder-swatch:hover {
+  border-color: var(--swatch);
+}
+
+/* Chat row status: spinner while a reply is being written, blue dot for a reply not seen yet. */
+.row-status {
+  flex: none;
+}
+
+.row-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid color-mix(in srgb, var(--muted) 35%, transparent);
+  border-top-color: var(--muted);
+  border-radius: 50%;
+  animation: row-spin 0.8s linear infinite;
+}
+
+.row-unread {
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+
+@keyframes row-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+/* Line under the window title bar, the same hairline as the sidebar's right edge. */
+.workspace::before {
+  position: fixed;
+  z-index: 30;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: var(--hairline);
+  content: "";
+  pointer-events: none;
+}
+
+/* Chat rows: name and status mark at the two ends; pin and archive (delete in the archive) take the mark's place on hover. */
+.chat-row {
+  position: relative;
+}
+
+.chat-row .row-actions {
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  display: flex;
+  transform: translateY(-50%);
+}
+
+.chat-row .row-action {
+  margin: 0;
+}
+
+.chat-row:hover .row-main,
+.chat-row:focus-within .row-main {
+  padding-right: 62px;
+}
+
+.archived-row:hover .row-main,
+.archived-row:focus-within .row-main {
+  padding-right: 34px;
+}
+
+/* Archive: a closed fold at the bottom of the sidebar, its chevron beside the label. */
+.sidebar-archive > summary {
+  justify-content: flex-start;
+  gap: 8px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.chat-row:hover .row-status,
+.chat-row:focus-within .row-status {
+  display: none;
+}
+
+/* Sidebar width handle on its right edge: a blue line on hover, focus or drag. */
+.sidebar-resizer {
+  position: absolute;
+  z-index: 20;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--sidebar-width) - 3px);
+  width: 6px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.sidebar-resizer:hover,
+.sidebar-resizer:focus-visible,
+.sidebar-resizing .sidebar-resizer {
+  background: linear-gradient(to right, transparent 2px, var(--accent) 2px, var(--accent) 4px, transparent 4px);
+  outline: none;
+}
+
+.workspace.sidebar-hidden .sidebar-resizer {
+  display: none;
+}
+
+/* While dragging: no text selection, and the resize cursor wherever the pointer goes. */
+.sidebar-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* Body background: the conversation pane (and what sits in it) takes the user's body color;
+   the settings panel inside it keeps the system background. */
+.app-shell {
+  --surface: var(--body-bg, var(--theme-surface));
+}
+
+.settings-panel {
+  --surface: var(--system-bg, var(--theme-surface));
+}
+
+.composer textarea {
+  color: var(--body-ink, var(--ink));
+}
+
+/* 모양: 시스템 and 본문 fold open and shut. */
+.settings-group {
+  border-top: 1px solid var(--hairline);
+}
+
+.settings-group > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0 10px;
+  color: var(--ink);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  list-style: none;
+  cursor: pointer;
+}
+
+.settings-group > summary::-webkit-details-marker,
+.sidebar-archive > summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-group > summary::after,
+.sidebar-archive > summary::after {
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform 120ms ease;
+  content: "";
+}
+
+.settings-group[open] > summary::after,
+.sidebar-archive[open] > summary::after {
+  transform: rotate(-135deg) translate(-2px, -2px);
+}
+
+.settings-group-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 14px;
+}
+
+/* 글자색·배경색: the color in use; clicking it opens the color popup. */
+.color-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.color-chip {
+  display: inline-flex;
+  min-width: 0;
+  height: 34px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 0 6px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.color-chip:hover {
+  background: var(--row-hover);
+}
+
+.color-chip-swatch {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+}
+
+.color-chip-value {
+  font-family: var(--font-code);
+  font-size: 0.8125rem;
+}
+
+/* The color popup (color-picker.js): hue across, saturation down to white, brightness bar, hex. */
+.color-popup {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  width: 300px;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  color: var(--ink);
+  background: var(--theme-surface);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px color-mix(in srgb, #000 22%, transparent);
+  font-family: var(--font-ui);
+}
+
+.color-popup[hidden] {
+  display: none;
+}
+
+.picker-field {
+  position: relative;
+  height: 190px;
+  border-radius: 6px;
+  background:
+    linear-gradient(rgb(0 0 0 / var(--darken)), rgb(0 0 0 / var(--darken))),
+    linear-gradient(to bottom, transparent, #fff),
+    linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.picker-marker {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 55%);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.picker-value {
+  width: 100%;
+  height: 12px;
+  margin: 0;
+  background: linear-gradient(to right, #000, var(--hue-color));
+  border-radius: 999px;
+  appearance: none;
+  cursor: pointer;
+}
+
+.picker-value::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border: 1px solid rgb(0 0 0 / 35%);
+  border-radius: 50%;
+  appearance: none;
+}
+
+.picker-hex {
+  width: 120px;
+  height: 34px;
+  align-self: flex-end;
+  padding: 0 10px;
+  color: var(--ink);
+  background: var(--theme-surface);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  font-family: var(--font-code);
+  font-size: 0.875rem;
+}
