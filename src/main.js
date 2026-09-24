@@ -247,6 +247,7 @@ const sidebar = createSidebar({
     if (!project) return;
     if (color) project.color = color;
     else delete project.color;
+    if (project === activeProject()) app.setProject(project);
     persistWorkspace();
   },
   onToggleProject(projectId) {

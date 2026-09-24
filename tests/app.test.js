@@ -321,4 +321,20 @@ describe("chat app", () => {
     expect(conversations).toEqual(["chat-a"]);
     expect(onConversationUpdate).toHaveBeenCalledWith("chat-a", expect.any(Array));
   });
+
+  it("colors the project chip's folder like the sidebar folder and follows a color change", () => {
+    const app = createChatApp({ client: {}, host: { openLink: vi.fn() } });
+    app.mount(document.querySelector("#app"));
+    const project = { id: "p1", name: "rndlog", path: "C:\\rndlog", color: "#f97316" };
+    app.showConversation("chat-a", { project });
+    const folder = () => document.querySelector("[data-project-chip] svg");
+    expect(folder().style.color).toBe("rgb(249, 115, 22)");
+
+    project.color = "#3b82f6";
+    app.setProject(project);
+    expect(folder().style.color).toBe("rgb(59, 130, 246)");
+
+    app.showConversation("chat-b");
+    expect(folder().style.color).toBe("");
+  });
 });

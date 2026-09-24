@@ -969,6 +969,15 @@ export function createChatApp({
     }
   }
 
+  /** The open chat's project on the chip; its folder takes the project's sidebar color. */
+  function setProject(nextProject) {
+    project = nextProject;
+    projectChip.querySelector("[data-project-name]").textContent = project?.name || "프로젝트 없음";
+    projectChip.title = project?.path || "프로젝트를 고르면 Hermes가 그 폴더에서 일합니다";
+    projectChip.classList.toggle("is-empty", !project);
+    projectChip.querySelector("svg").style.color = project?.color || "";
+  }
+
   return {
     /** Shows a stored chat; an in-flight reply is stopped and saved to its own chat. */
     showConversation(id, { project: nextProject = null } = {}) {
@@ -983,10 +992,7 @@ export function createChatApp({
       if (run?.approvalCard) elements.get(run.message.id)?.content.after(run.approvalCard);
       setRunning(Boolean(run));
       clearSuggestion();
-      project = nextProject;
-      projectChip.querySelector("[data-project-name]").textContent = project?.name || "프로젝트 없음";
-      projectChip.title = project?.path || "프로젝트를 고르면 Hermes가 그 폴더에서 일합니다";
-      projectChip.classList.toggle("is-empty", !project);
+      setProject(nextProject);
       root.querySelector("[data-branch-chip]").hidden = true;
       queue = queues.get(id) ?? [];
       queues.set(id, queue);
@@ -998,6 +1004,8 @@ export function createChatApp({
       scrollArea.scrollTop = scrollArea.scrollHeight;
       textarea.focus();
     },
+
+    setProject,
 
     hasMessages() {
       return messages.length > 0;
