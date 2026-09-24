@@ -7,9 +7,9 @@
   Push $0
   Push $1
   ReadEnvStr $0 HERMES_HOME
-  StrCmp $0 "" +2
+  StrCmp $0 "" 0 +2
+  StrCpy $0 "$LOCALAPPDATA\hermes"
   IfFileExists "$0\bin\hermes.cmd" hermes_done
-  IfFileExists "$LOCALAPPDATA\hermes\bin\hermes.cmd" hermes_done
 
   DetailPrint "Hermes 설치 중 (인터넷 연결 필요, 몇 분 걸립니다)"
   ExecWait `"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/NousResearch/hermes-agent/${HERMES_COMMIT}/scripts/install.ps1'))) -NonInteractive -SkipSetup -Commit ${HERMES_COMMIT}"` $1
