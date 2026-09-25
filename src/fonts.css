@@ -35,6 +35,21 @@
   font-display: swap;
 }
 
+/* NanumBarunGothic (OFL), NAVER's 2013 release converted to woff2. */
+@font-face {
+  font-family: "NanumBarunGothic";
+  src: url("./fonts/nanum-barun/NanumBarunGothic-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "NanumBarunGothic";
+  src: url("./fonts/nanum-barun/NanumBarunGothic-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+
 /* Paperlogy (OFL), official woff2. */
 @font-face {
   font-family: "Paperlogy";

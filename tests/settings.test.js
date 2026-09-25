@@ -21,7 +21,7 @@ describe("appearance settings", () => {
     const { label, ...reading } = PRESETS.read;
     const { label: codeLabel, ...coding } = PRESETS.code;
     expect(loadAppearance()).toEqual({
-      preset: "read", ...reading, systemFont: "hcr", systemSize: 16, colors: { light: {}, dark: {} }, theme: "light",
+      preset: "read", ...reading, systemFont: "nanum", systemSize: 16, colors: { light: {}, dark: {} }, theme: "light",
       spellcheck: true, suggest: true, modes: { read: reading, code: coding },
     });
   });
@@ -84,13 +84,13 @@ describe("appearance settings", () => {
     // A variable font shows any weight in its range.
     expect(shownWeight("pretendard", 650)).toBe(650);
     // The chosen weight survives a font without it: back on Pretendard, 600 is shown again.
-    const onHcr = normalizeAppearance({ ...normalizeAppearance({ font: "pretendard", weight: 600 }), font: "hcr" });
-    expect(shownWeight("hcr", onHcr.weight)).toBe(700);
-    expect(normalizeAppearance({ ...onHcr, font: "pretendard" }).weight).toBe(600);
+    const onBarun = normalizeAppearance({ ...normalizeAppearance({ font: "pretendard", weight: 600 }), font: "barun" });
+    expect(shownWeight("barun", onBarun.weight)).toBe(700);
+    expect(normalizeAppearance({ ...onBarun, font: "pretendard" }).weight).toBe(600);
     // Bold stays a weight the font has above the body; none heavier means it cannot stand out.
     expect(strongWeight("pretendard", 400)).toBe(700);
     expect(strongWeight("nanum", 400)).toBe(700);
-    expect(strongWeight("hcr", 700)).toBe(700);
+    expect(strongWeight("barun", 700)).toBe(700);
     const coding = normalizeAppearance({ ...normalizeAppearance({ font: "pretendard", weight: 300 }), preset: "code", ...PRESETS.code });
     expect(coding.weight).toBe(400);
     expect(coding.modes.read).toMatchObject({ font: "pretendard", weight: 300 });
@@ -99,7 +99,7 @@ describe("appearance settings", () => {
 
   it("clamps out-of-range values and rejects unknown fonts", () => {
     const appearance = normalizeAppearance({ preset: "x", size: 99, leading: 0.5, tracking: 1, width: 10, font: "nope" });
-    expect(appearance).toMatchObject({ preset: "read", size: 22, leading: 1.3, tracking: 0.04, width: 600, font: "hcr" });
+    expect(appearance).toMatchObject({ preset: "read", size: 22, leading: 1.3, tracking: 0.04, width: 600, font: "nanum" });
   });
 
   it("applies typography values and resolves the system theme", () => {

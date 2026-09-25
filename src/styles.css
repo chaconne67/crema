@@ -1,24 +1,3 @@
-@font-face {
-  font-family: "Codex HCR";
-  src:
-    local("HCR Dotum"),
-    local("함초롬돋움"),
-    local("HCR");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Codex HCR";
-  src:
-    local("HCR Dotum Bold"),
-    local("함초롬돋움 굵게");
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-}
-
 :root {
   color-scheme: light;
   --accent: #339cff;
@@ -45,8 +24,8 @@
   --ok: #16a34a;
   --selection: #d9ecff;
   --focus: #006fc9;
-  --font-ui: "Codex HCR", "HCR Dotum", "Malgun Gothic", system-ui, sans-serif;
-  --font-body: "Codex HCR", "HCR Dotum", "Malgun Gothic", system-ui, sans-serif;
+  --font-ui: "Nanum Gothic", "Malgun Gothic", system-ui, sans-serif;
+  --font-body: "Nanum Gothic", "Malgun Gothic", system-ui, sans-serif;
   --system-size: 16px;
   --scrollbar-size: 10px;
   --font-code: "Nanum Gothic Coding", ui-monospace, "Cascadia Mono", Consolas, monospace;

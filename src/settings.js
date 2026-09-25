@@ -5,7 +5,6 @@ const STORAGE_KEY = "agent-client:appearance:v1";
 // Object order is the list order; `group` heads the list sections.
 const FALLBACK = '"Malgun Gothic", system-ui, sans-serif';
 export const FONTS = {
-  hcr: { label: "함초롬돋움", group: "고딕", weights: [400, 700], stack: `"Codex HCR", "HCR Dotum", ${FALLBACK}` },
   pretendard: { label: "Pretendard", group: "고딕", variable: true, weights: [100, 900], stack: `"Pretendard Variable", ${FALLBACK}` },
   noto: { label: "본고딕", group: "고딕", variable: true, weights: [100, 900], stack: `"Noto Sans KR Variable", ${FALLBACK}` },
   nanum: { label: "나눔고딕", group: "고딕", weights: [400, 700, 800], stack: `"Nanum Gothic", ${FALLBACK}` },
@@ -15,7 +14,7 @@ export const FONTS = {
   score: { label: "에스코어 드림", group: "고딕", weights: [300, 400, 500, 600, 700], stack: `"S-Core Dream", ${FALLBACK}` },
   paperlogy: { label: "페이퍼로지", group: "고딕", weights: [300, 400, 500, 600, 700], stack: `"Paperlogy", ${FALLBACK}` },
   pen: { label: "나눔손글씨 펜", group: "손글씨", weights: [400], stack: `"Nanum Pen Script", ${FALLBACK}` },
-  coding: { label: "나눔고딕코딩", group: "코딩", weights: [400, 700], stack: '"Nanum Gothic Coding", "Codex HCR", "Malgun Gothic", monospace' },
+  coding: { label: "나눔고딕코딩", group: "코딩", weights: [400, 700], stack: '"Nanum Gothic Coding", "Malgun Gothic", monospace' },
 };
 
 export const WEIGHT_LABELS = {
@@ -24,8 +23,8 @@ export const WEIGHT_LABELS = {
 
 // Presets set type only; colour belongs to the theme setting.
 export const PRESETS = {
-  read: { label: "읽기", font: "hcr", weight: 400, size: 17, leading: 1.7, tracking: -0.012, width: 820 },
-  code: { label: "코딩", font: "hcr", weight: 400, size: 15, leading: 1.6, tracking: 0, width: 1040 },
+  read: { label: "읽기", font: "nanum", weight: 400, size: 17, leading: 1.7, tracking: -0.012, width: 820 },
+  code: { label: "코딩", font: "nanum", weight: 400, size: 15, leading: 1.6, tracking: 0, width: 1040 },
 };
 
 export const RANGES = {
@@ -65,7 +64,7 @@ function normalizeColors(value = {}) {
 export const DEFAULT_APPEARANCE = {
   preset: "read",
   ...PRESETS.read,
-  systemFont: "hcr",
+  systemFont: "nanum",
   systemSize: 16,
   theme: "light",
   spellcheck: true,
