@@ -54,6 +54,8 @@ const CHEVRON_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 
 const icon = (body) => `<svg viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
 const SETTINGS_ICON = icon('<path d="M14 17H5"/><path d="M19 7h-9"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>');
 const SECTION_ICONS = {
+  // Lucide (ISC) "circle-user".
+  account: icon('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/>'),
   providers: icon('<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>'),
   connection: icon('<path d="M12 22v-5"/><path d="M15 8V2"/><path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z"/><path d="M9 8V2"/>'),
   model: icon('<path d="M12 20v2"/><path d="M12 2v2"/><path d="M17 20v2"/><path d="M17 2v2"/><path d="M2 12h2"/><path d="M2 17h2"/><path d="M2 7h2"/><path d="M20 12h2"/><path d="M20 17h2"/><path d="M20 7h2"/><path d="M7 20v2"/><path d="M7 2v2"/><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/>'),
@@ -120,8 +122,10 @@ export function createSettingsPanel({
   onConnect,
   onEnableLocal,
   onProvidersChanged,
+  onSignOut,
 }) {
   let current = appearance;
+  let account = null;
   let providers = [];
   let panel;
   let shell;
@@ -243,6 +247,7 @@ export function createSettingsPanel({
   function updateSummaries() {
     const reasoning = REASONING_LEVELS.find((level) => level.value === (connection.reasoning || ""));
     const summaries = {
+      account: account?.email || "",
       connection: `${connection.mode === "local" ? "이 PC" : "메인서버"} · ${CONNECTION_STATES[connectionState] || ""}`,
       providers: connection.mode === "local" && catalog.length ? `${catalog.length}개 연결됨` : "",
       model: [connection.model, connection.fast && "빠른 속도", connection.reasoning && reasoning?.label].filter(Boolean).join(" · "),
@@ -349,6 +354,15 @@ export function createSettingsPanel({
       showConnectionMessage(result);
     },
 
+    /** The signed-in Crema account ({ email, name }). */
+    setAccount(next) {
+      account = next;
+      panel.querySelector("[data-account-line]").textContent = account
+        ? [account.email, account.name].filter(Boolean).join(" · ")
+        : "로그인하지 않았습니다.";
+      updateSummaries();
+    },
+
     setProviders(next) {
       providers = next;
       catalog = buildCatalog(providers, authKinds);
@@ -388,6 +402,11 @@ export function createSettingsPanel({
           <button class="icon-button" type="button" data-close-settings aria-label="설정 닫기">${CLOSE_ICON}</button>
         </div>
         <div class="settings-body">
+          <section class="settings-section" aria-labelledby="account-title">
+            <h3 id="account-title">계정</h3>
+            <p class="connection-line" data-account-line></p>
+            <button class="secondary-button" type="button" data-sign-out>로그아웃</button>
+          </section>
           <section class="settings-section" aria-labelledby="connection-title">
             <h3 id="connection-title">연결</h3>
             <span class="field-label">연결 대상</span>
@@ -647,6 +666,7 @@ export function createSettingsPanel({
         await connect();
       });
       panel.querySelector("[data-check]").addEventListener("click", connect);
+      panel.querySelector("[data-sign-out]").addEventListener("click", () => onSignOut());
       panel.querySelector("[data-close-settings]").addEventListener("click", close);
       panel.addEventListener("keydown", (event) => {
         if (event.key === "Escape") close();

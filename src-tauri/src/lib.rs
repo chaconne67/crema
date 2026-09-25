@@ -133,6 +133,149 @@ fn status_error(status: reqwest::StatusCode) -> String {
   }
 }
 
+// Crema account (crema-agent.site): signed in once with Google in the browser, then kept here.
+const ACCOUNT_SITE: &str = "https://crema-agent.site";
+const ACCOUNT_KEY_USER: &str = "crema-account";
+
+fn account_entry() -> Result<keyring::Entry, String> {
+  keyring::Entry::new(KEYRING_SERVICE, ACCOUNT_KEY_USER).map_err(|_| "keyring".to_string())
+}
+
+fn random_token() -> Result<String, String> {
+  use base64::Engine;
+  let mut bytes = [0u8; 32];
+  getrandom::fill(&mut bytes).map_err(|_| "sign_in".to_string())?;
+  Ok(base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes))
+}
+
+fn pkce_challenge(verifier: &str) -> String {
+  use base64::Engine;
+  use sha2::Digest;
+  base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(sha2::Sha256::digest(verifier.as_bytes()))
+}
+
+/// `code` from the site's return request `GET /callback?code=…&state=…`, when `state` is ours.
+fn callback_code(request_line: &str, state: &str) -> Option<String> {
+  let target = request_line.strip_prefix("GET ")?.split(' ').next()?;
+  let query = target.strip_prefix("/callback?")?;
+  let mut code = None;
+  let mut state_ok = false;
+  for pair in query.split('&') {
+    match pair.split_once('=') {
+      Some(("code", value)) if !value.is_empty() => code = Some(value.to_string()),
+      Some(("state", value)) => state_ok = value == state,
+      _ => {}
+    }
+  }
+  code.filter(|_| state_ok)
+}
+
+/// Waits (up to 5 minutes) for the browser to come back to 127.0.0.1 with the one-time code.
+fn wait_for_callback(listener: TcpListener, state: String) -> Result<String, String> {
+  use std::io::{BufRead, BufReader, Write};
+  listener.set_nonblocking(true).map_err(|_| "sign_in".to_string())?;
+  let deadline = std::time::Instant::now() + Duration::from_secs(300);
+  while std::time::Instant::now() < deadline {
+    let (stream, _) = match listener.accept() {
+      Ok(connection) => connection,
+      Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+        std::thread::sleep(Duration::from_millis(200));
+        continue;
+      }
+      Err(_) => return Err("sign_in".into()),
+    };
+    let _ = stream.set_nonblocking(false);
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
+    let mut line = String::new();
+    let mut reader = BufReader::new(&stream);
+    if reader.read_line(&mut line).is_err() {
+      continue;
+    }
+    let code = callback_code(line.trim_end(), &state);
+    let page = if code.is_some() {
+      "로그인되었습니다. 이 창을 닫고 Crema로 돌아가 주세요."
+    } else {
+      "Crema 로그인 요청이 아닙니다."
+    };
+    let body = format!("<!doctype html><meta charset=utf-8><title>Crema</title><p style=\"font-family:sans-serif;margin:3em\">{page}</p>");
+    let _ = (&stream).write_all(
+      format!("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).as_bytes(),
+    );
+    if let Some(code) = code {
+      return Ok(code);
+    }
+  }
+  Err("sign_in_timeout".into())
+}
+
+/// Signs this app in to Crema: browser → crema-agent.site → Google → back here (RFC 8252 loopback + PKCE).
+#[tauri::command]
+async fn sign_in(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+  use tauri_plugin_opener::OpenerExt;
+  let listener = TcpListener::bind("127.0.0.1:0").map_err(|_| "sign_in".to_string())?;
+  let port = listener.local_addr().map_err(|_| "sign_in".to_string())?.port();
+  let state = random_token()?;
+  let verifier = random_token()?;
+  let url = format!(
+    "{ACCOUNT_SITE}/app/login/?port={port}&state={state}&challenge={}",
+    pkce_challenge(&verifier)
+  );
+  app.opener().open_url(url, None::<&str>).map_err(|_| "sign_in".to_string())?;
+  let code = tokio::task::spawn_blocking(move || wait_for_callback(listener, state))
+    .await
+    .map_err(|_| "sign_in".to_string())??;
+  let response = http_client()?
+    .post(format!("{ACCOUNT_SITE}/api/app/token"))
+    .json(&serde_json::json!({ "code": code, "verifier": verifier }))
+    .send()
+    .await
+    .map_err(|_| "account_unreachable".to_string())?;
+  if !response.status().is_success() {
+    return Err("sign_in".into());
+  }
+  let body: serde_json::Value = response.json().await.map_err(|_| "sign_in".to_string())?;
+  let token = body["token"].as_str().ok_or_else(|| "sign_in".to_string())?;
+  account_entry()?.set_password(token).map_err(|_| "keyring".to_string())?;
+  Ok(serde_json::json!({ "email": body["email"], "name": body["name"] }))
+}
+
+/// "signed_out" without a saved sign-in (or once the site revoked it); "offline" when the site
+/// cannot be reached, so the app keeps working; otherwise the account.
+#[tauri::command]
+async fn account_status() -> Result<serde_json::Value, String> {
+  let token = match account_entry()?.get_password() {
+    Ok(token) => token,
+    Err(keyring::Error::NoEntry) => return Ok(serde_json::json!({ "state": "signed_out" })),
+    Err(_) => return Err("keyring".into()),
+  };
+  let response = match http_client()?.get(format!("{ACCOUNT_SITE}/api/me")).bearer_auth(&token).timeout(Duration::from_secs(8)).send().await {
+    Ok(response) => response,
+    Err(_) => return Ok(serde_json::json!({ "state": "offline" })),
+  };
+  match response.status().as_u16() {
+    200 => {
+      let me: serde_json::Value = response.json().await.unwrap_or_default();
+      Ok(serde_json::json!({ "state": "signed_in", "email": me["email"], "name": me["name"] }))
+    }
+    401 => {
+      let _ = account_entry()?.delete_credential();
+      Ok(serde_json::json!({ "state": "signed_out" }))
+    }
+    _ => Ok(serde_json::json!({ "state": "offline" })),
+  }
+}
+
+#[tauri::command]
+async fn sign_out() -> Result<(), String> {
+  if let Ok(token) = account_entry()?.get_password() {
+    let _ = http_client()?.post(format!("{ACCOUNT_SITE}/api/app/logout")).bearer_auth(&token).send().await;
+  }
+  match account_entry()?.delete_credential() {
+    Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+    Err(_) => Err("keyring".into()),
+  }
+}
+
 #[tauri::command]
 fn has_api_key() -> bool {
   read_api_key("remote").is_ok()
@@ -863,6 +1006,9 @@ pub fn run() {
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
+      sign_in,
+      account_status,
+      sign_out,
       has_api_key,
       save_api_key,
       delete_api_key,
@@ -897,3 +1043,21 @@ pub fn run() {
     });
 }
 
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn pkce_challenge_matches_the_site() {
+    // The server's test vector (server/web/tests.py), computed with Python's hashlib.
+    assert_eq!(pkce_challenge(&"v".repeat(64)), "w1TpKUdYE9hUAcNSeeSRFioHDxfUxuHho_JHAfZ_vDM");
+  }
+
+  #[test]
+  fn callback_code_needs_our_state() {
+    assert_eq!(callback_code("GET /callback?code=abc&state=s1 HTTP/1.1", "s1"), Some("abc".into()));
+    assert_eq!(callback_code("GET /callback?code=abc&state=other HTTP/1.1", "s1"), None);
+    assert_eq!(callback_code("GET /favicon.ico HTTP/1.1", "s1"), None);
+    assert_eq!(callback_code("GET /callback?state=s1 HTTP/1.1", "s1"), None);
+  }
+}

@@ -21,6 +21,7 @@ const REASONING_ICON =
   '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>';
 import { buildCatalog, locate, pickRoute, suggestionRoute } from "./providers.js";
 import { createSettingsPanel } from "./settings-panel.js";
+import { createSignIn } from "./sign-in.js";
 import { FOLDER_COLORS, createSidebar } from "./sidebar.js";
 import {
   NEW_CHAT_TITLE,
@@ -30,8 +31,10 @@ import {
   createProject,
   deleteMessages,
   hermesSessionKey,
+  loadAccount,
   loadWorkspace,
   onStorageError,
+  saveAccount,
   saveWorkspace,
   startNewSession,
 } from "./storage.js";
@@ -307,6 +310,14 @@ const panel = createSettingsPanel({
   onConnect: connect,
   onEnableLocal: () => host.enableLocalHermes(),
   onProvidersChanged: () => refreshModels().catch(() => {}),
+  async onSignOut() {
+    const message = "Crema에서 로그아웃할까요?\n다시 쓰려면 구글 계정으로 다시 로그인해야 합니다. 대화 기록은 이 PC에 그대로 남습니다.";
+    if (!(await host.confirm(message, "로그아웃"))) return;
+    await host.signOut().catch(() => {});
+    saveAccount(null);
+    panel.setAccount(null);
+    await ensureSignedIn();
+  },
 });
 
 const formatNumber = (value) => Number(value || 0).toLocaleString("ko-KR");
@@ -810,4 +821,19 @@ if (activeChat()) {
   workspace.activeChatId = null;
   newChat(null);
 }
-connect().then((result) => panel.showConnection(result));
+const signIn = createSignIn({ host });
+
+/**
+ * Crema starts signed in to crema-agent.site: first run (or after signing out) asks for Google first.
+ * Once signed in, an unreachable site does not block the app.
+ */
+async function ensureSignedIn() {
+  const status = await host.accountStatus().catch(() => ({ state: "offline" }));
+  if (status.state === "signed_in") saveAccount(status);
+  if (status.state === "signed_out") saveAccount(await signIn.show());
+  panel.setAccount(loadAccount());
+}
+
+ensureSignedIn()
+  .then(connect)
+  .then((result) => panel.showConnection(result));

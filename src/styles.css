@@ -3017,3 +3017,54 @@ svg.zap {
   font-family: var(--font-code);
   font-size: 0.875rem;
 }
+
+/* First-run sign-in (crema-agent.site with Google): covers the app until signed in. */
+.sign-in {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  color: var(--ink);
+  background: var(--surface);
+  text-align: center;
+}
+
+.sign-in-logo {
+  width: 88px;
+  height: 88px;
+}
+
+.sign-in h1 {
+  margin: 8px 0 0;
+  font-size: 2rem;
+}
+
+.sign-in p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.sign-in .primary-button {
+  min-width: 200px;
+  margin-top: 12px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.sign-in .primary-button:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.sign-in-status {
+  min-height: 1.5em;
+  font-size: 0.875rem;
+}

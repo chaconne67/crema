@@ -1,5 +1,7 @@
-// Drives the INSTALLED Crema through tauri-driver (WebDriver) on a clean Windows machine:
-// the user's path from first launch to a working "이 PC" connection, then a relaunch.
+// Drives the INSTALLED Crema through tauri-driver (WebDriver) on a clean Windows machine: the user's
+// first launch up to the Google sign-in screen, and a relaunch.
+// A real Google account cannot sign in on CI, so the steps after sign-in (engine connection, first
+// reply) are checked once a signed-in test account exists (engine integration plan).
 // Usage: node tests/e2e/installed-app.mjs <path to installed app.exe>
 const application = process.argv[2];
 const driver = "http://127.0.0.1:4444";
@@ -41,56 +43,25 @@ async function session() {
     capabilities: { alwaysMatch: { "tauri:options": { application } } },
   });
   const id = created.sessionId;
-  const find = (css) => call("POST", `/session/${id}/element`, { using: "css selector", value: css });
-  const element = (found) => Object.values(found)[0];
   return {
-    id,
-    run: (script, args = []) => call("POST", `/session/${id}/execute/sync`, { script, args }),
-    click: async (css) => call("POST", `/session/${id}/element/${element(await find(css))}/click`, {}),
-    text: async (css) => call("GET", `/session/${id}/element/${element(await find(css))}/text`),
+    run: (script) => call("POST", `/session/${id}/execute/sync`, { script, args: [] }),
     close: () => call("DELETE", `/session/${id}`),
   };
 }
 
+const signInButton = "return document.querySelector('.sign-in [data-sign-in]')?.textContent || ''";
+
 const first = await session();
 await until("app window", () => first.run("return Boolean(document.querySelector('[data-open-settings]'))"), 60_000);
-
 const family = await first.run("return getComputedStyle(document.querySelector('.sidebar')).fontFamily");
 check("default font is the bundled 나눔고딕", /^"?Nanum Gothic"?/.test(family), family);
-
-await first.click("[data-open-settings]");
-const status = await until(
-  "connection check",
-  async () => {
-    const line = await first.text("[data-connection-line]");
-    return /연결되었습니다|꺼져 있습니다|응답하지 않습니다|찾지 못했습니다/.test(line) && line;
-  },
-  60_000,
-);
-console.log(`first status: ${status}`);
-if (!/연결되었습니다/.test(status)) {
-  await first.click("[data-enable-local]");
-  const after = await until(
-    "Hermes 연결 켜기",
-    async () => {
-      const line = await first.text("[data-connection-line]");
-      return !/켜고 있습니다|확인하고 있습니다/.test(line) && line;
-    },
-    240_000,
-  ).catch((error) => error.message);
-  check("Hermes 연결 켜기 connects this PC", /연결되었습니다/.test(after), after);
-} else {
-  check("this PC connected on first launch", true, status);
-}
-
-const saved = await first.run("return localStorage.getItem('agent-client:workspace:v1')");
-check("workspace saved to storage", Boolean(saved));
+const gate = await until("sign-in screen", () => first.run(signInButton), 30_000).catch((error) => error.message);
+check("first launch asks for Google sign-in", gate === "구글로 시작하기", gate);
 await first.close();
 
 const second = await session();
-await until("app window after relaunch", () => second.run("return Boolean(document.querySelector('[data-open-settings]'))"), 60_000);
-const reloaded = await second.run("return localStorage.getItem('agent-client:workspace:v1')");
-check("workspace survives a relaunch", Boolean(reloaded) && JSON.parse(reloaded).activeChatId === JSON.parse(saved || "{}").activeChatId);
+const again = await until("sign-in screen after relaunch", () => second.run(signInButton), 60_000).catch((error) => error.message);
+check("still asks for sign-in after a relaunch without signing in", again === "구글로 시작하기", again);
 await second.close();
 
 if (failures.length) {

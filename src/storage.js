@@ -1,4 +1,5 @@
 const WORKSPACE_KEY = "agent-client:workspace:v1";
+const ACCOUNT_KEY = "agent-client:account:v1";
 const chatKey = (chatId) => `agent-client:chat:${chatId}`;
 
 export const NEW_CHAT_TITLE = "새 대화";
@@ -131,4 +132,15 @@ export function loadWorkspace() {
 
 export function saveWorkspace(workspace) {
   writeJson(WORKSPACE_KEY, workspace);
+}
+
+/** The signed-in Crema account ({ email, name }), shown even while crema-agent.site is unreachable. */
+export function loadAccount() {
+  return readJson(ACCOUNT_KEY, null);
+}
+
+/** Remembers the account; null forgets it (signed out). */
+export function saveAccount(account) {
+  if (account) writeJson(ACCOUNT_KEY, { email: account.email || "", name: account.name || "" });
+  else window.localStorage.removeItem(ACCOUNT_KEY);
 }

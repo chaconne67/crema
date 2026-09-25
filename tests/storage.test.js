@@ -7,8 +7,10 @@ import {
   createProject,
   hermesSessionKey,
   loadMessages,
+  loadAccount,
   loadWorkspace,
   onStorageError,
+  saveAccount,
   saveMessages,
   saveWorkspace,
   startNewSession,
@@ -93,5 +95,13 @@ describe("workspace storage", () => {
     expect(chatTitle([{ role: "user", content: "  폴더   구조를\n정리해줘 " }])).toBe("폴더 구조를 정리해줘");
     expect(chatTitle([{ role: "user", content: "가".repeat(50) }])).toBe(`${"가".repeat(40)}…`);
     expect(chatTitle([])).toBe("새 대화");
+  });
+
+  it("remembers the signed-in account for offline use and forgets it on sign-out", () => {
+    expect(loadAccount()).toBeNull();
+    saveAccount({ email: "me@example.com", name: "주인", token: "never-stored" });
+    expect(loadAccount()).toEqual({ email: "me@example.com", name: "주인" });
+    saveAccount(null);
+    expect(loadAccount()).toBeNull();
   });
 });

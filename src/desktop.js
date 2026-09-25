@@ -33,6 +33,9 @@ const ERROR_MESSAGES = {
   server: "Hermes가 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.",
   interrupted: "응답이 중간에 끊겼습니다. 다시 시도해 주세요.",
   keyring: "Windows 자격 증명 관리자에 접근하지 못했습니다.",
+  sign_in: "로그인하지 못했습니다. 다시 시도해 주세요.",
+  sign_in_timeout: "5분 안에 로그인이 끝나지 않았습니다. 다시 시도해 주세요.",
+  account_unreachable: "crema-agent.site에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.",
   admin_start: "Hermes에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.",
   admin_busy: "Hermes 대시보드 등 다른 프로그램이 Hermes 설정 기능을 쓰고 있어 연결하지 못했습니다. 그 프로그램을 닫고 다시 시도해 주세요.",
   file_read: "파일을 읽지 못했습니다.",
@@ -154,6 +157,10 @@ export function parseModelChoice(value) {
 
 export function createDesktopHost() {
   return {
+    /** Crema account: Google sign-in in the browser, kept in Windows Credential Manager. */
+    signIn: () => call("sign_in"),
+    accountStatus: () => call("account_status"),
+    signOut: () => call("sign_out"),
     hasApiKey: () => call("has_api_key"),
     saveApiKey: (key) => call("save_api_key", { key }),
     deleteApiKey: () => call("delete_api_key"),
