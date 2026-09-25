@@ -41,6 +41,8 @@ jobs:
           $setup = Get-ChildItem src-tauri/target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
           if (Test-Path "$env:LOCALAPPDATA\hermes\bin\hermes.cmd") { throw "runner already has Hermes; not a clean machine" }
           $run = Start-Process $setup.FullName -ArgumentList "/S" -Wait -PassThru
+          $log = "$env:TEMP\crema-hermes-install.log"
+          if (Test-Path $log) { Get-Content $log } else { "no Hermes install log at $log" }
           if ($run.ExitCode -ne 0) { throw "installer exit $($run.ExitCode)" }
           $app = "$env:LOCALAPPDATA\Crema\app.exe"
           if (-not (Test-Path $app)) { throw "Crema not installed at $app" }
