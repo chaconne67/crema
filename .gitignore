@@ -3,3 +3,5 @@ dist/
 server/.venv/
 server/staticfiles/
 __pycache__/
+.env
+.env.*
