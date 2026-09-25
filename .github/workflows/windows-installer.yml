@@ -1,0 +1,96 @@
+# The one path Crema's installer is built, verified and released on: a clean Windows machine
+# with no Hermes, no extra fonts and no gateway service, like a new user's PC.
+name: Windows installer
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Unit tests
+        run: |
+          npm ci
+          npm test
+
+      - name: Build installer
+        run: npm run tauri build -- --bundles nsis
+
+      - name: Install as a user would (silent), Hermes included
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem src-tauri/target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
+          if (Test-Path "$env:LOCALAPPDATA\hermes\bin\hermes.cmd") { throw "runner already has Hermes; not a clean machine" }
+          $run = Start-Process $setup.FullName -ArgumentList "/S" -Wait -PassThru
+          if ($run.ExitCode -ne 0) { throw "installer exit $($run.ExitCode)" }
+          $app = "$env:LOCALAPPDATA\Crema\app.exe"
+          if (-not (Test-Path $app)) { throw "Crema not installed at $app" }
+          if (-not (Test-Path "$env:LOCALAPPDATA\hermes\bin\hermes.cmd")) { throw "Hermes was not installed" }
+          $pinned = (Select-String src-tauri/windows/hooks.nsh -Pattern 'HERMES_COMMIT "([0-9a-f]+)"').Matches[0].Groups[1].Value
+          $head = git -C "$env:LOCALAPPDATA\hermes\hermes-agent" rev-parse HEAD
+          if ($head -ne $pinned) { throw "Hermes at $head, expected $pinned" }
+          "APP=$app" >> $env:GITHUB_ENV
+
+      - name: WebDriver for the installed app
+        shell: pwsh
+        run: |
+          cargo install tauri-driver --locked
+          $key = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+          $version = (Get-ItemProperty $key).pv
+          Invoke-WebRequest "https://msedgedriver.microsoft.com/$version/edgedriver_win64.zip" -OutFile edgedriver.zip
+          Expand-Archive edgedriver.zip -DestinationPath edgedriver
+          "EDGEDRIVER=$PWD\edgedriver\msedgedriver.exe" >> $env:GITHUB_ENV
+
+      - name: First launch to a connected "이 PC", then relaunch
+        shell: pwsh
+        run: |
+          $driver = Start-Process tauri-driver -ArgumentList "--native-driver", $env:EDGEDRIVER -PassThru
+          Start-Sleep 3
+          try { node tests/e2e/installed-app.mjs $env:APP; if ($LASTEXITCODE) { throw "installed-app checks failed" } }
+          finally { Stop-Process -Id $driver.Id -Force -ErrorAction SilentlyContinue }
+
+      - name: Hermes gateway starts on login
+        shell: pwsh
+        run: |
+          $task = Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object TaskName -like "Hermes_Gateway*"
+          $startup = Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup" -Filter "Hermes_Gateway*" -ErrorAction SilentlyContinue
+          if (-not $task -and -not $startup) { throw "no Hermes gateway auto-start registered" }
+          "auto-start: $($task.TaskName) $($startup.Name)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Crema-setup-x64
+          path: src-tauri/target/release/bundle/nsis/*-setup.exe
+
+      - name: Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json).version
+          if ("v$version" -ne $env:GITHUB_REF_NAME) { throw "tag $env:GITHUB_REF_NAME does not match app version $version" }
+          $setup = Get-ChildItem src-tauri/target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
+          Copy-Item $setup.FullName Crema-setup-x64.exe
+          $sha = (Get-FileHash Crema-setup-x64.exe -Algorithm SHA256).Hash.ToLower()
+          $notes = "Built and verified on a clean Windows runner.`n`nSHA-256: ``$sha``"
+          gh release create $env:GITHUB_REF_NAME Crema-setup-x64.exe --title "Crema $version" --notes $notes
