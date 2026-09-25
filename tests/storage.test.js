@@ -35,6 +35,12 @@ describe("workspace storage", () => {
     expect(project.name).toBe("agent-client");
     expect(createProject(workspace, "C:\\Users\\me\\controlroom\\agent-client\\")).toBe(project);
     expect(workspace.projects).toHaveLength(1);
+    expect(project.color).toBeUndefined();
+
+    // A new project takes the color it is made with; adding the same folder again keeps its own.
+    const colored = createProject(workspace, "C:\\work\\moka", "#a855f7");
+    expect(colored.color).toBe("#a855f7");
+    expect(createProject(workspace, "C:\\work\\moka", "#ef4444").color).toBe("#a855f7");
 
     const chat = createChat(workspace, project.id);
     expect(chat).toMatchObject({ projectId: project.id, title: "새 대화" });

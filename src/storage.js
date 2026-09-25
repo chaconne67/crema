@@ -77,11 +77,12 @@ export function createChat(workspace, projectId = null) {
   return chat;
 }
 
-export function createProject(workspace, path) {
+/** `color`: the folder color of a new project; a folder already in the list keeps its own. */
+export function createProject(workspace, path, color) {
   const existing = workspace.projects.find((project) => project.path === path);
   if (existing) return existing;
   const name = path.replace(/[\\/]+$/, "").split(/[\\/]/).pop() || path;
-  const project = { id: createId(), name, path };
+  const project = { id: createId(), name, path, ...(color ? { color } : {}) };
   workspace.projects.push(project);
   return project;
 }

@@ -21,7 +21,7 @@ const REASONING_ICON =
   '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>';
 import { buildCatalog, locate, pickRoute, suggestionRoute } from "./providers.js";
 import { createSettingsPanel } from "./settings-panel.js";
-import { createSidebar } from "./sidebar.js";
+import { FOLDER_COLORS, createSidebar } from "./sidebar.js";
 import {
   NEW_CHAT_TITLE,
   chatSessions,
@@ -170,7 +170,9 @@ function newChat(projectId = activeChat()?.projectId ?? null) {
 async function addProject() {
   const path = await host.pickFolder().catch(() => null);
   if (!path) return;
-  const project = createProject(workspace, path);
+  // A new folder gets one of the colors (not the default ink) at random.
+  const colors = FOLDER_COLORS.slice(1);
+  const project = createProject(workspace, path, colors[Math.floor(Math.random() * colors.length)][0]);
   workspace.collapsed[project.id] = false;
   newChat(project.id);
 }
