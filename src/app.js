@@ -251,7 +251,8 @@ export function createChatApp({
     const status = document.createElement("div");
     status.className = "work-status";
     status.hidden = message.status !== "streaming";
-    status.innerHTML = `<span data-work-label>생각 중</span><div class="work-divider"></div>`;
+    status.dataset.state = "thinking";
+    status.innerHTML = `<div class="work-line"><span class="work-dot" aria-hidden="true"></span><span data-work-label>생각 중</span><span class="work-time" data-work-time></span></div><div class="work-divider"></div>`;
 
     const content = document.createElement("div");
     content.className = "assistant-content markdown";
@@ -861,17 +862,22 @@ export function createChatApp({
       run.approvalCard?.remove();
       run.approvalCard = null;
     };
-    const timer = window.setInterval(() => {
-      const refs = elements.get(assistantMessage.id);
-      const label = refs?.status.querySelector("[data-work-label]");
-      if (!label) return;
-      const seconds = Math.max(1, Math.floor((Date.now() - startedAt) / 1000));
-      label.textContent = run.approvalCard
-        ? `${seconds}초 · 명령 실행 승인을 기다리고 있습니다`
+    // What the reply is doing now: its dot and word change with the state, the time runs beside them.
+    const showWork = () => {
+      const status = elements.get(assistantMessage.id)?.status;
+      if (!status) return;
+      const [state, word] = run.approvalCard
+        ? ["waiting", "승인 기다리는 중"]
         : activeTool
-          ? `${seconds}초 · 도구 사용 중: ${activeTool}`
-          : `${seconds}초 동안 작업 중입니다`;
-    }, 1000);
+          ? ["tool", `${activeTool} 실행 중`]
+          : assistantMessage.content
+            ? ["writing", "답변 쓰는 중"]
+            : ["thinking", "생각 중"];
+      status.dataset.state = state;
+      status.querySelector("[data-work-label]").textContent = word;
+      status.querySelector("[data-work-time]").textContent = `${Math.max(1, Math.floor((Date.now() - startedAt) / 1000))}초`;
+    };
+    const timer = window.setInterval(showWork, 1000);
 
     runs.set(runChatId, run);
     if (runChatId === chatId) setRunning(true);
@@ -888,11 +894,13 @@ export function createChatApp({
         onActivity(activity) {
           settleApproval();
           activeTool = activity.status === "running" ? activity.tool || "도구" : null;
+          showWork();
         },
         onApproval(request) {
           settleApproval();
           if (!answerApproval) return;
           run.approvalCard = renderApproval(request, settleApproval);
+          showWork();
           // Shown now if this chat is open, else when it is reopened.
           const refs = elements.get(assistantMessage.id);
           if (!refs) return;
@@ -904,6 +912,7 @@ export function createChatApp({
         settleApproval();
         assistantMessage.content += chunk;
         updateAssistant(assistantMessage);
+        showWork();
       }
 
       assistantMessage.status = "complete";

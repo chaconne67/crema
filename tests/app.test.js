@@ -49,6 +49,37 @@ describe("chat app", () => {
     expect(window.localStorage.getItem("agent-client:chat:chat-b")).toBeNull();
   });
 
+  it("says whether the reply is thinking, running a tool, or writing", async () => {
+    let step;
+    const next = () => new Promise((resolve) => (step = resolve));
+    let wait = next();
+    const client = {
+      async *streamReply({ onActivity }) {
+        await wait;
+        onActivity({ status: "running", tool: "터미널" });
+        wait = next();
+        await wait;
+        onActivity({ status: "done", tool: "터미널" });
+        yield "답";
+        await next();
+      },
+    };
+    const app = createChatApp({ client, host: { openLink: vi.fn() } });
+    app.mount(document.querySelector("#app"));
+    app.showConversation("chat-a");
+    submit("질문");
+    const status = () => document.querySelector(".work-status");
+    const word = () => status().querySelector("[data-work-label]").textContent;
+    await vi.waitFor(() => expect(status().hidden).toBe(false));
+    expect([status().dataset.state, word()]).toEqual(["thinking", "생각 중"]);
+
+    step();
+    await vi.waitFor(() => expect([status().dataset.state, word()]).toEqual(["tool", "터미널 실행 중"]));
+    step();
+    await vi.waitFor(() => expect([status().dataset.state, word()]).toEqual(["writing", "답변 쓰는 중"]));
+    step();
+  });
+
   it("keeps a chat's queued turn and sends it after the reply ends, even from another chat", async () => {
     let release;
     const gate = new Promise((resolve) => (release = resolve));

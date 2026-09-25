@@ -224,6 +224,11 @@ async fn sign_in(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
   let code = tokio::task::spawn_blocking(move || wait_for_callback(listener, state))
     .await
     .map_err(|_| "sign_in".to_string())??;
+  // Back from the browser: bring Crema forward instead of leaving the user on the browser tab.
+  if let Some(window) = app.get_webview_window("main") {
+    let _ = window.unminimize();
+    let _ = window.set_focus();
+  }
   let response = http_client()?
     .post(format!("{ACCOUNT_SITE}/api/app/token"))
     .json(&serde_json::json!({ "code": code, "verifier": verifier }))
