@@ -1,0 +1,36 @@
+# crema-agent.site tests against the same database engine it runs on (PostgreSQL).
+name: Server
+
+on:
+  push:
+    branches: [main]
+    paths: ["server/**", ".github/workflows/server.yml"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: crema
+          POSTGRES_PASSWORD: crema
+          POSTGRES_DB: crema
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U crema" --health-interval 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: server
+    env:
+      DJANGO_SECRET_KEY: ci-only
+      DATABASE_URL: postgres://crema:crema@127.0.0.1:5432/crema
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen
+      - run: uv run python manage.py makemigrations --check --dry-run
+      - run: uv run python manage.py test
+      - name: Image builds
+        run: docker build -t crema-server .

@@ -1,0 +1,33 @@
+{% load static %}<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Crema{% endblock %}</title>
+    <meta name="description" content="대화로 일을 맡기는 AI 에이전트, Crema" />
+    <link rel="icon" href="{% static 'crema.svg' %}" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'site.css' %}" />
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="{% url 'home' %}"><img src="{% static 'crema.svg' %}" alt="" />Crema</a>
+      <nav>
+        {% if user.is_authenticated %}
+          <a href="{% url 'account' %}">내 계정</a>
+        {% else %}
+          <a href="{% url 'google_login' %}?next=/account/">로그인</a>
+        {% endif %}
+      </nav>
+    </header>
+    <main>{% block content %}{% endblock %}</main>
+    <footer>
+      <span>© Crema</span>
+      <nav>
+        <a href="{% url 'privacy' %}">개인정보처리방침</a>
+        <a href="{% url 'terms' %}">이용약관</a>
+      </nav>
+    </footer>
+  </body>
+</html>

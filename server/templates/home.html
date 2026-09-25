@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+  <section class="hero">
+    <img src="{% static 'crema.svg' %}" alt="Crema 로고" />
+    <h1>Crema</h1>
+    <p class="lead">대화로 일을 맡기는 AI 에이전트</p>
+    <a class="button" href="{{ download_url }}">Windows용 다운로드</a>
+    <p class="note">Windows 10·11 64비트 · 설치 후 구글 계정으로 시작합니다</p>
+  </section>
+{% endblock %}

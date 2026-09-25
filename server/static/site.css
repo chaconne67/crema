@@ -1,0 +1,188 @@
+/* Colors from the Crema logo: espresso, crema, cream. */
+:root {
+  --espresso: #1a0f0a;
+  --espresso-2: #3b2418;
+  --crema-1: #f6d19a;
+  --crema-2: #d99a55;
+  --crema-3: #9a5527;
+  --cream: #f5ebdd;
+  --muted: #c9b8a6;
+  --line: rgb(245 235 221 / 12%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  color: var(--cream);
+  background: radial-gradient(ellipse at 50% 30%, var(--espresso-2), var(--espresso) 70%);
+  font-family: "Nanum Gothic", "Malgun Gothic", system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+a {
+  color: inherit;
+}
+
+header,
+footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 20px 24px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.brand img {
+  width: 28px;
+  height: 28px;
+}
+
+nav a,
+nav button {
+  color: var(--muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: none;
+}
+
+nav a:hover,
+nav button:hover {
+  color: var(--cream);
+}
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.hero {
+  display: flex;
+  min-height: 60vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.hero img {
+  width: 112px;
+  height: 112px;
+  filter: drop-shadow(0 18px 36px rgb(0 0 0 / 45%));
+}
+
+h1 {
+  margin: 28px 0 8px;
+  font-size: clamp(2.2rem, 6vw, 3.2rem);
+  letter-spacing: -0.02em;
+}
+
+.lead {
+  margin: 0 0 32px;
+  color: var(--muted);
+  font-size: 1.125rem;
+}
+
+.button {
+  display: inline-block;
+  padding: 14px 28px;
+  color: var(--espresso);
+  background: linear-gradient(135deg, var(--crema-1), var(--crema-2));
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.button:hover {
+  background: linear-gradient(135deg, var(--crema-1), var(--crema-3));
+}
+
+.button.quiet {
+  color: var(--cream);
+  background: transparent;
+  border: 1px solid var(--line);
+}
+
+.note {
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.card {
+  padding: 28px;
+  background: rgb(245 235 221 / 4%);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.card dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 20px;
+  margin: 0 0 24px;
+}
+
+.card dt {
+  color: var(--muted);
+}
+
+.card dd {
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.doc h2 {
+  margin-top: 32px;
+  font-size: 1.125rem;
+}
+
+.doc p,
+.doc li {
+  color: var(--muted);
+}
+
+footer {
+  color: var(--muted);
+  font-size: 0.875rem;
+  border-top: 1px solid var(--line);
+}
+
+footer nav {
+  display: flex;
+  gap: 16px;
+}

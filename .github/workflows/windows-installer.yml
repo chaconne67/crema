@@ -6,6 +6,7 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
+    paths-ignore: ["server/**", ".github/workflows/server.yml"]
   workflow_dispatch:
 
 permissions:

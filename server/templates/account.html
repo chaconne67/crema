@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}내 계정 · Crema{% endblock %}
+{% block content %}
+  <h1>내 계정</h1>
+  <div class="card">
+    <dl>
+      <dt>이메일</dt>
+      <dd>{{ user.email }}</dd>
+      <dt>이름</dt>
+      <dd>{{ user.get_full_name|default:"—" }}</dd>
+      <dt>로그인한 앱</dt>
+      <dd>{{ apps }}대</dd>
+    </dl>
+    <div class="actions">
+      <a class="button" href="{{ download_url }}">Windows용 다운로드</a>
+      <form method="post" action="{% url 'account_logout' %}">
+        {% csrf_token %}
+        <button class="button quiet" type="submit">로그아웃</button>
+      </form>
+      <form method="post" action="{% url 'delete_account' %}" onsubmit="return confirm('계정을 삭제할까요? 로그인한 Crema 앱도 모두 로그아웃됩니다.')">
+        {% csrf_token %}
+        <button class="button quiet" type="submit">계정 삭제</button>
+      </form>
+    </div>
+  </div>
+{% endblock %}
