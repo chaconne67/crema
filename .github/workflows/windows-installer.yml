@@ -14,7 +14,9 @@ permissions:
 
 jobs:
   installer:
-    runs-on: windows-latest
+    # Not windows-latest (Server 2025): its WebView2 152 never opens the DevTools port WebDriver needs
+    # (actions/runner-images#14738), so the installed app could not be driven there.
+    runs-on: windows-2022
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
