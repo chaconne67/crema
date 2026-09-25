@@ -14,7 +14,7 @@ describe("slash commands", () => {
 
   it("filters the menu by what follows the slash", () => {
     expect(filterCommands("/").length).toBe(COMMANDS.length);
-    expect(filterCommands("/re").map((command) => command.id)).toEqual(["retry", "reasoning", "restart"]);
+    expect(filterCommands("/re").map((command) => command.id)).toEqual(["retry", "reasoning"]);
     expect(filterCommands("/모").map((command) => command.id)).toEqual(["model"]);
   });
 

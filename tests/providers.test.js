@@ -58,15 +58,16 @@ describe("Providers that can be added", () => {
     HERMES_ANON_API_SECRET: { category: "provider", provider: "", provider_label: "" },
   };
 
-  it("lists Providers not yet signed in, one entry per sign-in method", () => {
+  it("lists the offered Providers not yet signed in, one entry per sign-in method", () => {
     const addable = addableProviders(ACCOUNTS, ENV, new Set(["openai"]));
-    expect(addable.map((group) => group.name)).toEqual(["Nous Portal", "Anthropic", "Google"]);
-    const anthropic = addable[1];
+    // Nous Portal is not one Crema offers.
+    expect(addable.map((group) => group.name)).toEqual(["Anthropic", "Google"]);
+    const anthropic = addable[0];
     expect(anthropic.methods.map((method) => [method.kind, method.id])).toEqual([
       ["subscription", "anthropic"],
       ["api_key", "anthropic"],
     ]);
-    expect(addable[2].methods).toEqual([
+    expect(addable[1].methods).toEqual([
       { kind: "api_key", id: "gemini", envVar: "GOOGLE_API_KEY", url: "https://aistudio.google.com" },
     ]);
   });

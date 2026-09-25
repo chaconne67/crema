@@ -25,12 +25,8 @@ const PROVIDERS = [
 describe("desktop connection", () => {
   beforeEach(() => window.localStorage.clear());
 
-  it("defaults to local Hermes with its own default model and no main server", () => {
-    expect(loadConnection()).toMatchObject({ mode: "local", provider: "", model: "", sshTarget: "", remote: "" });
-  });
-
-  it("keeps the remote tunnel off the local Hermes port", () => {
-    expect(loadConnection().tunnelPort).not.toBe(8642);
+  it("defaults to the engine's own default model", () => {
+    expect(loadConnection()).toEqual({ provider: "", model: "" });
   });
 
   it("offers only signed-in providers that have models, with their capabilities", () => {

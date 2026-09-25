@@ -5,3 +5,4 @@ server/staticfiles/
 __pycache__/
 .env
 .env.*
+src-tauri/engine/

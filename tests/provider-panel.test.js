@@ -10,13 +10,12 @@ const ACCOUNTS = {
 };
 const ENV = {
   ANTHROPIC_API_KEY: { category: "provider", provider: "anthropic", provider_label: "Anthropic", url: null },
-  DEEPSEEK_API_KEY: { category: "provider", provider: "deepseek", provider_label: "DeepSeek", url: "https://platform.deepseek.com" },
+  OPENROUTER_API_KEY: { category: "provider", provider: "openrouter", provider_label: "OpenRouter", url: "https://openrouter.ai/keys" },
 };
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("Provider section", () => {
-  let connection;
   let status;
   let host;
   let onChanged;
@@ -24,7 +23,6 @@ describe("Provider section", () => {
 
   beforeEach(() => {
     document.body.innerHTML = "";
-    connection = { mode: "local" };
     status = [
       { key: "openai", name: "OpenAI", methods: ["subscription"] },
       { key: "xai", name: "xAI", methods: ["subscription", "api_key"] },
@@ -40,9 +38,9 @@ describe("Provider section", () => {
       openLink: vi.fn(),
     };
     onChanged = vi.fn(async () => {
-      status = [...status, { key: "deepseek", name: "DeepSeek", methods: ["api_key"] }];
+      status = [...status, { key: "openrouter", name: "OpenRouter", methods: ["api_key"] }];
     });
-    section = createProviderSection({ host, getConnection: () => connection, getStatus: () => status, onChanged });
+    section = createProviderSection({ host, getStatus: () => status, onChanged });
     document.body.append(section.element);
     section.render();
   });
@@ -57,7 +55,7 @@ describe("Provider section", () => {
   it("offers only the Providers not yet added", async () => {
     $("[data-provider-add]").click();
     await flush();
-    expect([...$("#provider-select").options].map((option) => option.textContent)).toEqual(["Anthropic", "DeepSeek"]);
+    expect([...$("#provider-select").options].map((option) => option.textContent)).toEqual(["Anthropic", "OpenRouter"]);
     // Anthropic has two sign-in methods, so the choice is shown; it starts on the terminal sign-in.
     expect($("[data-method-field]").hidden).toBe(false);
     $("[data-open-terminal]").click();
@@ -76,17 +74,10 @@ describe("Provider section", () => {
     $("[data-save-key]").click();
     await flush();
     await flush();
-    expect(host.hermesAdmin).toHaveBeenCalledWith("POST", "/api/providers/validate", { key: "DEEPSEEK_API_KEY", value: "sk-test" });
-    expect(host.hermesAdmin).toHaveBeenCalledWith("PUT", "/api/env", { key: "DEEPSEEK_API_KEY", value: "sk-test" });
+    expect(host.hermesAdmin).toHaveBeenCalledWith("POST", "/api/providers/validate", { key: "OPENROUTER_API_KEY", value: "sk-test" });
+    expect(host.hermesAdmin).toHaveBeenCalledWith("PUT", "/api/env", { key: "OPENROUTER_API_KEY", value: "sk-test" });
     expect(onChanged).toHaveBeenCalled();
     expect($("[data-provider-form]").hidden).toBe(true);
-    expect(rows()).toContain("DeepSeekON API 키");
-  });
-
-  it("leaves a remote Hermes' Providers to the server", () => {
-    connection.mode = "remote";
-    section.render();
-    expect($("[data-provider-add]").hidden).toBe(true);
-    expect($("[data-provider-note]").textContent).toContain("서버");
+    expect(rows()).toContain("OpenRouterON API 키");
   });
 });

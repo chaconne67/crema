@@ -13,7 +13,7 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * local Hermes. Model choice and speed live in the AI section; nothing here touches them.
  * getStatus() → providerStatus() rows; onChanged() reloads them after a sign-in.
  */
-export function createProviderSection({ host, getConnection, getStatus, onChanged }) {
+export function createProviderSection({ host, getStatus, onChanged }) {
   const element = document.createElement("div");
   element.className = "provider-section";
   element.innerHTML = `
@@ -42,8 +42,6 @@ export function createProviderSection({ host, getConnection, getStatus, onChange
   let addable = [];
   let pending = null; // cancels a running device-code wait
 
-  const isLocal = () => getConnection().mode === "local";
-
   function render() {
     const rows = getStatus();
     $("[data-provider-list]").innerHTML = rows
@@ -54,12 +52,8 @@ export function createProviderSection({ host, getConnection, getStatus, onChange
             .join(" · ")}</span></li>`,
       )
       .join("");
-    $("[data-provider-note]").textContent = !isLocal()
-      ? "메인서버 Hermes의 Provider는 서버에서 관리합니다."
-      : rows.length
-        ? ""
-        : "연결되면 사용할 수 있는 Provider를 불러옵니다.";
-    $("[data-provider-add]").hidden = !isLocal() || !$("[data-provider-form]").hidden;
+    $("[data-provider-note]").textContent = rows.length ? "" : "연결되면 사용할 수 있는 Provider를 불러옵니다.";
+    $("[data-provider-add]").hidden = !$("[data-provider-form]").hidden;
   }
 
   const setStatus = (text, tone = "") => {

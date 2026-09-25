@@ -11,7 +11,6 @@ const ICONS = {
   fast: svg('<path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z"/>'),
   status: svg('<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>'),
   usage: svg('<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>'),
-  restart: svg('<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>'),
   help: svg('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>'),
 };
 
@@ -31,7 +30,6 @@ export const COMMANDS = [
   { id: "fast", alias: "빠르게", label: "빠른 속도", hint: "지원 모델에서 빠른 속도 켜기/끄기", group: "모델", whileRunning: true },
   { id: "status", alias: "상태", label: "상태 보기", hint: "연결 · 모델 · 세션 정보", group: "Hermes", whileRunning: true },
   { id: "usage", alias: "사용량", label: "사용량 보기", hint: "이 대화의 토큰 사용량", group: "Hermes", whileRunning: true },
-  { id: "restart", alias: "재시작", label: "Hermes 재시작", hint: "이 PC의 Hermes를 다시 시작", group: "Hermes" },
   { id: "help", alias: "도움말", label: "명령어 도움말", hint: "사용할 수 있는 명령 목록", group: "Hermes", whileRunning: true },
 ].map((command) => ({ ...command, icon: ICONS[command.id] }));
 

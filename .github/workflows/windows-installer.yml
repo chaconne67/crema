@@ -1,5 +1,5 @@
 # The one path Crema's installer is built, verified and released on: a clean Windows machine
-# with no Hermes, no extra fonts and no gateway service, like a new user's PC.
+# with no Hermes, no Python and no extra fonts, like a new user's PC.
 name: Windows installer
 
 on:
@@ -28,6 +28,9 @@ jobs:
         with:
           workspaces: src-tauri
 
+      # Builds the bundled engine (scripts/build-engine.ps1, run by the Tauri build).
+      - uses: astral-sh/setup-uv@v6
+
       - name: Unit tests
         run: |
           npm ci
@@ -36,21 +39,20 @@ jobs:
       - name: Build installer
         run: npm run tauri build -- --bundles nsis
 
-      - name: Install as a user would (silent), Hermes included
+      - name: Install as a user would (silent)
         shell: pwsh
         run: |
           $setup = Get-ChildItem src-tauri/target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
-          if (Test-Path "$env:LOCALAPPDATA\hermes\bin\hermes.cmd") { throw "runner already has Hermes; not a clean machine" }
+          "installer: {0:N0} MB" -f ($setup.Length / 1MB)
           $run = Start-Process $setup.FullName -ArgumentList "/S" -Wait -PassThru
-          $log = "$env:TEMP\crema-hermes-install.log"
-          if (Test-Path $log) { Get-Content $log } else { "no Hermes install log at $log" }
           if ($run.ExitCode -ne 0) { throw "installer exit $($run.ExitCode)" }
           $app = "$env:LOCALAPPDATA\Crema\app.exe"
           if (-not (Test-Path $app)) { throw "Crema not installed at $app" }
-          if (-not (Test-Path "$env:LOCALAPPDATA\hermes\bin\hermes.cmd")) { throw "Hermes was not installed" }
-          $pinned = (Select-String src-tauri/windows/hooks.nsh -Pattern 'HERMES_COMMIT "([0-9a-f]+)"').Matches[0].Groups[1].Value
-          $head = git -C "$env:LOCALAPPDATA\hermes\hermes-agent" rev-parse HEAD
-          if ($head -ne $pinned) { throw "Hermes at $head, expected $pinned" }
+          $engine = "$env:LOCALAPPDATA\Crema\engine"
+          foreach ($file in "python\python.exe", "src\crema_engine.py", "engine.commit") {
+            if (-not (Test-Path "$engine\$file")) { throw "engine file missing: $file" }
+          }
+          "engine: $(Get-Content "$engine\engine.commit")"
           "APP=$app" >> $env:GITHUB_ENV
 
       - name: WebDriver for the installed app
@@ -63,21 +65,26 @@ jobs:
           Expand-Archive edgedriver.zip -DestinationPath edgedriver
           "EDGEDRIVER=$PWD\edgedriver\msedgedriver.exe" >> $env:GITHUB_ENV
 
-      - name: First launch to a connected "이 PC", then relaunch
+      - name: First launch, the bundled engine and a real reply, then relaunch
         shell: pwsh
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           $driver = Start-Process tauri-driver -ArgumentList "--native-driver", $env:EDGEDRIVER -PassThru
           Start-Sleep 3
           try { node tests/e2e/installed-app.mjs $env:APP; if ($LASTEXITCODE) { throw "installed-app checks failed" } }
           finally { Stop-Process -Id $driver.Id -Force -ErrorAction SilentlyContinue }
 
-      - name: Hermes gateway starts on login
+      - name: The engine ends with the app and leaves no Hermes behind
         shell: pwsh
         run: |
-          $task = Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object TaskName -like "Hermes_Gateway*"
-          $startup = Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup" -Filter "Hermes_Gateway*" -ErrorAction SilentlyContinue
-          if (-not $task -and -not $startup) { throw "no Hermes gateway auto-start registered" }
-          "auto-start: $($task.TaskName) $($startup.Name)"
+          Start-Sleep 3
+          $left = Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.ExecutablePath -like "$env:LOCALAPPDATA\Crema\*" }
+          if ($left) { throw "engine still running after the app closed: $($left.ProcessId)" }
+          if (Test-Path "$env:LOCALAPPDATA\hermes") { throw "a Hermes home was created at $env:LOCALAPPDATA\hermes" }
+          $data = "$env:LOCALAPPDATA\local.agentclient.prototype\engine"
+          if (-not (Test-Path "$data\state.db")) { throw "no engine data at $data" }
+          "engine data: $data"
 
       - uses: actions/upload-artifact@v4
         with:

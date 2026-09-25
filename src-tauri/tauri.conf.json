@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://127.0.0.1:4173",
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeDevCommand": "npm run engine && npm run dev",
+    "beforeBuildCommand": "npm run build && npm run engine"
   },
   "app": {
     "windows": [
@@ -38,10 +38,8 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "windows": {
-      "nsis": {
-        "installerHooks": "./windows/hooks.nsh"
-      }
+    "resources": {
+      "engine/": "engine/"
     },
     "android": {
       "debugApplicationIdSuffix": ".debug"

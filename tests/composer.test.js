@@ -105,14 +105,6 @@ describe("composer", () => {
     expect(document.querySelector("[data-attachments]").hidden).toBe(true);
   });
 
-  it("keeps non-image files out when the connection cannot take them", async () => {
-    const app = mount({ canAttachFiles: () => false });
-    app.showConversation("chat-1");
-    attachFiles();
-    await vi.waitFor(() => expect(document.querySelectorAll(".draft-attachment")).toHaveLength(1));
-    expect(document.querySelector(".notice-card").textContent).toContain("이미지 파일만");
-  });
-
   it("offers finding a project file only in a project, and starts the @ search when chosen", async () => {
     const app = mount();
     app.showConversation("chat-1");

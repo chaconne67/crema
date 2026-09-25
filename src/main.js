@@ -62,9 +62,9 @@ function reasoningLabel(value = connection.reasoning) {
 
 let hermesAccess = null;
 
-/** Connection chip text once connected; the model and its options sit on the model chip. */
+/** Connection chip text once connected (the engine runs on this PC); the model sits on the model chip. */
 function connectedLabel() {
-  return connection.mode === "local" ? "이 PC" : "메인서버";
+  return "이 PC";
 }
 
 function syncModelChip() {
@@ -77,12 +77,8 @@ async function refreshBranch() {
   app.setBranch(project ? await host.gitInfo(project.path) : null);
 }
 
-/** Hermes' approval mode; also starts local Hermes' settings backend so voice input answers at once. */
+/** The engine's approval mode. */
 function refreshAccess() {
-  if (connection.mode !== "local") {
-    app.setAccess(null);
-    return;
-  }
   host
     .hermesAdmin("GET", "/api/config")
     .then((config) => {
@@ -95,8 +91,7 @@ function refreshAccess() {
 const hermesClient = createChatClient({
   async transport(args) {
     try {
-      // Reopens the tunnel if ssh ended (sleep, network change) since the last reply.
-      await (connected ? host.ensureTunnel(connection) : host.connect(connection));
+      if (!connected) await host.connect();
     } catch (error) {
       connected = false;
       app.setStatus("error", "연결 안 됨");
@@ -204,7 +199,7 @@ const sidebar = createSidebar({
       runningChats.delete(chat.id);
       deleteMessages(chat.id);
     }
-    host.deleteSessions(connection, removed.flatMap(chatSessions));
+    host.deleteSessions(removed.flatMap(chatSessions));
     if (removed.some((chat) => chat.id === workspace.activeChatId)) {
       workspace.activeChatId = null;
       newChat(null);
@@ -219,7 +214,7 @@ const sidebar = createSidebar({
     app.discardReply(chatId);
     runningChats.delete(chatId);
     deleteMessages(chatId);
-    host.deleteSessions(connection, chatSessions(chat));
+    host.deleteSessions(chatSessions(chat));
     if (chatId === workspace.activeChatId) {
       workspace.activeChatId = null;
       newChat(chat.projectId);
@@ -272,18 +267,13 @@ const sidebar = createSidebar({
 async function connect() {
   app.setStatus("checking", "연결 확인 중");
   connected = false;
-  if (connection.mode === "remote" && !(await host.hasApiKey().catch(() => false))) {
-    app.setStatus("offline", "연결 전");
-    return { state: "offline", message: "메인서버 API 키를 저장하면 연결합니다." };
-  }
   try {
-    await host.connect(connection);
+    await host.connect();
     connected = true;
     app.setStatus("connected", connectedLabel());
-    app.setConnectionMode(connection.mode);
     refreshModels().catch(() => {});
     refreshAccess();
-    return { state: "connected", message: connection.mode === "local" ? "이 PC의 Hermes에 연결되었습니다." : "메인서버 Hermes에 연결되었습니다." };
+    return { state: "connected", message: "Crema 엔진이 켜져 있습니다." };
   } catch (error) {
     app.setStatus("error", "연결 안 됨");
     return { state: "error", message: error.userMessage, code: error.code };
@@ -304,11 +294,9 @@ const panel = createSettingsPanel({
     saveConnection(next);
     if (reconnect) connected = false;
     else if (connected) app.setStatus("connected", connectedLabel());
-    app.setConnectionMode(connection.mode);
     syncModelChip();
   },
   onConnect: connect,
-  onEnableLocal: () => host.enableLocalHermes(),
   onProvidersChanged: () => refreshModels().catch(() => {}),
   async onSignOut() {
     const message = "Crema에서 로그아웃할까요?\n다시 쓰려면 구글 계정으로 다시 로그인해야 합니다. 대화 기록은 이 PC에 그대로 남습니다.";
@@ -330,9 +318,9 @@ function saveModelChoice() {
 
 /** Reloads the signed-in Providers and their models (after connecting or adding a Provider). */
 async function refreshModels() {
-  authChannels = await host.authKinds(connection);
+  authChannels = await host.authKinds();
   panel.setAuthKinds(authChannels);
-  providers = usableProviders(await host.modelOptions(connection));
+  providers = usableProviders(await host.modelOptions());
   panel.setProviders(providers);
   describeSuggestModel();
 }
@@ -392,7 +380,7 @@ async function askQuickModel({ system, content, signal }) {
     // A line starting with ⚠ is Hermes reporting a failed turn.
     return line.startsWith("⚠") ? "" : line;
   } finally {
-    host.deleteSessions(connection, [id]);
+    host.deleteSessions([id]);
   }
 }
 
@@ -444,7 +432,7 @@ function renameChat(chat, title) {
 
 async function loadProviders() {
   if (!providers.length) {
-    providers = usableProviders(await host.modelOptions(connection));
+    providers = usableProviders(await host.modelOptions());
     panel.setProviders(providers);
   }
   return providers;
@@ -571,7 +559,7 @@ const commandHandlers = {
     let info = null;
     let error = "";
     try {
-      info = await host.info(connection, current ? [current] : []);
+      info = await host.info(current ? [current] : []);
     } catch (failure) {
       error = failure.userMessage;
     }
@@ -581,7 +569,7 @@ const commandHandlers = {
       title: "상태",
       tone: error ? "error" : "",
       rows: [
-        ["연결", `${connection.mode === "local" ? "이 PC Hermes" : "메인서버 Hermes"} · ${info ? "연결됨" : "연결 안 됨"}${info?.health?.version ? ` · v${info.health.version}` : ""}`],
+        ["연결", `Crema 엔진 · ${info ? "연결됨" : "연결 안 됨"}${info?.health?.version ? ` · Hermes v${info.health.version}` : ""}`],
         ["모델", `${connection.model} · ${providerName}`],
         ["추론 강도", reasoningLabel()],
         ["속도", connection.fast ? "빠른 속도" : "기본"],
@@ -600,7 +588,7 @@ const commandHandlers = {
     const sessions = chat ? chatSessions(chat) : [];
     let info;
     try {
-      info = await host.info(connection, sessions);
+      info = await host.info(sessions);
     } catch (failure) {
       ui.notice({ title: "사용량", text: failure.userMessage, tone: "error" });
       return;
@@ -620,27 +608,6 @@ const commandHandlers = {
       ],
       text: "구독의 남은 한도는 Hermes API에서 제공하지 않아 표시하지 않습니다.",
     });
-  },
-
-  async restart(arg, ui) {
-    if (connection.mode !== "local") {
-      ui.notice({ title: "Hermes 재시작", text: "메인서버 Hermes는 이 앱에서 재시작할 수 없습니다.", tone: "error" });
-      return;
-    }
-    const ok = await host.confirm(
-      "이 PC의 Hermes를 다시 시작할까요?\nTelegram 봇 등 Hermes의 다른 연결도 1분 정도 멈춥니다.",
-      "재시작",
-    );
-    if (!ok) return;
-    ui.notice({ title: "Hermes 재시작", text: "다시 시작하고 있습니다… 1분 정도 걸릴 수 있습니다." });
-    try {
-      await host.enableLocalHermes();
-      const result = await connect();
-      panel.showConnection(result);
-      ui.notice({ title: "Hermes 재시작", text: result.state === "connected" ? "다시 시작했고 연결되었습니다." : result.message, tone: result.state === "connected" ? "" : "error" });
-    } catch (error) {
-      ui.notice({ title: "Hermes 재시작", text: error.userMessage, tone: "error" });
-    }
   },
 
   title(arg, ui) {
@@ -678,32 +645,15 @@ const app = createChatApp({
     const chat = activeChat();
     if (chat) renameChat(chat, title);
   },
-  answerApproval: (request, allow) => host.answerApproval(connection, request, allow),
-  canAttachFiles: () => connection.mode === "local",
-  canTranscribe: () => connection.mode === "local" && connected,
+  answerApproval: (request, allow) => host.answerApproval(request, allow),
+  canTranscribe: () => connected,
   onContextMenu(kind, ui, project) {
     if (kind === "model") {
       commandHandlers.model("", { ...ui, quiet: true });
       return;
     }
     if (kind === "location") {
-      // Where Hermes runs this chat (Codex: 작업 위치). The main server needs its saved API key.
-      host.hasApiKey().catch(() => false).then((remoteReady) => {
-        const items = [
-          { label: "이 PC", description: "이 컴퓨터의 Hermes에서 실행합니다", mode: "local", selected: connection.mode === "local" },
-          { label: "메인서버", description: remoteReady ? "메인서버의 Hermes에서 실행합니다" : "API 키를 저장하면 쓸 수 있습니다", mode: "remote", selected: connection.mode === "remote" },
-          { label: "연결 설정…", description: "연결 상태와 API 키를 관리합니다", action: "settings" },
-        ];
-        ui.picker({
-          title: "작업 위치",
-          items,
-          active: connection.mode === "local" ? 0 : 1,
-          onSelect(item) {
-            if (item.action === "settings") panel.open();
-            else if (item.mode !== connection.mode) panel.switchMode(item.mode);
-          },
-        });
-      });
+      panel.open();
       return;
     }
     if (kind === "access") {
@@ -716,7 +666,6 @@ const app = createChatApp({
         title: "명령 실행 승인",
         items,
         active: Math.max(0, items.findIndex((item) => item.selected)),
-        note: "텔레그램 등 Hermes의 다른 연결에도 똑같이 적용됩니다.",
         onSelect(item) {
           if (item.mode === hermesAccess) return;
           host
@@ -809,7 +758,6 @@ app.mount(root);
 sidebar.mount(root);
 if (workspace.sidebarWidth) sidebar.setWidth(workspace.sidebarWidth);
 panel.mount(root.querySelector(".app-shell"));
-app.setConnectionMode(connection.mode);
 syncModelChip();
 host.onFileDrop((paths) => app.addFiles(paths));
 window.addEventListener("focus", () => refreshBranch());

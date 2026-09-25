@@ -38,11 +38,6 @@ const THEMES = [
   ["system", "시스템"],
 ];
 
-const MODES = [
-  ["local", "이 PC의 Hermes"],
-  ["remote", "메인서버"],
-];
-
 const SECTIONS_KEY = "agent-client:settings-sections:v1";
 // 모양's 시스템/본문 groups left open (closed at first: the section has many settings).
 const GROUPS_KEY = "agent-client:settings-groups:v1";
@@ -65,9 +60,6 @@ const SECTION_ICONS = {
 };
 
 const CONNECTION_STATES = { connected: "연결됨", error: "연결 안 됨", checking: "확인 중", offline: "연결 전" };
-
-// Errors the one-click local repair (turn on API server + restart gateway) can fix.
-const LOCAL_FIXABLE = new Set(["local_api_off", "local_unreachable"]);
 
 const ALL_SLIDERS = [...SYSTEM_SLIDERS, WEIGHT_SLIDER, ...SLIDERS];
 const ALL_RANGES = { ...RANGES, ...SYSTEM_RANGES, weight: { min: 100, max: 900, step: 100 } };
@@ -120,7 +112,6 @@ export function createSettingsPanel({
   onAppearanceChange,
   onConnectionChange,
   onConnect,
-  onEnableLocal,
   onProvidersChanged,
   onSignOut,
 }) {
@@ -218,21 +209,6 @@ export function createSettingsPanel({
     onAppearanceChange(current);
   }
 
-  function syncModeControls() {
-    queueMicrotask(updateSummaries);
-    for (const button of panel.querySelectorAll('[data-segment="mode"] button')) {
-      button.setAttribute("aria-pressed", String(button.dataset.value === connection.mode));
-    }
-    panel.querySelector("[data-remote-only]").hidden = connection.mode !== "remote";
-  }
-
-  async function syncKeyState() {
-    if (connection.mode !== "remote") return;
-    const saved = await host.hasApiKey().catch(() => false);
-    panel.querySelector("[data-key-saved]").hidden = !saved;
-    panel.querySelector("[data-key-form]").hidden = saved;
-  }
-
   function renderModelOptions() {
     queueMicrotask(updateSummaries);
     modelPicker?.refresh();
@@ -248,8 +224,8 @@ export function createSettingsPanel({
     const reasoning = REASONING_LEVELS.find((level) => level.value === (connection.reasoning || ""));
     const summaries = {
       account: account?.email || "",
-      connection: `${connection.mode === "local" ? "이 PC" : "메인서버"} · ${CONNECTION_STATES[connectionState] || ""}`,
-      providers: connection.mode === "local" && catalog.length ? `${catalog.length}개 연결됨` : "",
+      connection: CONNECTION_STATES[connectionState] || "",
+      providers: catalog.length ? `${catalog.length}개 연결됨` : "",
       model: [connection.model, connection.fast && "빠른 속도", connection.reasoning && reasoning?.label].filter(Boolean).join(" · "),
       appearance: `시스템 ${current.systemSize}px · 본문 ${current.size}px`,
       theme: THEMES.find(([value]) => value === current.theme)?.[1] || "",
@@ -315,24 +291,11 @@ export function createSettingsPanel({
     line.textContent = result.message;
     connectionState = result.state;
     updateSummaries();
-    panel.querySelector("[data-enable-local]").hidden = !(connection.mode === "local" && LOCAL_FIXABLE.has(result.code));
   }
 
   async function connect() {
     showConnectionMessage({ state: "checking", message: "연결을 확인하고 있습니다…" });
     showConnectionMessage(await onConnect());
-  }
-
-  /** Where Hermes runs: this PC or the main server; reconnects right away. */
-  async function switchMode(mode) {
-    if (!mode || mode === connection.mode) return;
-    connection.mode = mode;
-    providers = [];
-    syncModeControls();
-    renderModelOptions();
-    notifyConnection({ reconnect: true });
-    await syncKeyState();
-    await connect();
   }
 
   function close() {
@@ -346,7 +309,6 @@ export function createSettingsPanel({
       opener = trigger || document.activeElement;
       panel.hidden = false;
       shell.classList.add("settings-open");
-      syncKeyState();
       panel.querySelector("[data-close-settings]").focus();
     },
 
@@ -383,8 +345,6 @@ export function createSettingsPanel({
       panel.querySelector("[data-suggest-note]").textContent = text;
     },
 
-    switchMode,
-
     /** Re-reads model, reasoning, and fast mode after a slash command changed them. */
     syncModel() {
       renderModelOptions();
@@ -409,34 +369,7 @@ export function createSettingsPanel({
           </section>
           <section class="settings-section" aria-labelledby="connection-title">
             <h3 id="connection-title">연결</h3>
-            <span class="field-label">연결 대상</span>
-            ${segmented("mode", "연결 대상", MODES)}
             <p class="connection-line" data-connection-line role="status"></p>
-            <button class="primary-button" type="button" data-enable-local hidden>Hermes 연결 켜기</button>
-            <div class="remote-only" data-remote-only hidden>
-              <div class="key-saved" data-key-saved hidden>
-                <span>API 키 저장됨</span>
-                <div class="key-actions">
-                  <button class="text-button" type="button" data-change-key>키 바꾸기</button>
-                  <button class="text-button danger" type="button" data-delete-key>키 삭제</button>
-                </div>
-              </div>
-              <form class="key-form" data-key-form hidden>
-                <label for="api-key">메인서버 Hermes API 키</label>
-                <input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="키를 붙여넣으세요" />
-                <p class="field-note">Windows 자격 증명 관리자에만 저장됩니다.</p>
-                <button class="primary-button" type="submit">저장하고 연결</button>
-              </form>
-              <details class="connection-details">
-                <summary>연결 상세</summary>
-                <label for="field-sshTarget">SSH 접속</label>
-                <input id="field-sshTarget" data-field="sshTarget" spellcheck="false" />
-                <label for="field-remote">메인서버 기준 Hermes 주소</label>
-                <input id="field-remote" data-field="remote" spellcheck="false" />
-                <label for="field-tunnelPort">이 PC 터널 포트</label>
-                <input id="field-tunnelPort" data-field="tunnelPort" inputmode="numeric" />
-              </details>
-            </div>
             <button class="secondary-button" type="button" data-check>연결 다시 확인</button>
           </section>
 
@@ -516,7 +449,6 @@ export function createSettingsPanel({
       panel.querySelector("[data-model-picker]").replaceWith(modelPicker.element);
       providerSection = createProviderSection({
         host,
-        getConnection: () => connection,
         getStatus: () => providerStatus(providers, authKinds),
         onChanged: onProvidersChanged,
       });
@@ -524,34 +456,10 @@ export function createSettingsPanel({
       makeSectionsCollapsible();
       updateSummaries();
 
-      for (const input of panel.querySelectorAll("[data-field]")) {
-        const field = input.dataset.field;
-        input.value = String(connection[field]);
-        input.addEventListener("change", () => {
-          connection[field] = field === "tunnelPort" ? Number(input.value) : input.value.trim();
-          notifyConnection({ reconnect: true });
-        });
-      }
-
-      panel.querySelector('[data-segment="mode"]').addEventListener("click", (event) => switchMode(event.target.closest("button")?.dataset.value));
       panel.querySelector("#reasoning-select").addEventListener("change", (event) => {
         connection.reasoning = event.target.value;
         notifyConnection({ reconnect: false });
       });
-      panel.querySelector("[data-enable-local]").addEventListener("click", async (event) => {
-        const button = event.currentTarget;
-        button.disabled = true;
-        showConnectionMessage({ state: "checking", message: "Hermes를 켜고 있습니다… 1분 정도 걸릴 수 있습니다." });
-        try {
-          await onEnableLocal();
-          await connect();
-        } catch (error) {
-          showConnectionMessage({ state: "error", message: error.userMessage, code: error.code });
-        } finally {
-          button.disabled = false;
-        }
-      });
-
       panel.querySelector('[data-segment="preset"]').addEventListener("click", (event) => {
         const preset = event.target.closest("button")?.dataset.value;
         // Each mode comes back with its own adjustments.
@@ -643,28 +551,6 @@ export function createSettingsPanel({
         updateAppearance({ ...current, ...PRESETS[current.preset] }),
       );
 
-      panel.querySelector("[data-key-form]").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const input = panel.querySelector("#api-key");
-        try {
-          await host.saveApiKey(input.value);
-          input.value = "";
-          await syncKeyState();
-          await connect();
-        } catch (error) {
-          showConnectionMessage({ state: "error", message: error.userMessage, code: error.code });
-        }
-      });
-      panel.querySelector("[data-change-key]").addEventListener("click", () => {
-        panel.querySelector("[data-key-saved]").hidden = true;
-        panel.querySelector("[data-key-form]").hidden = false;
-        panel.querySelector("#api-key").focus();
-      });
-      panel.querySelector("[data-delete-key]").addEventListener("click", async () => {
-        await host.deleteApiKey().catch(() => {});
-        await syncKeyState();
-        await connect();
-      });
       panel.querySelector("[data-check]").addEventListener("click", connect);
       panel.querySelector("[data-sign-out]").addEventListener("click", () => onSignOut());
       panel.querySelector("[data-close-settings]").addEventListener("click", close);
@@ -672,7 +558,6 @@ export function createSettingsPanel({
         if (event.key === "Escape") close();
       });
 
-      syncModeControls();
       syncAppearanceControls();
       renderModelOptions();
     },

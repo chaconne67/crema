@@ -4,40 +4,23 @@ import { confirm as confirmDialog, message as messageDialog, open as openDialog 
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 const STORAGE_KEY = "agent-client:connection:v2";
-const LOCAL_PORT = 8642;
 
-// No model or provider: Hermes answers with its own default until one is picked.
-// The main server is the user's own, entered in 설정 → 연결 상세.
+// No model or provider: the engine answers with its own default until one is picked.
 export const DEFAULT_CONNECTION = {
-  mode: "local",
   provider: "",
   model: "",
-  sshTarget: "",
-  remote: "",
-  tunnelPort: 18642,
 };
 
 const ERROR_MESSAGES = {
-  no_key: "API 키가 없습니다. 설정에서 키를 저장해 주세요.",
-  empty_key: "API 키를 입력해 주세요.",
-  auth: "API 키가 맞지 않습니다. 설정에서 키를 다시 확인해 주세요.",
-  tunnel: "메인서버에 SSH로 연결하지 못했습니다. 네트워크와 SSH 키를 확인해 주세요.",
-  remote_unset: "설정 → 연결 상세에서 메인서버의 SSH 접속과 Hermes 주소를 입력해 주세요.",
-  unreachable: "Hermes에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.",
-  local_unreachable: "이 PC의 Hermes가 응답하지 않습니다. 설정에서 ‘Hermes 연결 켜기’를 눌러 주세요.",
-  local_api_off: "이 PC의 Hermes에서 앱 연결이 꺼져 있습니다. 설정에서 ‘Hermes 연결 켜기’를 눌러 주세요.",
-  local_missing: "이 PC에서 Hermes 설치를 찾지 못했습니다.",
-  hermes_old: "Hermes가 이 앱보다 오래된 버전입니다. 터미널에서 ‘hermes update’로 0.21.4 이상으로 올려 주세요.",
-  local_config: "Hermes 설정 파일을 수정하지 못했습니다.",
-  local_restart: "Hermes를 다시 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.",
-  server: "Hermes가 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+  engine_start: "Crema 엔진을 시작하지 못했습니다. 앱을 다시 시작해 주세요.",
+  auth: "Crema 엔진이 요청을 거부했습니다. 앱을 다시 시작해 주세요.",
+  unreachable: "Crema 엔진이 응답하지 않습니다. 잠시 후 다시 시도해 주세요.",
+  server: "Crema 엔진이 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.",
   interrupted: "응답이 중간에 끊겼습니다. 다시 시도해 주세요.",
   keyring: "Windows 자격 증명 관리자에 접근하지 못했습니다.",
   sign_in: "로그인하지 못했습니다. 다시 시도해 주세요.",
   sign_in_timeout: "5분 안에 로그인이 끝나지 않았습니다. 다시 시도해 주세요.",
   account_unreachable: "crema-agent.site에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.",
-  admin_start: "Hermes에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.",
-  admin_busy: "Hermes 대시보드 등 다른 프로그램이 Hermes 설정 기능을 쓰고 있어 연결하지 못했습니다. 그 프로그램을 닫고 다시 시도해 주세요.",
   file_read: "파일을 읽지 못했습니다.",
   file_too_large: "20MB보다 큰 이미지는 첨부할 수 없습니다.",
   git_dirty: "커밋하지 않은 변경이 있어 브랜치를 바꾸지 않았습니다. 커밋하거나 되돌린 뒤 다시 시도해 주세요.",
@@ -59,10 +42,7 @@ function desktopError(code) {
 export function loadConnection() {
   try {
     const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "{}");
-    const connection = { ...DEFAULT_CONNECTION, ...stored };
-    connection.mode = connection.mode === "remote" ? "remote" : "local";
-    connection.tunnelPort = Number(connection.tunnelPort) || DEFAULT_CONNECTION.tunnelPort;
-    return connection;
+    return { ...DEFAULT_CONNECTION, ...stored };
   } catch {
     return { ...DEFAULT_CONNECTION };
   }
@@ -82,11 +62,6 @@ async function call(command, args) {
   } catch (code) {
     throw desktopError(typeof code === "string" ? code : "unknown");
   }
-}
-
-function baseUrl(connection) {
-  const port = connection.mode === "local" ? LOCAL_PORT : connection.tunnelPort;
-  return `http://127.0.0.1:${port}`;
 }
 
 export function hermesSessionId(sessionId) {
@@ -161,52 +136,26 @@ export function createDesktopHost() {
     signIn: () => call("sign_in"),
     accountStatus: () => call("account_status"),
     signOut: () => call("sign_out"),
-    hasApiKey: () => call("has_api_key"),
-    saveApiKey: (key) => call("save_api_key", { key }),
-    deleteApiKey: () => call("delete_api_key"),
-    enableLocalHermes: () => call("enable_local_api"),
     warn: (text) => messageDialog(text, { title: "Crema", kind: "error" }).catch(() => {}),
 
-    async ensureTunnel(connection) {
-      if (connection.mode !== "remote") return;
-      if (!connection.sshTarget.trim() || !connection.remote.trim()) throw desktopError("remote_unset");
-      await call("ensure_tunnel", {
-        sshTarget: connection.sshTarget,
-        remote: connection.remote,
-        localPort: connection.tunnelPort,
-      });
-    },
+    /** Starts Crema's engine if needed and checks it answers. */
+    connect: () => call("check_connection"),
 
-    async connect(connection) {
-      await this.ensureTunnel(connection);
-      try {
-        await call("check_connection", { baseUrl: baseUrl(connection), mode: connection.mode });
-      } catch (error) {
-        if (connection.mode === "local" && error.code === "unreachable") throw desktopError("local_unreachable");
-        throw error;
-      }
-    },
-
-    /** Removes the given sessions from Hermes; failures are left for Hermes' own cleanup. */
-    async deleteSessions(connection, sessionIds) {
+    /** Removes the given sessions from the engine; failures are left for its own cleanup. */
+    async deleteSessions(sessionIds) {
       for (const id of sessionIds) {
-        await call("delete_session", {
-          baseUrl: baseUrl(connection),
-          mode: connection.mode,
-          sessionId: hermesSessionId(id),
-        }).catch(() => {});
+        await call("delete_session", { sessionId: hermesSessionId(id) }).catch(() => {});
       }
     },
 
-    info: (connection, sessionIds) =>
-      call("hermes_info", { baseUrl: baseUrl(connection), mode: connection.mode, sessionIds: sessionIds.map(hermesSessionId) }),
+    info: (sessionIds) => call("hermes_info", { sessionIds: sessionIds.map(hermesSessionId) }),
 
-    /** Channel credential kinds and re-login needs, read from local Hermes (empty when remote). */
-    authKinds: (connection) => call("auth_kinds", { mode: connection.mode }).catch(() => ({})),
+    /** Channel credential kinds and re-login needs, from the engine's own records. */
+    authKinds: () => call("auth_kinds").catch(() => ({})),
 
-    modelOptions: (connection) => call("model_options", { baseUrl: baseUrl(connection), mode: connection.mode }),
+    modelOptions: () => call("model_options"),
 
-    /** Local Hermes' settings API (Provider sign-ins, API keys); its backend starts on first use. */
+    /** The engine's settings API (Provider sign-ins, API keys, approval mode). */
     hermesAdmin: (method, path, body) => call("hermes_admin", { method, path, body: body ?? null }),
 
     openLoginTerminal: (command) => call("open_login_terminal", { command }),
@@ -219,7 +168,7 @@ export function createDesktopHost() {
     /** Raw bytes of a picked image (ArrayBuffer). */
     readFile: (path) => call("read_file", { path }),
 
-    /** Copies a non-image attachment into local Hermes' document cache; returns the agent's path. */
+    /** Copies a non-image attachment into the engine's document cache; returns the agent's path. */
     stageDocument: (path) => call("stage_document", { path }),
 
     gitInfo: (path) => call("git_info", { path }).catch(() => null),
@@ -227,7 +176,7 @@ export function createDesktopHost() {
     gitCreateBranch: (path, name) => call("git_create_branch", { path, name }),
     listProjectFiles: (path, query) => call("list_project_files", { path, query }).catch(() => []),
 
-    /** Speech to text through local Hermes' configured STT provider. */
+    /** Speech to text through the engine's STT provider (a cloud one when its key is saved). */
     async transcribe(dataUrl, mimeType) {
       const result = await call("hermes_admin", {
         method: "POST",
@@ -279,8 +228,6 @@ export function createDesktopHost() {
             { once: true },
           );
           call("chat_stream", {
-            baseUrl: baseUrl(connection),
-            mode: connection.mode,
             runId,
             sessionId: hermesSessionId(conversationId),
             sessionKey,
@@ -301,10 +248,8 @@ export function createDesktopHost() {
     },
 
     /** Allows or denies the command a running reply is waiting on (its `approval.request` event). */
-    answerApproval: (connection, request, allow) =>
+    answerApproval: (request, allow) =>
       call("run_approval", {
-        baseUrl: baseUrl(connection),
-        mode: connection.mode,
         hermesRun: request.run_id,
         requestId: request.request_id ?? null,
         choice: allow ? "once" : "deny",

@@ -34,3 +34,7 @@ tauri-plugin-single-instance = "2"
 sha2 = "0.10"
 base64 = "0.22"
 getrandom = "0.3"
+
+# Ends the bundled engine with the app (a Windows job object); already in the dependency tree through Tauri.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }

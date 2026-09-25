@@ -84,7 +84,6 @@ const MIC_ICON = icon('<path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/
 const SHIELD_ICON = icon('<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>');
 const BRANCH_ICON = icon('<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>');
 const LAPTOP_ICON = icon('<path d="M18 5a2 2 0 0 1 2 2v8.526a2 2 0 0 0 .212.897l1.068 2.127a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45l1.068-2.127A2 2 0 0 0 4 15.526V7a2 2 0 0 1 2-2z"/><path d="M20.054 15.987H3.946"/>');
-const SERVER_ICON = icon('<rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/>');
 const CHEVRON_DOWN = `<svg class="chip-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
 const FILE_ICON = icon('<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/>');
 const X_ICON = icon('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>');
@@ -106,7 +105,6 @@ export function createChatApp({
   sessionFor = (id) => id,
   onCommand = () => {},
   onContextMenu = () => {},
-  canAttachFiles = () => true,
   canTranscribe = () => false,
   suggestNext = null,
   answerApproval = null,
@@ -221,9 +219,8 @@ export function createChatApp({
       figure.replaceChildren(caption);
     };
     const type = imageTypeOf(path);
-    // The path is on the machine running Hermes: readable here only when that is this PC.
-    if (!type || !canAttachFiles()) {
-      note(type ? "메인서버에 저장된 그림이라 여기서 열 수 없습니다" : "Hermes가 만든 파일");
+    if (!type) {
+      note("Hermes가 만든 파일");
       return figure;
     }
     if (!mediaUrls.has(path)) {
@@ -535,10 +532,8 @@ export function createChatApp({
         if (type) {
           const bytes = await host.readFile(path);
           attachments.push({ id: createId(), kind: "image", name, dataUrl: await blobToDataUrl(new Blob([bytes], { type })) });
-        } else if (canAttachFiles()) {
-          attachments.push({ id: createId(), kind: "file", name, path });
         } else {
-          showNotice({ title: "첨부", text: "메인서버 연결에서는 이미지 파일만 첨부할 수 있습니다.", tone: "error" });
+          attachments.push({ id: createId(), kind: "file", name, path });
         }
       } catch (error) {
         showNotice({ title: "첨부", text: `${name}: ${error?.userMessage || "파일을 읽지 못했습니다."}`, tone: "error" });
@@ -632,7 +627,7 @@ export function createChatApp({
       items: [
         {
           label: "파일 첨부",
-          description: canAttachFiles() ? "문서·이미지를 첨부합니다" : "메인서버 연결에서는 이미지만 첨부할 수 있습니다",
+          description: "문서·이미지를 첨부합니다",
           action: "files",
         },
         // Only with a project folder to search.
@@ -1039,11 +1034,6 @@ export function createChatApp({
       root.dataset.connection = state;
       statusLabel.textContent = label;
       connectButton.hidden = state === "connected" || state === "checking";
-    },
-
-    /** Connection chip icon: this PC or the main server. */
-    setConnectionMode(mode) {
-      root.querySelector("[data-connection-icon]").innerHTML = mode === "remote" ? SERVER_ICON : LAPTOP_ICON;
       root.querySelector("[data-mic]").hidden = !canTranscribe();
     },
 
@@ -1096,7 +1086,7 @@ export function createChatApp({
             <div class="command-menu" data-command-menu role="listbox" aria-label="명령" hidden></div>
             <div class="composer-context">
               <button class="context-chip" type="button" data-project-chip data-menu-owner="project" aria-label="프로젝트 바꾸기" title="프로젝트 바꾸기">${FOLDER_ICON}<span data-project-name>프로젝트 없음</span>${CHEVRON_DOWN}</button>
-              <button class="context-chip" type="button" data-connection-chip data-menu-owner="location" aria-label="작업 위치 선택" title="작업 위치 선택"><span class="chip-icon" data-connection-icon>${LAPTOP_ICON}</span><span data-status-label>연결 확인 중</span><span class="status-dot" aria-hidden="true"></span>${CHEVRON_DOWN}</button>
+              <button class="context-chip" type="button" data-connection-chip data-menu-owner="location" aria-label="연결 설정" title="연결 설정"><span class="chip-icon">${LAPTOP_ICON}</span><span data-status-label>연결 확인 중</span><span class="status-dot" aria-hidden="true"></span>${CHEVRON_DOWN}</button>
               <button class="context-chip" type="button" data-branch-chip data-menu-owner="branch" aria-label="브랜치 바꾸기" title="브랜치 바꾸기" hidden>${BRANCH_ICON}<span data-branch-name></span>${CHEVRON_DOWN}</button>
             </div>
             <form class="composer" data-composer>

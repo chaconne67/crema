@@ -14,6 +14,9 @@ const GROUP_OF = Object.fromEntries(Object.entries(GROUPS).flatMap(([key, group]
 // Hermes' virtual mixture-of-agents channel is not a Provider.
 const SKIPPED_CHANNELS = new Set(["moa"]);
 
+// The Providers Crema offers to add (its engine keeps only these; see crema-engine CREMA.md).
+const OFFERED_CHANNELS = new Set(["openai-codex", "openai-api", "anthropic", "claude-code", "gemini", "openrouter"]);
+
 // Subscription channels: Hermes' OAuth registry (hermes_cli/auth.py) plus Copilot, a GitHub-login
 // subscription; any channel whose local auth.json credential is OAuth counts too.
 const SUBSCRIPTION_CHANNELS = new Set(["openai-codex", "xai-oauth", "qwen-oauth", "minimax-oauth", "nous", "copilot"]);
@@ -113,7 +116,7 @@ export function addableProviders(accountRows, envRows, connectedKeys) {
   const groups = new Map();
   const add = (channelId, fallbackName, method) => {
     const { key, name } = providerOf(channelId, fallbackName);
-    if (connectedKeys.has(key) || SKIPPED_CHANNELS.has(channelId)) return;
+    if (connectedKeys.has(key) || !OFFERED_CHANNELS.has(channelId)) return;
     if (!groups.has(key)) groups.set(key, { key, name, methods: [] });
     const methods = groups.get(key).methods;
     if (!methods.some((item) => item.kind === method.kind)) methods.push(method);

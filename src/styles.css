@@ -1220,27 +1220,6 @@ html[data-pointer] :focus-visible {
   color: var(--error);
 }
 
-.key-saved {
-  display: flex;
-  min-height: 44px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 4px 0 12px;
-  background: color-mix(in srgb, var(--ink) 4%, transparent);
-  border-radius: 10px;
-}
-
-.key-saved[hidden],
-.key-form[hidden] {
-  display: none;
-}
-
-.key-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 .field-note {
   margin: 0;
   color: var(--muted);
@@ -1275,7 +1254,6 @@ html[data-pointer] :focus-visible {
 
 .primary-button[hidden],
 .secondary-button[hidden],
-.remote-only[hidden],
 .provider-add[hidden],
 .provider-add [hidden] {
   display: none;
@@ -1399,25 +1377,6 @@ html[data-pointer] :focus-visible {
 .primary-button:disabled {
   opacity: 0.6;
   cursor: progress;
-}
-
-.remote-only {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.connection-details summary {
-  min-height: 36px;
-  padding: 8px 0;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.connection-details[open] {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
 }
 
 .settings-section .check-row {
