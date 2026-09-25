@@ -13,7 +13,9 @@
 
   DetailPrint "Hermes 설치 중 (인터넷 연결 필요, 몇 분 걸립니다)"
   ; Everything Hermes' installer prints goes to a log, so a failure on someone else's PC can be read.
-  ExecWait `"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command "Start-Transcript -Path '$TEMP\crema-hermes-install.log' -Force | Out-Null; try { & ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/NousResearch/hermes-agent/${HERMES_COMMIT}/scripts/install.ps1'))) -NonInteractive -SkipSetup -Commit ${HERMES_COMMIT} } catch { Write-Host ('FAILED: ' + $$_) }; Stop-Transcript | Out-Null"` $1
+  ; PSModulePath is reset first: started from PowerShell 7 (a terminal, VS Code), Windows PowerShell
+  ; inherits 7's module path and its own modules fail to load (Hermes' uv step then fails).
+  ExecWait `"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command "$$env:PSModulePath = [Environment]::GetEnvironmentVariable('PSModulePath', 'Machine'); Start-Transcript -Path '$TEMP\crema-hermes-install.log' -Force | Out-Null; try { & ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/NousResearch/hermes-agent/${HERMES_COMMIT}/scripts/install.ps1'))) -NonInteractive -SkipSetup -Commit ${HERMES_COMMIT} } catch { Write-Host ('FAILED: ' + $$_) }; Stop-Transcript | Out-Null"` $1
   ; Installed means present where the app looks, whatever the script's exit code says.
   IfFileExists "$0\bin\hermes.cmd" hermes_done
   MessageBox MB_ICONEXCLAMATION "Hermes 설치를 마치지 못했습니다.$\r$\n기록: $TEMP\crema-hermes-install.log$\r$\n$\r$\nPowerShell에서 아래 명령으로 직접 설치해 주세요.$\r$\niex (irm https://hermes-agent.nousresearch.com/install.ps1)" /SD IDOK
