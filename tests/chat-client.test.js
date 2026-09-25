@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   createChatClient,
   readResponseBody,
-  streamDemoResponse,
 } from "../src/chat-client.js";
 
 async function collect(iterable) {
@@ -13,13 +12,6 @@ async function collect(iterable) {
 }
 
 describe("chat client streams", () => {
-  it("produces a Markdown demonstration response", async () => {
-    const response = await collect(streamDemoResponse({ delayMs: 0 }));
-    expect(response).toContain("**이 PC에서 만든 예시 응답**");
-    expect(response).toContain("```typescript");
-    expect(response).toContain("| 항목 | 적용 상태 |");
-  });
-
   it("sends only the newest request and conversation to the transport", async () => {
     let request;
     const client = createChatClient({

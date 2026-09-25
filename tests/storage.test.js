@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   chatSessions,
@@ -8,25 +8,30 @@ import {
   hermesSessionKey,
   loadMessages,
   loadWorkspace,
+  onStorageError,
   saveMessages,
+  saveWorkspace,
   startNewSession,
 } from "../src/storage.js";
 
 describe("workspace storage", () => {
   beforeEach(() => window.localStorage.clear());
 
-  it("moves the single pre-project conversation into a chat that keeps its Hermes session", () => {
-    const legacy = [
-      { id: "first-user-id", role: "user", content: "안녕", createdAt: 1, status: "complete" },
-      { id: "a1", role: "assistant", content: "반가워요", createdAt: 2, status: "complete" },
-    ];
-    window.localStorage.setItem("agent-client:conversation:v1", JSON.stringify(legacy));
+  it("reports saved chats it cannot read and changes it cannot save instead of skipping them", () => {
+    const reported = vi.fn();
+    onStorageError(reported);
+    window.localStorage.setItem("agent-client:workspace:v1", "{not json");
+    expect(loadWorkspace().projects).toEqual([]);
+    expect(reported).toHaveBeenCalledTimes(1);
 
-    const workspace = loadWorkspace();
-    expect(workspace.chats).toHaveLength(1);
-    expect(workspace.chats[0]).toMatchObject({ id: "first-user-id", title: "이전 대화", projectId: null });
-    expect(workspace.activeChatId).toBe("first-user-id");
-    expect(loadMessages("first-user-id")).toHaveLength(2);
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("full", "QuotaExceededError");
+    });
+    saveWorkspace({ projects: [], chats: [] });
+    saveMessages("chat-1", []);
+    expect(reported).toHaveBeenCalledTimes(3);
+    setItem.mockRestore();
+    onStorageError(() => {});
   });
 
   it("names projects after their folder and does not add the same folder twice", () => {

@@ -1,5 +1,4 @@
 const WORKSPACE_KEY = "agent-client:workspace:v1";
-const LEGACY_CONVERSATION_KEY = "agent-client:conversation:v1";
 const chatKey = (chatId) => `agent-client:chat:${chatId}`;
 
 export const NEW_CHAT_TITLE = "새 대화";
@@ -18,10 +17,18 @@ function isStoredMessage(value) {
   );
 }
 
+let reportStorageError = () => {};
+
+/** Called when saved chats cannot be read or a change cannot be saved, so the app can say so. */
+export function onStorageError(handler) {
+  reportStorageError = handler;
+}
+
 function readJson(key, fallback) {
   try {
     return JSON.parse(window.localStorage.getItem(key) || "null") ?? fallback;
-  } catch {
+  } catch (error) {
+    reportStorageError(error);
     return fallback;
   }
 }
@@ -29,8 +36,8 @@ function readJson(key, fallback) {
 function writeJson(key, value) {
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // Storage can be unavailable; the session keeps working in memory.
+  } catch (error) {
+    reportStorageError(error);
   }
 }
 
@@ -119,21 +126,7 @@ export function loadWorkspace() {
   if (stored && Array.isArray(stored.projects) && Array.isArray(stored.chats)) {
     return { collapsed: {}, sidebarHidden: false, ...stored };
   }
-
-  const workspace = { projects: [], chats: [], activeChatId: null, collapsed: {}, sidebarHidden: false };
-  // Keeps the single conversation from before projects existed.
-  const legacy = parseMessages(readJson(LEGACY_CONVERSATION_KEY, []));
-  if (legacy.length) {
-    const chat = createChat(workspace);
-    // The old Hermes session id was the first request's id; reuse it so Hermes keeps the context.
-    chat.id = legacy.find((message) => message.role === "user")?.id || chat.id;
-    chat.sessions = [chat.id];
-    chat.title = "이전 대화";
-    chat.updatedAt = legacy.at(-1).createdAt;
-    saveMessages(chat.id, legacy);
-    workspace.activeChatId = chat.id;
-  }
-  return workspace;
+  return { projects: [], chats: [], activeChatId: null, collapsed: {}, sidebarHidden: false };
 }
 
 export function saveWorkspace(workspace) {

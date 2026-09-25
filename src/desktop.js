@@ -1,17 +1,19 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { confirm as confirmDialog, open as openDialog } from "@tauri-apps/plugin-dialog";
+import { confirm as confirmDialog, message as messageDialog, open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 const STORAGE_KEY = "agent-client:connection:v2";
 const LOCAL_PORT = 8642;
 
+// No model or provider: Hermes answers with its own default until one is picked.
+// The main server is the user's own, entered in 설정 → 연결 상세.
 export const DEFAULT_CONNECTION = {
   mode: "local",
-  provider: "openai-codex",
-  model: "gpt-6-sol",
-  sshTarget: "chaconne@49.247.192.127",
-  remote: "172.30.31.128:8642",
+  provider: "",
+  model: "",
+  sshTarget: "",
+  remote: "",
   tunnelPort: 18642,
 };
 
@@ -20,10 +22,12 @@ const ERROR_MESSAGES = {
   empty_key: "API 키를 입력해 주세요.",
   auth: "API 키가 맞지 않습니다. 설정에서 키를 다시 확인해 주세요.",
   tunnel: "메인서버에 SSH로 연결하지 못했습니다. 네트워크와 SSH 키를 확인해 주세요.",
+  remote_unset: "설정 → 연결 상세에서 메인서버의 SSH 접속과 Hermes 주소를 입력해 주세요.",
   unreachable: "Hermes에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.",
   local_unreachable: "이 PC의 Hermes가 응답하지 않습니다. 설정에서 ‘Hermes 연결 켜기’를 눌러 주세요.",
   local_api_off: "이 PC의 Hermes에서 앱 연결이 꺼져 있습니다. 설정에서 ‘Hermes 연결 켜기’를 눌러 주세요.",
   local_missing: "이 PC에서 Hermes 설치를 찾지 못했습니다.",
+  hermes_old: "Hermes가 이 앱보다 오래된 버전입니다. 터미널에서 ‘hermes update’로 0.21.4 이상으로 올려 주세요.",
   local_config: "Hermes 설정 파일을 수정하지 못했습니다.",
   local_restart: "Hermes를 다시 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.",
   server: "Hermes가 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.",
@@ -154,9 +158,11 @@ export function createDesktopHost() {
     saveApiKey: (key) => call("save_api_key", { key }),
     deleteApiKey: () => call("delete_api_key"),
     enableLocalHermes: () => call("enable_local_api"),
+    warn: (text) => messageDialog(text, { title: "Crema", kind: "error" }).catch(() => {}),
 
     async ensureTunnel(connection) {
       if (connection.mode !== "remote") return;
+      if (!connection.sshTarget.trim() || !connection.remote.trim()) throw desktopError("remote_unset");
       await call("ensure_tunnel", {
         sshTarget: connection.sshTarget,
         remote: connection.remote,

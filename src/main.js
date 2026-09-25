@@ -31,6 +31,7 @@ import {
   deleteMessages,
   hermesSessionKey,
   loadWorkspace,
+  onStorageError,
   saveWorkspace,
   startNewSession,
 } from "./storage.js";
@@ -49,7 +50,6 @@ window.matchMedia?.("(prefers-color-scheme: dark)")?.addEventListener?.("change"
 const host = createDesktopHost();
 const connection = loadConnection();
 let connected = false;
-let client = createChatClient();
 let providers = [];
 let authChannels = {};
 
@@ -65,7 +65,7 @@ function connectedLabel() {
 }
 
 function syncModelChip() {
-  app.setModel({ name: connection.model, detail: connection.reasoning ? reasoningLabel() : "", fast: Boolean(connection.fast) });
+  app.setModel({ name: connection.model || "Hermes 기본 모델", detail: connection.reasoning ? reasoningLabel() : "", fast: Boolean(connection.fast) });
 }
 
 /** Branch of the open chat's project folder (hidden outside Git). */
@@ -110,6 +110,14 @@ const hermesClient = createChatClient({
       sessionKey: hermesSessionKey(project, activeChat()?.id ?? args.conversationId),
     });
   },
+});
+
+// Chats live only in this PC's app storage: a read or save that fails is said once, not skipped.
+let storageWarned = false;
+onStorageError(() => {
+  if (storageWarned) return;
+  storageWarned = true;
+  host.warn("대화 기록을 읽거나 저장하지 못했습니다.\n디스크 공간과 권한을 확인해 주세요. 지금 앱을 닫으면 최근 변경이 사라질 수 있습니다.");
 });
 
 let workspace = loadWorkspace();
@@ -262,12 +270,9 @@ async function connect() {
   app.setStatus("checking", "연결 확인 중");
   connected = false;
   if (connection.mode === "remote" && !(await host.hasApiKey().catch(() => false))) {
-    client = createChatClient();
-    app.setStatus("offline", "연결 전 · 예시 답변");
-    return { state: "offline", message: "메인서버 API 키를 저장하면 연결합니다. 그 전에는 예시 답변만 보여 줍니다." };
+    app.setStatus("offline", "연결 전");
+    return { state: "offline", message: "메인서버 API 키를 저장하면 연결합니다." };
   }
-  // Once a real target is chosen, failures surface as errors instead of falling back to examples.
-  client = hermesClient;
   try {
     await host.connect(connection);
     connected = true;
@@ -640,7 +645,7 @@ const commandHandlers = {
 };
 
 const app = createChatApp({
-  client: { streamReply: (args) => client.streamReply(args) },
+  client: hermesClient,
   host,
   onOpenSettings: (event) => panel.open(event?.currentTarget),
   onNewChat: () => newChat(),

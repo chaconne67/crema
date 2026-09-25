@@ -25,8 +25,8 @@ const PROVIDERS = [
 describe("desktop connection", () => {
   beforeEach(() => window.localStorage.clear());
 
-  it("defaults to local Hermes with the Codex subscription and gpt-6-sol", () => {
-    expect(loadConnection()).toMatchObject({ mode: "local", provider: "openai-codex", model: "gpt-6-sol" });
+  it("defaults to local Hermes with its own default model and no main server", () => {
+    expect(loadConnection()).toMatchObject({ mode: "local", provider: "", model: "", sshTarget: "", remote: "" });
   });
 
   it("keeps the remote tunnel off the local Hermes port", () => {

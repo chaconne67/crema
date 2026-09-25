@@ -45,16 +45,47 @@ fn hide_window(command: &mut Command) {
 #[cfg(not(windows))]
 fn hide_window(_command: &mut Command) {}
 
-/// Hermes' own home: HERMES_HOME, else the Windows installer default, else ~/.hermes.
+/// Hermes' own home on native Windows: HERMES_HOME, else %LOCALAPPDATA%\hermes — the rule Hermes'
+/// installer and this app's installer (windows/hooks.nsh) use too.
 fn hermes_home() -> Option<PathBuf> {
-  if let Some(home) = std::env::var_os("HERMES_HOME") {
-    return Some(PathBuf::from(home));
+  std::env::var_os("HERMES_HOME")
+    .filter(|home| !home.is_empty())
+    .or_else(|| std::env::var_os("LOCALAPPDATA").map(|dir| PathBuf::from(dir).join("hermes").into()))
+    .map(PathBuf::from)
+}
+
+/// Hermes' command, when Hermes is installed.
+fn hermes_cli() -> Result<PathBuf, String> {
+  let hermes = hermes_home().ok_or_else(|| "local_missing".to_string())?.join("bin").join("hermes.cmd");
+  if hermes.exists() {
+    Ok(hermes)
+  } else {
+    Err("local_missing".into())
   }
-  let local = std::env::var_os("LOCALAPPDATA").map(|dir| PathBuf::from(dir).join("hermes"));
-  if let Some(local) = local.filter(|dir| dir.join(".env").exists()) {
-    return Some(local);
+}
+
+/// Runs a Hermes command unattended; false when it fails or is still running after two minutes.
+async fn run_hermes(hermes: &std::path::Path, args: &[&str]) -> bool {
+  let mut command = Command::new("cmd");
+  command
+    .arg("/C")
+    .arg(hermes)
+    .args(args)
+    .env("HERMES_NONINTERACTIVE", "1")
+    .env("HERMES_GATEWAY_INSTALL_START_NOW", "1")
+    .env("HERMES_GATEWAY_INSTALL_START_ON_LOGIN", "1")
+    .stdin(std::process::Stdio::null());
+  hide_window(&mut command);
+  let Ok(mut child) = command.spawn() else { return false };
+  for _ in 0..240 {
+    match child.try_wait() {
+      Ok(Some(status)) => return status.success(),
+      Ok(None) => tokio::time::sleep(Duration::from_millis(500)).await,
+      Err(_) => return false,
+    }
   }
-  std::env::var_os("USERPROFILE").map(|dir| PathBuf::from(dir).join(".hermes"))
+  let _ = child.kill();
+  false
 }
 
 fn local_env_value(name: &str) -> Option<String> {
@@ -124,17 +155,13 @@ fn delete_api_key() -> Result<(), String> {
   }
 }
 
-/// Turns on local Hermes' API server (loopback only) and restarts its gateway.
+/// Turns on local Hermes' API server (loopback only) and (re)starts its gateway with start-on-login.
 #[tauri::command]
 async fn enable_local_api() -> Result<(), String> {
-  let home = hermes_home().ok_or_else(|| "local_missing".to_string())?;
-  let hermes = home.join("bin").join("hermes.cmd");
-  if !hermes.exists() {
-    return Err("local_missing".into());
-  }
+  let hermes = hermes_cli()?;
   if local_env_value("API_SERVER_KEY").is_none() {
     let key = random_key(48);
-    let env_path = home.join(".env");
+    let env_path = hermes_home().ok_or_else(|| "local_missing".to_string())?.join(".env");
     let mut text = std::fs::read_to_string(&env_path).unwrap_or_default();
     if !text.is_empty() && !text.ends_with('\n') {
       text.push('\n');
@@ -144,14 +171,11 @@ async fn enable_local_api() -> Result<(), String> {
     ));
     std::fs::write(&env_path, text).map_err(|_| "local_config".to_string())?;
   }
-  let mut command = Command::new("cmd");
-  command.args(["/C"]).arg(&hermes).args(["gateway", "restart"]);
-  hide_window(&mut command);
-  let status = tokio::task::spawn_blocking(move || command.status())
-    .await
-    .map_err(|_| "local_restart".to_string())?
-    .map_err(|_| "local_restart".to_string())?;
-  if !status.success() {
+  // A running gateway reads .env only when it starts. `gateway restart` is not used: where no
+  // start-on-login is registered (a fresh install) it runs the gateway in the foreground and never
+  // returns. `gateway install` registers start-on-login and starts the gateway, then returns.
+  run_hermes(&hermes, &["gateway", "stop"]).await;
+  if !run_hermes(&hermes, &["gateway", "install"]).await {
     return Err("local_restart".into());
   }
   for _ in 0..180 {
@@ -222,16 +246,30 @@ async fn ensure_tunnel(
   Err("tunnel".into())
 }
 
-/// Confirms Hermes answers and accepts the key without running the agent.
+/// The oldest Hermes this app is tested with (the version windows/hooks.nsh installs).
+const MIN_HERMES: [u64; 3] = [0, 21, 4];
+
+fn version_parts(version: &str) -> [u64; 3] {
+  let mut parts = version.split(['.', '-', '+']).map(|part| part.parse().unwrap_or(0));
+  [parts.next().unwrap_or(0), parts.next().unwrap_or(0), parts.next().unwrap_or(0)]
+}
+
+/// Confirms Hermes answers, is new enough, and accepts the key without running the agent.
 #[tauri::command]
 async fn check_connection(base_url: String, mode: String) -> Result<(), String> {
   let key = read_api_key(&mode)?;
   let client = http_client()?;
-  client
+  let health: serde_json::Value = client
     .get(format!("{base_url}/health"))
     .send()
     .await
-    .map_err(|_| "unreachable".to_string())?;
+    .map_err(|_| "unreachable".to_string())?
+    .json()
+    .await
+    .unwrap_or_default();
+  if version_parts(health["version"].as_str().unwrap_or("")) < MIN_HERMES {
+    return Err("hermes_old".into());
+  }
   let response = client
     .get(format!("{base_url}/v1/models"))
     .bearer_auth(key)
@@ -616,8 +654,7 @@ fn open_login_terminal(command: String) -> Result<(), String> {
     return Err("server".into());
   }
   if parts[0] == "hermes" {
-    let hermes = hermes_home().ok_or_else(|| "local_missing".to_string())?.join("bin").join("hermes.cmd");
-    parts[0] = hermes.to_string_lossy().into_owned();
+    parts[0] = hermes_cli()?.to_string_lossy().into_owned();
   }
   Command::new("cmd")
     .args(["/C", "start", "Hermes 로그인", "cmd", "/K"])
