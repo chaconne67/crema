@@ -4,16 +4,18 @@ const GROUPS = {
   openai: { name: "OpenAI", ids: ["openai-codex", "openai-api"] },
   anthropic: { name: "Anthropic", ids: ["anthropic"] },
   google: { name: "Google", ids: ["gemini"] },
+  copilot: { name: "GitHub Copilot", ids: ["copilot"] },
 };
 const GROUP_OF = Object.fromEntries(Object.entries(GROUPS).flatMap(([key, group]) => group.ids.map((id) => [id, key])));
 
 // The only channels Crema offers, to add and to use (its engine keeps these; see crema-engine CREMA.md).
-// Others the engine may still report (e.g. its mixture-of-agents channel, a Copilot token from the GitHub
-// CLI) never show. Claude's subscription is the Anthropic login; the engine does not borrow Claude Code's.
-const OFFERED_CHANNELS = new Set(["openai-codex", "openai-api", "anthropic", "gemini", "openrouter"]);
+// Others the engine may report (e.g. its mixture-of-agents channel) never show. The engine borrows no
+// other program's login (Claude Code, the GitHub CLI): each Provider shows once it is added in Crema.
+const OFFERED_CHANNELS = new Set(["openai-codex", "openai-api", "anthropic", "gemini", "openrouter", "copilot"]);
 
-// Subscription channels by name; any channel whose engine credential is OAuth (a Claude login) counts too.
-const SUBSCRIPTION_CHANNELS = new Set(["openai-codex"]);
+// Subscription channels by name (Copilot: a GitHub token of a Copilot subscription); any channel whose
+// engine credential is OAuth (a Claude login) counts too.
+const SUBSCRIPTION_CHANNELS = new Set(["openai-codex", "copilot"]);
 
 export const METHOD_LABELS = { subscription: "구독", api_key: "API 키" };
 
@@ -60,10 +62,11 @@ export function providerStatus(channels, kinds = {}) {
   });
 }
 
-// Small, fast models for predicting the next input: subscriptions first (ChatGPT, then Claude — its
-// third-party use may draw extra usage credits, so it comes later), then an API key.
+// Small, fast models for predicting the next input: subscriptions first (ChatGPT, Copilot, then Claude —
+// its third-party use may draw extra usage credits, so it comes later), then an API key.
 const SUGGESTION_MODELS = [
   ["openai-codex", "gpt-6-luna"],
+  ["copilot", "gpt-5-mini"],
   ["anthropic", "claude-haiku-4-5-20251001"],
   ["gemini", "gemini-3.1-flash-lite"],
 ];

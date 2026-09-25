@@ -5,9 +5,9 @@ import { addableProviders, buildCatalog, locate, pickRoute, providerStatus, rout
 const CHANNELS = [
   { id: "anthropic", name: "Anthropic", models: ["claude-opus-5"], capabilities: {} },
   { id: "openrouter", name: "OpenRouter", models: ["anthropic/claude-opus-5"], capabilities: {} },
-  // Reported by the engine but not offered by Crema: its mixture-of-agents channel, a GitHub CLI token.
+  // Reported by the engine but not offered by Crema: its mixture-of-agents channel, a Provider it no longer has.
   { id: "moa", name: "Mixture of Agents", models: ["moa-default"], capabilities: {} },
-  { id: "copilot", name: "GitHub Copilot", models: ["gpt-5-mini"], capabilities: {} },
+  { id: "xai", name: "xAI", models: ["grok-5"], capabilities: {} },
   { id: "openai-api", name: "OpenAI API", models: ["gpt-6-sol", "gpt-6-mini"], capabilities: {} },
   { id: "openai-codex", name: "ChatGPT or Codex Subscription", models: ["gpt-6-sol"], capabilities: { "gpt-6-sol": { fast: true } } },
 ];
@@ -60,14 +60,17 @@ describe("Providers that can be added", () => {
     GOOGLE_API_KEY: { category: "provider", provider: "gemini", provider_label: "Google AI Studio", url: "https://aistudio.google.com" },
     GEMINI_API_KEY: { category: "provider", provider: "gemini", provider_label: "Google AI Studio", url: "https://aistudio.google.com" },
     GEMINI_BASE_URL: { category: "provider", provider: "gemini", provider_label: "Google AI Studio", url: null },
+    COPILOT_GITHUB_TOKEN: { category: "provider", provider: "copilot", provider_label: "GitHub Copilot", url: null },
+    GH_TOKEN: { category: "provider", provider: "copilot", provider_label: "GitHub Copilot", url: null },
     AWS_REGION: { category: "provider", provider: "bedrock", provider_label: "AWS Bedrock", url: null },
     HERMES_ANON_API_SECRET: { category: "provider", provider: "", provider_label: "" },
   };
 
   it("lists the offered Providers not yet signed in, one entry per sign-in method", () => {
     const addable = addableProviders(ACCOUNTS, ENV, new Set(["openai"]));
-    // Nous Portal is not one Crema offers.
-    expect(addable.map((group) => group.name)).toEqual(["Anthropic", "Google"]);
+    // Nous Portal is not one Crema offers; Copilot is added with a GitHub token (one entry for its two names).
+    expect(addable.map((group) => group.name)).toEqual(["Anthropic", "Google", "GitHub Copilot"]);
+    expect(addable[2].methods).toEqual([{ kind: "api_key", id: "copilot", envVar: "COPILOT_GITHUB_TOKEN", url: "" }]);
     const anthropic = addable[0];
     expect(anthropic.methods.map((method) => [method.kind, method.id])).toEqual([
       ["subscription", "anthropic"],

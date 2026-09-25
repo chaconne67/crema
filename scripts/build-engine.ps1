@@ -2,7 +2,7 @@
 # tests) and a private Python with the engine's packages. Every installer build runs it (Tauri's
 # beforeBuildCommand); it does nothing when the pinned engine is already there. Needs git and uv.
 $ErrorActionPreference = "Stop"
-$engineCommit = "4bd45c299420014493065d54eb97801b1f09d0a4"
+$engineCommit = "385c80f532907a320c4e2dc4d6a3bb0d1b6a019e"
 $pythonVersion = "3.12.13"
 
 $root = Split-Path $PSScriptRoot
@@ -19,13 +19,15 @@ function Run {
 if (Test-Path $out) { Remove-Item $out -Recurse -Force }
 New-Item -ItemType Directory "$out\src" | Out-Null
 
-$repo = Join-Path $root "src-tauri\target\crema-engine.git"
-if (-not (Test-Path $repo)) { Run git clone --bare --filter=blob:none https://github.com/chaconne67/crema-engine.git $repo }
-Run git -C $repo fetch --filter=blob:none origin $engineCommit
-$tar = Join-Path $root "src-tauri\target\crema-engine.tar"
+# Only the pinned commit, into a fresh temporary repository: nothing is reused from an earlier build
+# (a copy kept under target/ was left broken by the CI build cache).
+$repo = Join-Path ([System.IO.Path]::GetTempPath()) "crema-engine-$([guid]::NewGuid())"
+Run git init -q --bare $repo
+Run git -C $repo fetch -q --depth 1 https://github.com/chaconne67/crema-engine.git $engineCommit
+$tar = "$repo.tar"
 Run git -C $repo archive -o $tar $engineCommit
 Run "$env:SystemRoot\System32\tar.exe" -xf $tar -C "$out\src" --exclude=tests --exclude=.github
-Remove-Item $tar
+Remove-Item $tar, $repo -Recurse -Force
 
 Run uv python install $pythonVersion
 $python = Split-Path (& uv python find $pythonVersion --managed-python)
