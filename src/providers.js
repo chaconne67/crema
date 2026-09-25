@@ -2,24 +2,18 @@
 // own channel ("openai-codex" = ChatGPT subscription, "openai-api" = OpenAI API key); these are merged.
 const GROUPS = {
   openai: { name: "OpenAI", ids: ["openai-codex", "openai-api"] },
-  anthropic: { name: "Anthropic", ids: ["anthropic", "claude-code"] },
-  xai: { name: "xAI", ids: ["xai-oauth", "xai"] },
-  minimax: { name: "MiniMax", ids: ["minimax-oauth", "minimax"] },
-  qwen: { name: "Qwen", ids: ["qwen-oauth", "alibaba"] },
-  copilot: { name: "GitHub Copilot", ids: ["copilot", "copilot-acp"] },
+  anthropic: { name: "Anthropic", ids: ["anthropic"] },
   google: { name: "Google", ids: ["gemini"] },
 };
 const GROUP_OF = Object.fromEntries(Object.entries(GROUPS).flatMap(([key, group]) => group.ids.map((id) => [id, key])));
 
-// Hermes' virtual mixture-of-agents channel is not a Provider.
-const SKIPPED_CHANNELS = new Set(["moa"]);
+// The only channels Crema offers, to add and to use (its engine keeps these; see crema-engine CREMA.md).
+// Others the engine may still report (e.g. its mixture-of-agents channel, a Copilot token from the GitHub
+// CLI) never show. Claude's subscription is the Anthropic login; the engine does not borrow Claude Code's.
+const OFFERED_CHANNELS = new Set(["openai-codex", "openai-api", "anthropic", "gemini", "openrouter"]);
 
-// The Providers Crema offers to add (its engine keeps only these; see crema-engine CREMA.md).
-const OFFERED_CHANNELS = new Set(["openai-codex", "openai-api", "anthropic", "claude-code", "gemini", "openrouter"]);
-
-// Subscription channels: Hermes' OAuth registry (hermes_cli/auth.py) plus Copilot, a GitHub-login
-// subscription; any channel whose local auth.json credential is OAuth counts too.
-const SUBSCRIPTION_CHANNELS = new Set(["openai-codex", "xai-oauth", "qwen-oauth", "minimax-oauth", "nous", "copilot"]);
+// Subscription channels by name; any channel whose engine credential is OAuth (a Claude login) counts too.
+const SUBSCRIPTION_CHANNELS = new Set(["openai-codex"]);
 
 export const METHOD_LABELS = { subscription: "구독", api_key: "API 키" };
 
@@ -35,7 +29,7 @@ export function providerOf(channelId, fallbackName) {
 export function buildCatalog(channels, kinds = {}) {
   const groups = new Map();
   for (const channel of channels) {
-    if (SKIPPED_CHANNELS.has(channel.id) || kinds[channel.id]?.relogin) continue;
+    if (!OFFERED_CHANNELS.has(channel.id) || kinds[channel.id]?.relogin) continue;
     const { key, name } = providerOf(channel.id, channel.name);
     if (!groups.has(key)) groups.set(key, { key, provider: name, models: new Map() });
     const models = groups.get(key).models;
@@ -66,13 +60,11 @@ export function providerStatus(channels, kinds = {}) {
   });
 }
 
-// Small, fast models for predicting the next input: subscriptions first (ChatGPT, Copilot, Claude,
-// SuperGrok — Claude's third-party use may draw extra usage credits, so it comes late), then an API key.
+// Small, fast models for predicting the next input: subscriptions first (ChatGPT, then Claude — its
+// third-party use may draw extra usage credits, so it comes later), then an API key.
 const SUGGESTION_MODELS = [
   ["openai-codex", "gpt-6-luna"],
-  ["copilot", "gpt-5-mini"],
   ["anthropic", "claude-haiku-4-5-20251001"],
-  ["xai-oauth", "grok-4.20-0309-non-reasoning"],
   ["gemini", "gemini-3.1-flash-lite"],
 ];
 
