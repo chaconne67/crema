@@ -64,6 +64,17 @@ jobs:
           Invoke-WebRequest "https://msedgedriver.microsoft.com/$version/edgedriver_win64.zip" -OutFile edgedriver.zip
           Expand-Archive edgedriver.zip -DestinationPath edgedriver
           "EDGEDRIVER=$PWD\edgedriver\msedgedriver.exe" >> $env:GITHUB_ENV
+          "WebView2 runtime $version; $(& "$PWD\edgedriver\msedgedriver.exe" --version)"
+
+      - name: The installed app starts on its own
+        shell: pwsh
+        run: |
+          $app = Start-Process $env:APP -PassThru
+          Start-Sleep 15
+          $app.Refresh()
+          if ($app.HasExited) { throw "Crema exited on start with code $($app.ExitCode)" }
+          "running, window: '$($app.MainWindowTitle)'"
+          Stop-Process -Id $app.Id -Force
 
       - name: First launch, the bundled engine and a real reply, then relaunch
         shell: pwsh
