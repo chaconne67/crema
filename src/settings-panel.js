@@ -312,24 +312,41 @@ export function createSettingsPanel({
     status.dataset.tone = tone;
   };
 
-  /** SOUL.md as it is now, read each time Settings opens (the first-run setup may have written it). */
+  // SOUL.md as last read or saved; 저장 is on only while the text differs from it.
+  let savedPersona = null;
+  let savingPersona = false;
+  const personaText = () => panel.querySelector("#persona-text");
+  function syncPersonaSave() {
+    panel.querySelector("[data-save-persona]").disabled = savingPersona || savedPersona === null || personaText().value === savedPersona;
+  }
+
+  /** SOUL.md as it is now, read each time Settings opens (the first-run setup may have written it); an unsaved edit is kept. */
   async function loadPersona() {
+    if (savedPersona !== null && personaText().value !== savedPersona) return;
     try {
-      panel.querySelector("#persona-text").value = await host.readSoul();
+      savedPersona = await host.readSoul();
+      personaText().value = savedPersona;
       personaStatus("");
     } catch (error) {
       personaStatus(error.userMessage, "error");
     }
+    syncPersonaSave();
   }
 
   async function savePersona() {
+    const content = personaText().value;
+    savingPersona = true;
+    syncPersonaSave();
     personaStatus("저장하고 있습니다…");
     try {
-      await host.writeSoul(panel.querySelector("#persona-text").value);
+      await host.writeSoul(content);
+      savedPersona = content;
       personaStatus("저장했습니다. 다음 메시지부터 적용됩니다.");
     } catch (error) {
       personaStatus(error.userMessage, "error");
     }
+    savingPersona = false;
+    syncPersonaSave();
   }
 
   function close() {
@@ -430,7 +447,7 @@ export function createSettingsPanel({
             <h3 id="persona-title">페르소나</h3>
             <p class="field-note">에이전트가 누구이고 어떻게 말할지 정하는 글(SOUL.md)입니다. 어떤 모델을 쓰든 이 글만 에이전트의 정체성이 됩니다. 저장하면 다음 메시지부터 적용됩니다.</p>
             <textarea id="persona-text" class="persona-text" rows="10" spellcheck="false" aria-label="페르소나 (SOUL.md)"></textarea>
-            <button class="secondary-button" type="button" data-save-persona>저장</button>
+            <button class="primary-button" type="button" data-save-persona disabled>저장</button>
             <p class="provider-status" data-persona-status role="status"></p>
           </section>
 
@@ -611,6 +628,10 @@ export function createSettingsPanel({
       panel.querySelector("[data-check]").addEventListener("click", connect);
       panel.querySelector("[data-sign-out]").addEventListener("click", () => onSignOut());
       panel.querySelector("[data-save-persona]").addEventListener("click", savePersona);
+      personaText().addEventListener("input", () => {
+        if (!savingPersona) personaStatus("");
+        syncPersonaSave();
+      });
       panel.querySelector("[data-close-settings]").addEventListener("click", close);
       panel.addEventListener("keydown", (event) => {
         if (event.key === "Escape") close();

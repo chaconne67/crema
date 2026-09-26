@@ -83,10 +83,29 @@ describe("Settings → 페르소나", () => {
     panel.mount(shell);
     panel.open();
     await vi.waitFor(() => expect(document.querySelector("#persona-text").value).toBe(DEFAULT_SOUL));
+    const save = document.querySelector("[data-save-persona]");
+    const text = document.querySelector("#persona-text");
+    // Nothing to save until the text changes, and again once it is back as it was.
+    expect(save.disabled).toBe(true);
+    text.value = "당신은 JUDY입니다.";
+    text.dispatchEvent(new Event("input"));
+    expect(save.disabled).toBe(false);
+    text.value = DEFAULT_SOUL;
+    text.dispatchEvent(new Event("input"));
+    expect(save.disabled).toBe(true);
 
-    document.querySelector("#persona-text").value = "당신은 JUDY입니다.";
-    document.querySelector("[data-save-persona]").click();
+    // Reopening Settings keeps an unsaved edit.
+    text.value = "당신은 JUDY입니다.";
+    text.dispatchEvent(new Event("input"));
+    panel.open();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(text.value).toBe("당신은 JUDY입니다.");
+    expect(host.readSoul).toHaveBeenCalledTimes(1);
+
+    save.click();
+    expect(save.disabled).toBe(true);
     await vi.waitFor(() => expect(document.querySelector("[data-persona-status]").textContent).toBe("저장했습니다. 다음 메시지부터 적용됩니다."));
+    expect(save.disabled).toBe(true);
     expect(host.writeSoul).toHaveBeenCalledWith("당신은 JUDY입니다.");
   });
 });

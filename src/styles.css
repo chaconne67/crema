@@ -1425,6 +1425,33 @@ html[data-pointer] :focus-visible {
   border: 1px solid var(--hairline);
 }
 
+.primary-button,
+.secondary-button {
+  transition: background-color 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
+}
+
+.primary-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-strong) 86%, var(--ink));
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: var(--row-hover);
+  border-color: color-mix(in srgb, var(--accent-strong) 35%, var(--hairline));
+}
+
+.primary-button:focus-visible,
+.secondary-button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Off: nothing to do yet (e.g. 저장 with no change) or a request running. */
+.primary-button:disabled,
+.secondary-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .primary-button[hidden],
 .secondary-button[hidden],
 .provider-add[hidden],
@@ -1657,11 +1684,6 @@ html[data-pointer] :focus-visible {
   cursor: pointer;
   font: inherit;
   text-decoration: underline;
-}
-
-.primary-button:disabled {
-  opacity: 0.6;
-  cursor: progress;
 }
 
 .settings-section .check-row {
