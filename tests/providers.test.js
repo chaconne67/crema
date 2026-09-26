@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { addCategories, addableProviders, buildCatalog, locate, pickRoute, providerStatus, routesFor, suggestionRoute } from "../src/providers.js";
+import {
+  addCategories,
+  addableProviders,
+  buildCatalog,
+  freeChain,
+  locate,
+  pickRoute,
+  providerStatus,
+  routesFor,
+  suggestionRoute,
+  turnRoute,
+} from "../src/providers.js";
 
 const CHANNELS = [
   { id: "nous", name: "Nous Portal", models: ["hermes-5"], capabilities: {} },
@@ -61,7 +72,7 @@ describe("Providers that can be added", () => {
 
   it("lists Providers not yet signed in, one entry per sign-in method", () => {
     const addable = addableProviders(ACCOUNTS, ENV, new Set(["openai"]));
-    expect(addable.map((group) => group.name)).toEqual(["Nous Portal", "Anthropic", "Google", "GitHub Copilot"]);
+    expect(addable.map((group) => group.name)).toEqual(["Nous Portal", "Anthropic", "Google", "GitHub Copilot", "Groq", "Mistral"]);
     // Claude Code's borrowed login is not offered; Claude's subscription is the Anthropic login.
     expect(addable.flatMap((group) => group.methods).some((method) => method.id === "claude-code")).toBe(false);
     const anthropic = addable[1];
@@ -71,6 +82,46 @@ describe("Providers that can be added", () => {
     ]);
     expect(addable[2].methods).toEqual([
       { kind: "api_key", id: "gemini", envVar: "GOOGLE_API_KEY", url: "https://aistudio.google.com" },
+    ]);
+  });
+});
+
+describe("free Provider failover", () => {
+  const channel = (id, models) => ({ id, name: id, models, capabilities: {} });
+  const CONNECTED = [
+    channel("openrouter", ["anthropic/claude-opus-5", "qwen/qwen3.8:free"]),
+    channel("gemini", ["gemini-3.5-flash", "gemini-3.5-flash-lite"]),
+    channel("groq", ["llama-4-scout", "openai/gpt-oss-120b"]),
+    channel("xai", ["grok-5"]),
+  ];
+
+  it("chains the connected free Providers in order, each on its free model, leaving out those cooling off", () => {
+    expect(freeChain(CONNECTED)).toEqual([
+      { provider: "gemini", model: "gemini-3.5-flash-lite" },
+      { provider: "groq", model: "openai/gpt-oss-120b" },
+      { provider: "openrouter", model: "qwen/qwen3.8:free" },
+    ]);
+    expect(freeChain(CONNECTED, { gemini: 2000, groq: 500 }, 1000).map((entry) => entry.provider)).toEqual(["groq", "openrouter"]);
+  });
+
+  it("answers a turn from the next free Provider only while the chosen one cools off", () => {
+    const chosen = { provider: "gemini", model: "gemini-3.5-flash", reasoning: "high", fast: false };
+    const chain = freeChain(CONNECTED, { gemini: 2000 }, 1000);
+    expect(turnRoute(chosen, chain, {}, 1000)).toBe(chosen);
+    expect(turnRoute(chosen, chain, { gemini: 2000 }, 1000)).toEqual({ provider: "groq", model: "openai/gpt-oss-120b", reasoning: "", fast: false });
+    expect(turnRoute(chosen, [], { gemini: 2000 }, 1000)).toBe(chosen);
+  });
+
+  it("offers Groq and Mistral as OpenAI-compatible endpoints with their free model", () => {
+    const groq = addableProviders([], {}, new Set()).find((group) => group.key === "groq");
+    expect(groq.methods).toEqual([
+      {
+        kind: "api_key",
+        id: "groq",
+        envVar: "GROQ_API_KEY",
+        url: "https://console.groq.com/keys",
+        endpoint: expect.objectContaining({ base_url: "https://api.groq.com/openai/v1", key_env: "GROQ_API_KEY", model: "openai/gpt-oss-120b" }),
+      },
     ]);
   });
 });

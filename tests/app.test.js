@@ -49,6 +49,24 @@ describe("chat app", () => {
     expect(window.localStorage.getItem("agent-client:chat:chat-b")).toBeNull();
   });
 
+  it("notes under an answer which Provider answered instead, and keeps the note", async () => {
+    const client = {
+      async *streamReply({ onServed }) {
+        yield "답";
+        onServed({ provider: "groq", model: "openai/gpt-oss-120b" });
+      },
+    };
+    const describeServed = vi.fn(() => "대신 답한 AI: Groq · openai/gpt-oss-120b");
+    const app = createChatApp({ client, host: { openLink: vi.fn() }, describeServed });
+    app.mount(document.querySelector("#app"));
+    app.showConversation("chat-a");
+    submit("질문");
+    await vi.waitFor(() => expect(document.querySelector(".assistant-note").textContent).toBe("대신 답한 AI: Groq · openai/gpt-oss-120b"));
+    expect(describeServed).toHaveBeenCalledWith("chat-a", { provider: "groq", model: "openai/gpt-oss-120b" });
+    const stored = JSON.parse(window.localStorage.getItem("agent-client:chat:chat-a"));
+    expect(stored.at(-1).note).toBe("대신 답한 AI: Groq · openai/gpt-oss-120b");
+  });
+
   it("says whether the reply is thinking, running a tool, or writing", async () => {
     let step;
     const next = () => new Promise((resolve) => (step = resolve));

@@ -69,6 +69,7 @@ describe("Provider section", () => {
     expect(groups()).toEqual([
       { label: "많이 쓰는 AI", open: true, items: ["Claude (Anthropic)구독 · API 키", "GitHub Copilot토큰"] },
       { label: "여러 AI를 한 곳에서", open: false, items: ["OpenRouterAPI 키"] },
+      { label: "오픈소스 모델 서비스", open: false, items: ["GroqAPI 키", "MistralAPI 키"] },
       { label: "중국 AI", open: false, items: ["DeepSeekAPI 키"] },
       { label: "기타 (개발자·기업용)", open: false, items: ["NewCoAPI 키"] },
     ]);
@@ -109,5 +110,30 @@ describe("Provider section", () => {
     expect(onChanged).toHaveBeenCalled();
     expect($("[data-provider-form]").hidden).toBe(true);
     expect(rows()).toContain("OpenRouterON API 키");
+  });
+
+  it("adds Groq as the engine's OpenAI-compatible endpoint, the default only when nothing else is set up", async () => {
+    const addGroq = async () => {
+      $("[data-provider-add]").click();
+      await flush();
+      choose("Groq");
+      $("#provider-key").value = "gsk-test";
+      $("[data-save-key]").click();
+      await flush();
+      await flush();
+    };
+    const endpoint = { name: "Groq", base_url: "https://api.groq.com/openai/v1", key_env: "GROQ_API_KEY", api_mode: "chat_completions", model: "openai/gpt-oss-120b" };
+
+    await addGroq();
+    expect(host.hermesAdmin).not.toHaveBeenCalledWith("POST", "/api/providers/validate", expect.anything());
+    expect(host.hermesAdmin).toHaveBeenCalledWith("PUT", "/api/env", { key: "GROQ_API_KEY", value: "gsk-test" });
+    expect(host.hermesAdmin).toHaveBeenCalledWith("PUT", "/api/config", { config: { providers: { groq: endpoint } } });
+
+    status = [];
+    host.hermesAdmin.mockClear();
+    await addGroq();
+    expect(host.hermesAdmin).toHaveBeenCalledWith("PUT", "/api/config", {
+      config: { providers: { groq: endpoint }, model: { provider: "groq", default: "openai/gpt-oss-120b" } },
+    });
   });
 });

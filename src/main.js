@@ -8,8 +8,10 @@ import {
   createDesktopHost,
   hermesSessionId,
   loadConnection,
+  loadCooling,
   parseModelChoice,
   saveConnection,
+  saveCooling,
   supportsFast,
   usableProviders,
 } from "./desktop.js";
@@ -19,7 +21,7 @@ import { PROVIDER_CHEVRON, ZAP_ICON, modelMenuRows } from "./model-picker.js";
 // Lucide (ISC) "gauge": the reasoning-effort row in the model menu.
 const REASONING_ICON =
   '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>';
-import { buildCatalog, locate, pickRoute, suggestionRoute } from "./providers.js";
+import { COOL_MS, FREE_PROVIDERS, buildCatalog, freeChain, locate, pickRoute, providerOf, suggestionRoute, turnRoute } from "./providers.js";
 import { createSettingsPanel } from "./settings-panel.js";
 import { createSignIn } from "./sign-in.js";
 import { FOLDER_COLORS, createSidebar } from "./sidebar.js";
@@ -88,6 +90,44 @@ function refreshAccess() {
     .catch(() => app.setAccess(null));
 }
 
+// Free Providers that failed a turn sit out COOL_MS: the engine would otherwise try them first every turn.
+const cooling = loadCooling();
+// What each conversation's last turn asked for: { route, asked, why } (why: "cooling" | "resume" | "").
+const sentTurns = new Map();
+// The engine's fallback_providers as last read or written (JSON); null until first read.
+let syncedChain = null;
+
+/** Sits a free Provider out; a paid one is left as chosen. Returns whether it now sits out. */
+function coolOff(providerId) {
+  if (!FREE_PROVIDERS.some((free) => free.id === providerId)) return false;
+  cooling[providerId] = Date.now() + COOL_MS;
+  saveCooling(cooling);
+  return true;
+}
+
+/** Keeps the engine's failover chain on the connected free Providers not cooling off (never emptied). */
+async function syncFallback() {
+  const chain = JSON.stringify(freeChain(providers, cooling));
+  if (syncedChain === null) syncedChain = JSON.stringify((await host.hermesAdmin("GET", "/api/config"))?.fallback_providers || []);
+  if (chain === "[]" || chain === syncedChain) return;
+  await host.hermesAdmin("PUT", "/api/config", { config: { fallback_providers: JSON.parse(chain) } });
+  syncedChain = chain;
+}
+
+const providerName = (id) => (id ? providerOf(id, providers.find((item) => item.id === id)?.name).name : "기본 모델");
+
+/** The line under an answer another Provider gave; a free Provider the engine failed over from sits out. */
+function describeServed(conversationId, runtime) {
+  const turn = sentTurns.get(conversationId);
+  if (!turn) return "";
+  if (runtime?.model && turn.route.model && runtime.model !== turn.route.model) {
+    const rest = coolOff(turn.route.provider) ? ", 15분 쉼" : "";
+    return `대신 답한 AI: ${providerName(runtime.provider)} · ${runtime.model} — ${providerName(turn.route.provider)} 한도 초과 또는 응답 없음${rest}`;
+  }
+  const reason = { cooling: "쉬는 중", resume: `연결 끊김${turn.asked.provider in cooling ? ", 15분 쉼" : ""}` }[turn.why];
+  return reason ? `대신 답한 AI: ${providerName(turn.route.provider)} · ${turn.route.model} — ${providerName(turn.asked.provider)} ${reason}` : "";
+}
+
 const hermesClient = createChatClient({
   async transport(args) {
     try {
@@ -100,8 +140,15 @@ const hermesClient = createChatClient({
     connected = true;
     app.setStatus("connected", connectedLabel());
     const project = activeProject();
+    // A reply cut off midway goes to the next free Provider; with none left the cut-off stands.
+    const asked = { ...((args.resume && sentTurns.get(args.conversationId)?.route) || connection) };
+    if (args.resume) coolOff(asked.provider);
+    const route = turnRoute(asked, freeChain(providers, cooling), args.resume ? { ...cooling, [asked.provider]: Infinity } : cooling);
+    if (args.resume && route === asked) throw args.resume;
+    sentTurns.set(args.conversationId, { route, asked, why: args.resume ? "resume" : route === asked ? "" : "cooling" });
+    await syncFallback().catch(() => {});
     return host.streamHermes({
-      connection,
+      connection: route,
       ...args,
       workdir: project?.path,
       // conversationId is the chat's current Hermes session; the scope key stays per chat/project.
@@ -646,6 +693,7 @@ const app = createChatApp({
     if (chat) renameChat(chat, title);
   },
   answerApproval: (request, allow) => host.answerApproval(request, allow),
+  describeServed,
   canTranscribe: () => connected,
   onContextMenu(kind, ui, project) {
     if (kind === "model") {

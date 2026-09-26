@@ -58,13 +58,14 @@ export function saveMessages(chatId, messages) {
   writeJson(
     chatKey(chatId),
     // Attachments are kept by name and kind only; their data is never stored.
-    messages.map(({ id, role, content, createdAt, status, attachments }) => ({
+    messages.map(({ id, role, content, createdAt, status, attachments, note }) => ({
       id,
       role,
       content,
       createdAt,
       status,
       ...(attachments?.length ? { attachments: attachments.map(({ kind, name }) => ({ kind, name })) } : {}),
+      ...(note ? { note } : {}),
     })),
   );
 }

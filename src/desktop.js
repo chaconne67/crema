@@ -56,6 +56,25 @@ export function saveConnection(connection) {
   }
 }
 
+const COOLING_KEY = "agent-client:cooling:v1";
+
+/** Free Providers left out after failing a turn: { providerId: until (ms) }. */
+export function loadCooling() {
+  try {
+    return JSON.parse(window.localStorage.getItem(COOLING_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+export function saveCooling(cooling) {
+  try {
+    window.localStorage.setItem(COOLING_KEY, JSON.stringify(cooling));
+  } catch {
+    // Forgotten on the next launch: that Provider is tried again once.
+  }
+}
+
 async function call(command, args) {
   try {
     return await invoke(command, args);
