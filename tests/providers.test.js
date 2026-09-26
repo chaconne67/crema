@@ -75,16 +75,13 @@ describe("Providers that can be added", () => {
     HERMES_ANON_API_SECRET: { category: "provider", provider: "", provider_label: "" },
   };
 
-  it("lists Providers not yet signed in, one entry per sign-in method", () => {
+  it("lists Providers not yet signed in, one entry per sign-in method done inside Crema", () => {
     const addable = addableProviders(ACCOUNTS, ENV, new Set(["openai"]));
     expect(addable.map((group) => group.name)).toEqual(["Nous Portal", "Anthropic", "Google", "GitHub Copilot", "Groq", "Mistral"]);
-    // Claude Code's borrowed login is not offered; Claude's subscription is the Anthropic login.
+    // Sign-ins the engine leaves to a terminal (Claude's subscription, Claude Code's token) are not offered.
     expect(addable.flatMap((group) => group.methods).some((method) => method.id === "claude-code")).toBe(false);
     const anthropic = addable[1];
-    expect(anthropic.methods.map((method) => [method.kind, method.id])).toEqual([
-      ["subscription", "anthropic"],
-      ["api_key", "anthropic"],
-    ]);
+    expect(anthropic.methods.map((method) => [method.kind, method.id])).toEqual([["api_key", "anthropic"]]);
     expect(addable[2].methods).toEqual([
       { kind: "api_key", id: "gemini", envVar: "GOOGLE_API_KEY", url: "https://aistudio.google.com" },
     ]);

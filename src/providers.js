@@ -13,9 +13,9 @@ const GROUPS = {
 };
 const GROUP_OF = Object.fromEntries(Object.entries(GROUPS).flatMap(([key, group]) => group.ids.map((id) => [id, key])));
 
-// Hermes' virtual mixture-of-agents channel is not a Provider. Claude Code's channel borrows that
-// program's login, which Crema's engine does not do (auth.adopt_external_logins is off): Claude's
-// subscription is the Anthropic login instead.
+// Hermes' virtual mixture-of-agents channel is not a Provider. Claude Code's channel uses that program's
+// subscription token, which Crema's engine does not borrow (auth.adopt_external_logins is off); Claude is
+// reached with an Anthropic API key.
 const SKIPPED_CHANNELS = new Set(["moa", "claude-code"]);
 
 // Subscription channels: Hermes' OAuth registry (hermes_cli/auth.py) plus Copilot, a GitHub-login
@@ -213,8 +213,12 @@ export function addableProviders(accountRows, envRows, connectedKeys) {
     const methods = groups.get(key).methods;
     if (!methods.some((item) => item.kind === method.kind)) methods.push(method);
   };
+  // Only sign-ins done inside Crema (a browser page and a code). The engine leaves the others to a
+  // terminal ("external": Claude's subscription, the Qwen and Copilot CLIs), which most people will not use;
+  // those Providers are offered by their API key or token instead.
   for (const row of accountRows) {
-    add(row.id, row.name, { kind: "subscription", id: row.id, flow: row.flow, command: row.cli_command || "" });
+    if (row.flow !== "device_code") continue;
+    add(row.id, row.name, { kind: "subscription", id: row.id, flow: row.flow });
   }
   for (const [envVar, meta] of Object.entries(envRows)) {
     if (meta.category !== "provider" || !meta.provider || !/_(KEY|TOKEN)$/.test(envVar)) continue;

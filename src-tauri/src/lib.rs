@@ -697,35 +697,6 @@ async fn hermes_admin(
   response.json().await.map_err(|_| "server".to_string())
 }
 
-/// Opens a console running a Provider's own sign-in command — the ones the engine leaves to a terminal
-/// (e.g. `hermes auth add anthropic`, `claude setup-token`): `hermes` is the engine's own CLI, on
-/// Crema's engine data.
-#[tauri::command]
-fn open_login_terminal(app: AppHandle, command: String) -> Result<(), String> {
-  let mut parts: Vec<String> = command.split_whitespace().map(str::to_string).collect();
-  let safe = parts.iter().all(|part| part.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'));
-  if !safe || !matches!(parts.first().map(String::as_str), Some("hermes" | "claude" | "copilot")) {
-    return Err("server".into());
-  }
-  let mut console = Command::new("cmd");
-  if parts[0] == "hermes" {
-    let bundle = app.path().resource_dir().map_err(|_| "server".to_string())?.join("engine");
-    parts.splice(0..1, [bundle.join("python").join("python.exe").to_string_lossy().into_owned(), "-m".into(), "hermes_cli.main".into()]);
-    console
-      .current_dir(bundle.join("src"))
-      .env("HERMES_HOME", engine_home(&app)?)
-      .env("PYTHONUTF8", "1")
-      .env_remove("PYTHONHOME")
-      .env_remove("PYTHONPATH");
-  }
-  console
-    .args(["/C", "start", "Crema 로그인", "cmd", "/K"])
-    .args(&parts)
-    .spawn()
-    .map(|_| ())
-    .map_err(|_| "server".to_string())
-}
-
 const ATTACHMENT_LIMIT: u64 = 20 * 1024 * 1024;
 // Folders never worth offering as @-mentions.
 const SKIPPED_DIRS: [&str; 9] = [".git", "node_modules", "target", "dist", "build", ".venv", "venv", "__pycache__", ".next"];
@@ -942,7 +913,6 @@ pub fn run() {
       hermes_info,
       auth_kinds,
       hermes_admin,
-      open_login_terminal,
       read_file,
       stage_document,
       git_info,

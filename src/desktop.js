@@ -190,7 +190,6 @@ export function createDesktopHost() {
     /** The engine's settings API (Provider sign-ins, API keys, approval mode). */
     hermesAdmin: (method, path, body) => call("hermes_admin", { method, path, body: body ?? null }),
 
-    openLoginTerminal: (command) => call("open_login_terminal", { command }),
 
     async pickFiles() {
       const paths = await openDialog({ multiple: true, title: "첨부할 파일" }).catch(() => null);

@@ -37,7 +37,6 @@ describe("Provider section", () => {
         if (path === "/api/providers/validate") return { ok: true, reachable: true };
         return {};
       }),
-      openLoginTerminal: vi.fn(async () => {}),
       openLink: vi.fn(),
     };
     onChanged = vi.fn(async () => {
@@ -67,7 +66,7 @@ describe("Provider section", () => {
     await flush();
     // Only the popular ones open; a Provider no category names falls under the last; a GitHub token is not an API key.
     expect(groups()).toEqual([
-      { label: "많이 쓰는 AI", open: true, items: ["Claude (Anthropic)구독 · API 키", "GitHub Copilot토큰"] },
+      { label: "많이 쓰는 AI", open: true, items: ["Claude (Anthropic)API 키", "GitHub Copilot토큰"] },
       { label: "여러 AI를 한 곳에서", open: false, items: ["OpenRouterAPI 키"] },
       { label: "오픈소스 모델 서비스", open: false, items: ["GroqAPI 키", "MistralAPI 키"] },
       { label: "중국 AI", open: false, items: ["DeepSeekAPI 키"] },
@@ -76,10 +75,9 @@ describe("Provider section", () => {
     choose("Claude");
     expect($("[data-chosen-name]").textContent).toBe("Claude (Anthropic)");
     expect($("[data-provider-picker]").hidden).toBe(true);
-    // Anthropic has two sign-in methods, so the choice is shown; it starts on the terminal sign-in.
-    expect($("[data-method-field]").hidden).toBe(false);
-    $("[data-open-terminal]").click();
-    expect(host.openLoginTerminal).toHaveBeenCalledWith("hermes auth add anthropic");
+    // Claude's subscription sign-in needs a terminal, so only its API key is offered, and asked for at once.
+    expect($("[data-method-field]").hidden).toBe(true);
+    expect($("#provider-key")).not.toBeNull();
   });
 
   it("finds a Provider by name, and goes back to the list to pick another", async () => {

@@ -160,7 +160,7 @@ export function createProviderSection({ host, getStatus, onChanged, onGuide = ()
         onGuide(method.id);
       });
       step.querySelector("[data-save-key]").addEventListener("click", () => saveKey(method));
-    } else if (method.flow === "device_code") {
+    } else {
       step.innerHTML = `
         <button class="primary-button" type="button" data-start-login>로그인 시작</button>
         <div class="device-login" data-device hidden>
@@ -169,15 +169,6 @@ export function createProviderSection({ host, getStatus, onChanged, onGuide = ()
           <button class="secondary-button" type="button" data-open-login>로그인 페이지 열기</button>
         </div>`;
       step.querySelector("[data-start-login]").addEventListener("click", (event) => deviceLogin(method, event.currentTarget));
-    } else {
-      step.innerHTML = `
-        <p class="field-note">이 Provider는 터미널에서 직접 로그인합니다. 터미널 창의 안내를 따른 뒤 완료 확인을 눌러 주세요.</p>
-        <button class="primary-button" type="button" data-open-terminal>터미널에서 로그인</button>
-        <button class="secondary-button" type="button" data-check-login>로그인 완료 확인</button>`;
-      step.querySelector("[data-open-terminal]").addEventListener("click", () =>
-        host.openLoginTerminal(method.command).catch(() => setStatus("터미널을 열지 못했습니다.", "error")),
-      );
-      step.querySelector("[data-check-login]").addEventListener("click", () => checkConnected());
     }
     step.insertAdjacentHTML("beforeend", '<p class="provider-status" data-step-status role="status"></p>');
   }
@@ -255,14 +246,6 @@ export function createProviderSection({ host, getStatus, onChanged, onGuide = ()
         button.disabled = false;
       }
     }
-  }
-
-  async function checkConnected() {
-    const key = chosen?.key;
-    setStatus("확인하고 있습니다…");
-    await onChanged();
-    if (getStatus().some((row) => row.key === key)) await finish();
-    else setStatus("아직 로그인이 확인되지 않았습니다. 터미널에서 로그인을 마친 뒤 다시 눌러 주세요.", "error");
   }
 
   async function openForm() {
