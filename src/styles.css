@@ -1325,6 +1325,9 @@ html[data-pointer] :focus-visible {
 }
 
 .settings-panel input:not([type="range"]):not([type="checkbox"]),
+.persona-text,
+.persona-form input,
+.persona-form textarea,
 .dropdown-button {
   width: 100%;
   min-height: 40px;
@@ -1364,6 +1367,9 @@ html[data-pointer] :focus-visible {
 }
 
 .settings-panel input:not([type="range"]):not([type="checkbox"]):focus,
+.persona-text:focus,
+.persona-form input:focus,
+.persona-form textarea:focus,
 .dropdown-button:focus-visible,
 .dropdown-button[aria-expanded="true"] {
   border-color: var(--accent-strong);
@@ -3361,4 +3367,34 @@ svg.zap {
 .sign-in-status {
   min-height: 1.5em;
   font-size: 0.875rem;
+}
+
+/* SOUL.md: edited in Settings and written by the first-run persona setup (which reuses .sign-in). */
+.persona-text,
+.persona-form textarea {
+  padding: 10px 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.persona-text {
+  font-family: var(--font-code);
+  font-size: 0.8125rem;
+}
+
+.persona-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(420px, 100%);
+  margin-top: 8px;
+  text-align: left;
+}
+
+.persona-form .primary-button {
+  align-self: stretch;
+}
+
+.persona-form .text-button {
+  align-self: center;
 }

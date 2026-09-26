@@ -616,6 +616,27 @@ fn auth_kinds(app: AppHandle) -> serde_json::Value {
   channels.into()
 }
 
+/// The agent's SOUL.md — who it is and how it speaks, its only identity. Starts the engine first, so a
+/// new install reads the one the engine seeds. The engine reads the file fresh for each message.
+#[tauri::command]
+async fn read_soul(app: AppHandle) -> Result<String, String> {
+  engine(&app).await?;
+  let path = engine_home(&app)?.join("SOUL.md");
+  if !path.exists() {
+    return Ok(String::new());
+  }
+  std::fs::read_to_string(path).map_err(|_| "file_read".to_string())
+}
+
+/// Replaces SOUL.md whole (written beside it, then moved over it, so a failed save never leaves half a file).
+#[tauri::command]
+fn write_soul(app: AppHandle, content: String) -> Result<(), String> {
+  let home = engine_home(&app)?;
+  let staged = home.join("SOUL.md.saving");
+  std::fs::write(&staged, content).map_err(|_| "file_write".to_string())?;
+  std::fs::rename(&staged, home.join("SOUL.md")).map_err(|_| "file_write".to_string())
+}
+
 /// One request to the engine's settings API (`/api/...`): provider sign-ins, API keys, voice input.
 #[tauri::command]
 async fn hermes_admin(
@@ -864,6 +885,8 @@ pub fn run() {
       hermes_info,
       auth_kinds,
       hermes_admin,
+      read_soul,
+      write_soul,
       read_file,
       stage_document,
       git_info,

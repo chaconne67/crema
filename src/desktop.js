@@ -23,6 +23,7 @@ const ERROR_MESSAGES = {
   account_unreachable: "crema-agent.site에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.",
   file_read: "파일을 읽지 못했습니다.",
   file_too_large: "20MB보다 큰 이미지는 첨부할 수 없습니다.",
+  file_write: "파일을 저장하지 못했습니다.",
   git_dirty: "커밋하지 않은 변경이 있어 브랜치를 바꾸지 않았습니다. 커밋하거나 되돌린 뒤 다시 시도해 주세요.",
   git_switch: "브랜치를 바꾸지 못했습니다.",
   git_branch_name: "브랜치 이름으로 쓸 수 없는 글자가 있습니다.",
@@ -187,6 +188,10 @@ export function createDesktopHost() {
 
     /** `refresh`: each Provider's model list fetched now (at start and after adding one), not the last one. */
     modelOptions: (refresh = false) => call("model_options", { refresh }),
+
+    /** The agent's SOUL.md: its identity and persona, the only place they are set. */
+    readSoul: () => call("read_soul"),
+    writeSoul: (content) => call("write_soul", { content }),
 
     /** The engine's settings API (Provider sign-ins, API keys, approval mode). */
     hermesAdmin: (method, path, body) => call("hermes_admin", { method, path, body: body ?? null }),

@@ -54,6 +54,8 @@ const SECTION_ICONS = {
   providers: icon('<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>'),
   connection: icon('<path d="M12 22v-5"/><path d="M15 8V2"/><path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z"/><path d="M9 8V2"/>'),
   model: icon('<path d="M12 20v2"/><path d="M12 2v2"/><path d="M17 20v2"/><path d="M17 2v2"/><path d="M2 12h2"/><path d="M2 17h2"/><path d="M2 7h2"/><path d="M20 12h2"/><path d="M20 17h2"/><path d="M20 7h2"/><path d="M7 20v2"/><path d="M7 2v2"/><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/>'),
+  // Lucide (ISC) "smile".
+  persona: icon('<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/>'),
   appearance: icon('<path d="M12 4v16"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 20h6"/>'),
   theme: icon('<path d="M12 2v2"/><path d="M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715"/><path d="M16 12a4 4 0 0 0-4-4"/><path d="m19 5-1.256 1.256"/><path d="M20 12h2"/>'),
   input: icon('<path d="M10 8h.01"/><path d="M12 12h.01"/><path d="M14 8h.01"/><path d="M16 12h.01"/><path d="M18 8h.01"/><path d="M6 8h.01"/><path d="M7 16h10"/><path d="M8 12h.01"/><rect width="20" height="16" x="2" y="4" rx="2"/>'),
@@ -304,6 +306,32 @@ export function createSettingsPanel({
     showConnectionMessage(await onConnect());
   }
 
+  const personaStatus = (text, tone = "") => {
+    const status = panel.querySelector("[data-persona-status]");
+    status.textContent = text;
+    status.dataset.tone = tone;
+  };
+
+  /** SOUL.md as it is now, read each time Settings opens (the first-run setup may have written it). */
+  async function loadPersona() {
+    try {
+      panel.querySelector("#persona-text").value = await host.readSoul();
+      personaStatus("");
+    } catch (error) {
+      personaStatus(error.userMessage, "error");
+    }
+  }
+
+  async function savePersona() {
+    personaStatus("저장하고 있습니다…");
+    try {
+      await host.writeSoul(panel.querySelector("#persona-text").value);
+      personaStatus("저장했습니다. 다음 메시지부터 적용됩니다.");
+    } catch (error) {
+      personaStatus(error.userMessage, "error");
+    }
+  }
+
   function close() {
     panel.hidden = true;
     shell.classList.remove("settings-open");
@@ -317,6 +345,7 @@ export function createSettingsPanel({
       panel.hidden = false;
       shell.classList.add("settings-open");
       onOpenChange(true);
+      loadPersona();
       panel.querySelector("[data-close-settings]").focus();
     },
 
@@ -395,6 +424,14 @@ export function createSettingsPanel({
               ${REASONING_LEVELS.map((level) => `<option value="${level.value}">${level.label}</option>`).join("")}
             </select>
             <p class="field-note" data-model-note></p>
+          </section>
+
+          <section class="settings-section" aria-labelledby="persona-title">
+            <h3 id="persona-title">페르소나</h3>
+            <p class="field-note">에이전트가 누구이고 어떻게 말할지 정하는 글(SOUL.md)입니다. 어떤 모델을 쓰든 이 글만 에이전트의 정체성이 됩니다. 저장하면 다음 메시지부터 적용됩니다.</p>
+            <textarea id="persona-text" class="persona-text" rows="10" spellcheck="false" aria-label="페르소나 (SOUL.md)"></textarea>
+            <button class="secondary-button" type="button" data-save-persona>저장</button>
+            <p class="provider-status" data-persona-status role="status"></p>
           </section>
 
           <section class="settings-section" aria-labelledby="appearance-title">
@@ -573,6 +610,7 @@ export function createSettingsPanel({
 
       panel.querySelector("[data-check]").addEventListener("click", connect);
       panel.querySelector("[data-sign-out]").addEventListener("click", () => onSignOut());
+      panel.querySelector("[data-save-persona]").addEventListener("click", savePersona);
       panel.querySelector("[data-close-settings]").addEventListener("click", close);
       panel.addEventListener("keydown", (event) => {
         if (event.key === "Escape") close();

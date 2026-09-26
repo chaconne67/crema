@@ -37,6 +37,7 @@ import {
 } from "./providers.js";
 import { createGuide } from "./guide.js";
 import { createSettingsPanel } from "./settings-panel.js";
+import { createPersonaSetup } from "./persona.js";
 import { createSignIn } from "./sign-in.js";
 import { FOLDER_COLORS, createSidebar } from "./sidebar.js";
 import {
@@ -898,6 +899,12 @@ async function ensureSignedIn() {
   panel.setAccount(loadAccount());
 }
 
+const personaSetup = createPersonaSetup({ host });
+
 ensureSignedIn()
   .then(connect)
-  .then((result) => panel.showConnection(result));
+  .then((result) => {
+    panel.showConnection(result);
+    // First run: who the agent is, into SOUL.md (needs the engine, so after connecting).
+    if (result.state === "connected") return personaSetup.show();
+  });
