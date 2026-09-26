@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { addableProviders, buildCatalog, locate, pickRoute, providerStatus, routesFor, suggestionRoute } from "../src/providers.js";
+import { addCategories, addableProviders, buildCatalog, locate, pickRoute, providerStatus, routesFor, suggestionRoute } from "../src/providers.js";
 
 const CHANNELS = [
   { id: "nous", name: "Nous Portal", models: ["hermes-5"], capabilities: {} },
@@ -84,5 +84,23 @@ describe("next-input prediction model", () => {
     const keyOnly = buildCatalog([channel("gemini", ["gemini-3.1-flash-lite", "gemini-2.5-pro"])]);
     expect(suggestionRoute(keyOnly)).toMatchObject({ providerId: "gemini", modelId: "gemini-3.1-flash-lite", subscription: false });
     expect(suggestionRoute(buildCatalog([channel("openrouter", ["x"])]))).toBeNull();
+  });
+});
+
+describe("Provider add list", () => {
+  const group = (key, name) => ({ key, name, methods: [{ kind: "api_key" }] });
+
+  it("keeps each category in order of how widely known, and reads mainland-China endpoints as such", () => {
+    const categories = addCategories([
+      group("alibaba-coding-plan-cn", "Alibaba Cloud (Coding Plan, China)"),
+      group("kimi-coding", "Kimi / Kimi Coding Plan"),
+      group("deepseek", "DeepSeek"),
+      group("zeta", "Zeta"),
+      group("acme", "Acme"),
+    ]);
+    expect(categories.map((category) => [category.label, category.items.map((item) => item.name)])).toEqual([
+      ["중국 AI", ["DeepSeek", "Kimi (Moonshot)", "Alibaba Cloud (Coding Plan, 중국 본토)"]],
+      ["기타 (개발자·기업용)", ["Acme", "Zeta"]],
+    ]);
   });
 });

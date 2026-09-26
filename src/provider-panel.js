@@ -1,5 +1,5 @@
 import { enhanceSelect } from "./dropdown.js";
-import { METHOD_LABELS, addableProviders } from "./providers.js";
+import { METHOD_LABELS, addCategories, addableProviders } from "./providers.js";
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
@@ -7,10 +7,13 @@ function escapeHtml(value) {
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// A GitHub token is not called an API key.
+const methodLabel = (method) => (method.kind === "api_key" && method.envVar?.endsWith("_TOKEN") ? "토큰" : METHOD_LABELS[method.kind]);
+
 /**
- * Settings "Provider" section: the Providers signed in now, and adding one. Adding picks a Provider,
- * then its sign-in method (asked only when it has more than one), then runs that sign-in through
- * local Hermes. Model choice and speed live in the AI section; nothing here touches them.
+ * Settings "Provider" section: the Providers signed in now, and adding one. Adding picks a Provider
+ * from a searchable, folded list, then its sign-in method (asked only when it has more than one), then
+ * runs that sign-in through Crema's engine. Model choice and speed live in the AI section; nothing here touches them.
  * getStatus() → providerStatus() rows; onChanged() reloads them after a sign-in.
  */
 export function createProviderSection({ host, getStatus, onChanged }) {
@@ -25,8 +28,14 @@ export function createProviderSection({ host, getStatus, onChanged }) {
     <div class="provider-add" data-provider-form hidden>
       <p class="provider-status" data-provider-loading role="status"></p>
       <div class="field-group" data-provider-fields hidden>
-        <label for="provider-select">Provider</label>
-        <select id="provider-select"></select>
+        <div class="provider-picker" data-provider-picker>
+          <input type="search" data-provider-search placeholder="AI 이름으로 찾기" aria-label="AI 이름으로 찾기" autocomplete="off" spellcheck="false" />
+          <div data-provider-groups></div>
+        </div>
+        <div class="provider-chosen" data-provider-chosen hidden>
+          <span class="provider-chosen-name" data-chosen-name></span>
+          <button class="text-button" type="button" data-provider-repick>다른 AI 고르기</button>
+        </div>
         <div class="field-group" data-method-field hidden>
           <label for="method-select">인증 방식</label>
           <select id="method-select"></select>
@@ -36,10 +45,10 @@ export function createProviderSection({ host, getStatus, onChanged }) {
       <button class="text-button" type="button" data-provider-cancel>취소</button>
     </div>`;
   const $ = (selector) => element.querySelector(selector);
-  const providerSelect = $("#provider-select");
   const methodSelect = $("#method-select");
-  const dropdowns = [enhanceSelect(providerSelect), enhanceSelect(methodSelect)];
-  let addable = [];
+  const methodDropdown = enhanceSelect(methodSelect);
+  let categories = [];
+  let chosen = null; // the Provider picked from the list
   let pending = null; // cancels a running device-code wait
 
   function render() {
@@ -72,19 +81,57 @@ export function createProviderSection({ host, getStatus, onChanged }) {
 
   async function finish() {
     await onChanged();
-    const name = providerSelect.selectedOptions[0]?.textContent || "Provider";
+    const name = chosen?.name || "Provider";
     closeForm();
     $("[data-provider-note]").textContent = `${name}을(를) 연결했습니다. 이제 모델 목록에서 고를 수 있습니다.`;
   }
 
-  const currentMethod = () => addable[providerSelect.selectedIndex]?.methods[Number(methodSelect.value) || 0];
+  const currentMethod = () => chosen?.methods[Number(methodSelect.value) || 0];
+
+  /** The folded list; a search opens every category with a match and leaves the others out. */
+  function showGroups(query = "") {
+    const words = query.trim().toLowerCase();
+    const matches = (group) => !words || `${group.name} ${group.key}`.toLowerCase().includes(words);
+    const choice = (group) =>
+      `<li><button type="button" class="provider-choice" data-choose="${escapeHtml(group.key)}"><span>${escapeHtml(group.name)}</span><span class="provider-method">${group.methods.map(methodLabel).join(" · ")}</span></button></li>`;
+    const shown = categories
+      .map((category) => ({ ...category, items: category.items.filter(matches) }))
+      .filter((category) => category.items.length);
+    $("[data-provider-groups]").innerHTML = shown.length
+      ? shown
+          .map(
+            (category) => `
+              <details class="settings-group provider-group"${category.open || words ? " open" : ""}>
+                <summary>${escapeHtml(category.label)}<span class="provider-count">${category.items.length}</span></summary>
+                <ul class="provider-choices">${category.items.map(choice).join("")}</ul>
+              </details>`,
+          )
+          .join("")
+      : `<p class="field-note">찾는 AI가 없습니다.</p>`;
+  }
+
+  function choose(key) {
+    chosen = categories.flatMap((category) => category.items).find((group) => group.key === key) || null;
+    if (!chosen) return;
+    $("[data-provider-picker]").hidden = true;
+    $("[data-provider-chosen]").hidden = false;
+    $("[data-chosen-name]").textContent = chosen.name;
+    showMethods();
+  }
+
+  function repick() {
+    chosen = null;
+    $("[data-provider-picker]").hidden = false;
+    $("[data-provider-chosen]").hidden = true;
+    showMethods();
+  }
 
   function showMethods() {
-    const methods = addable[providerSelect.selectedIndex]?.methods || [];
-    methodSelect.innerHTML = methods.map((method, index) => `<option value="${index}">${METHOD_LABELS[method.kind]}</option>`).join("");
+    const methods = chosen?.methods || [];
+    methodSelect.innerHTML = methods.map((method, index) => `<option value="${index}">${methodLabel(method)}</option>`).join("");
     // Only a choice when there is one.
     $("[data-method-field]").hidden = methods.length < 2;
-    dropdowns.forEach((dropdown) => dropdown.refresh());
+    methodDropdown.refresh();
     showStep();
   }
 
@@ -99,9 +146,9 @@ export function createProviderSection({ host, getStatus, onChanged }) {
     }
     if (method.kind === "api_key") {
       step.innerHTML = `
-        <label for="provider-key">API 키</label>
-        <input id="provider-key" type="password" autocomplete="off" spellcheck="false" placeholder="키를 붙여넣으세요" />
-        <p class="field-note">Hermes 설정에 저장됩니다.${method.url ? ' <button class="link-button" type="button" data-key-page>키 발급 페이지</button>' : ""}</p>
+        <label for="provider-key">${methodLabel(method)}</label>
+        <input id="provider-key" type="password" autocomplete="off" spellcheck="false" placeholder="붙여넣으세요" />
+        <p class="field-note">이 PC의 Crema 엔진에만 저장됩니다.${method.url ? ' <button class="link-button" type="button" data-key-page>키 발급 페이지</button>' : ""}</p>
         <button class="primary-button" type="button" data-save-key>확인하고 저장</button>`;
       step.querySelector("[data-key-page]")?.addEventListener("click", () => host.openLink(method.url));
       step.querySelector("[data-save-key]").addEventListener("click", () => saveKey(method));
@@ -131,7 +178,7 @@ export function createProviderSection({ host, getStatus, onChanged }) {
     const input = $("#provider-key");
     const value = input.value.trim();
     if (!value) {
-      setStatus("API 키를 입력해 주세요.", "error");
+      setStatus(`${methodLabel(method)}를 입력해 주세요.`, "error");
       return;
     }
     setStatus("키를 확인하고 있습니다…");
@@ -188,7 +235,7 @@ export function createProviderSection({ host, getStatus, onChanged }) {
   }
 
   async function checkConnected() {
-    const key = addable[providerSelect.selectedIndex]?.key;
+    const key = chosen?.key;
     setStatus("확인하고 있습니다…");
     await onChanged();
     if (getStatus().some((row) => row.key === key)) await finish();
@@ -208,11 +255,12 @@ export function createProviderSection({ host, getStatus, onChanged }) {
         host.hermesAdmin("GET", "/api/env"),
       ]);
       if ($("[data-provider-form]").hidden) return;
-      addable = addableProviders(accounts.providers || [], env || {}, new Set(getStatus().map((row) => row.key)));
-      providerSelect.innerHTML = addable.map((group, index) => `<option value="${index}">${escapeHtml(group.name)}</option>`).join("");
-      loading.textContent = addable.length ? "" : "추가할 수 있는 Provider가 없습니다.";
-      $("[data-provider-fields]").hidden = !addable.length;
-      showMethods();
+      categories = addCategories(addableProviders(accounts.providers || [], env || {}, new Set(getStatus().map((row) => row.key))));
+      loading.textContent = categories.length ? "" : "추가할 수 있는 Provider가 없습니다.";
+      $("[data-provider-fields]").hidden = !categories.length;
+      $("[data-provider-search]").value = "";
+      showGroups();
+      repick();
     } catch (error) {
       loading.dataset.tone = "error";
       loading.textContent = error.userMessage;
@@ -221,7 +269,12 @@ export function createProviderSection({ host, getStatus, onChanged }) {
 
   $("[data-provider-add]").addEventListener("click", openForm);
   $("[data-provider-cancel]").addEventListener("click", closeForm);
-  providerSelect.addEventListener("change", showMethods);
+  $("[data-provider-search]").addEventListener("input", (event) => showGroups(event.target.value));
+  $("[data-provider-groups]").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-choose]");
+    if (button) choose(button.dataset.choose);
+  });
+  $("[data-provider-repick]").addEventListener("click", repick);
   methodSelect.addEventListener("change", showStep);
 
   return { element, render };

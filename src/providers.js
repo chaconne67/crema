@@ -129,3 +129,41 @@ export function addableProviders(accountRows, envRows, connectedKeys) {
   }
   return [...groups.values()];
 }
+
+// The add list, for people who know an AI by its product name rather than its company: the popular
+// ones first and open, the rest folded by what they are, each in order of how widely it is known. A
+// Provider not listed falls under the last one, alphabetically after the listed ones.
+const ADD_CATEGORIES = [
+  { label: "많이 쓰는 AI", open: true, keys: ["openai", "anthropic", "google", "xai", "copilot", "meta-ai"] },
+  { label: "여러 AI를 한 곳에서", keys: ["openrouter", "ai-gateway", "kilocode", "opencode-zen", "opencode-go", "nous"] },
+  { label: "오픈소스 모델 서비스", keys: ["huggingface", "fireworks", "deepinfra", "novita", "gmi", "nebius-token-factory", "nvidia", "ollama-cloud", "arcee"] },
+  {
+    label: "중국 AI",
+    keys: ["deepseek", "qwen", "kimi-coding", "kimi-coding-cn", "zai", "minimax", "minimax-cn", "stepfun", "xiaomi",
+      "tencent-tokenhub", "tencent-tokenplan", "alibaba-token-plan", "alibaba-token-plan-cn", "alibaba-coding-plan", "alibaba-coding-plan-cn"],
+  },
+  { label: "내 컴퓨터·직접 연결", keys: ["lmstudio"] },
+  { label: "기타 (개발자·기업용)", keys: [] },
+];
+
+// The name people know, where the engine gives the company's or a plan's.
+const KNOWN_NAMES = {
+  openai: "ChatGPT (OpenAI)", anthropic: "Claude (Anthropic)", google: "Gemini (Google)", xai: "Grok (xAI)",
+  "meta-ai": "Meta AI (Llama)", qwen: "Qwen (Alibaba)", zai: "GLM (Z.ai)",
+  "kimi-coding": "Kimi (Moonshot)", "kimi-coding-cn": "Kimi (Moonshot, China)",
+};
+
+/** addableProviders() rows in folded categories: [{ label, open, items }], empty categories left out. */
+export function addCategories(addable) {
+  // A mainland-China endpoint reads as such, whatever the engine calls it.
+  const named = addable.map((group) => ({ ...group, name: (KNOWN_NAMES[group.key] || group.name).replace(/\bChina\b/g, "중국 본토") }));
+  const placed = new Set();
+  const categories = ADD_CATEGORIES.map(({ label, open = false, keys }) => {
+    const items = keys.map((key) => named.find((group) => group.key === key)).filter(Boolean);
+    items.forEach((group) => placed.add(group.key));
+    return { label, open, items };
+  });
+  const unlisted = named.filter((group) => !placed.has(group.key)).sort((a, b) => a.name.localeCompare(b.name));
+  categories.at(-1).items.push(...unlisted);
+  return categories.filter((category) => category.items.length);
+}
