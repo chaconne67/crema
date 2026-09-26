@@ -6,7 +6,7 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
-    paths-ignore: ["server/**", ".github/workflows/server.yml"]
+    paths-ignore: ["server/**", ".github/workflows/server.yml", "scripts/engine-tests/**", ".github/workflows/engine-tests.yml"]
   workflow_dispatch:
 
 permissions:

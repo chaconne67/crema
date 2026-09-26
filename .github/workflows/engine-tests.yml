@@ -1,0 +1,95 @@
+# Upstream's own tests on the pruned engine and on its upstream base, run the same way and compared,
+# to tell failures the prune caused from ones upstream already has (scripts/engine-tests/compare.py).
+# Run it after changing the engine: gh workflow run engine-tests.yml -f pruned=<crema-engine commit>
+name: Engine tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      pruned:
+        description: crema-engine commit to test (the pruned tree)
+        required: true
+      upstream:
+        description: its upstream base commit
+        default: a25cf4d77d46733767b91d5a410e701f4596541e
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        tree: [pruned, upstream]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: crema
+      - uses: actions/checkout@v4
+        with:
+          repository: chaconne67/crema-engine
+          ref: ${{ matrix.tree == 'pruned' && inputs.pruned || inputs.upstream }}
+          path: tree
+      # The pruned tree's packages for both trees, so only the code differs.
+      - uses: actions/checkout@v4
+        with:
+          repository: chaconne67/crema-engine
+          ref: ${{ inputs.pruned }}
+          path: pruned
+          sparse-checkout: pyproject.toml
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Python with the engine's packages
+        run: |
+          uv venv --python 3.12.13 .venv
+          uv pip install --python .venv -r pruned/pyproject.toml --extra crema "pytest==9.1.1" "pytest-asyncio==1.3.0"
+
+      # Upstream's per-file runner (each test file in its own process); this shard's share of the files
+      # it discovers, and one result line per test from crema_report.
+      - name: This shard's tests
+        working-directory: tree
+        env:
+          CREMA_REPORT_DIR: ${{ github.workspace }}/report
+          PYTHONPATH: ${{ github.workspace }}/tree:${{ github.workspace }}/crema/scripts/engine-tests
+          HERMES_TEST_WORKERS: "4"
+        run: |
+          mkdir -p "$CREMA_REPORT_DIR"
+          paths=$(../.venv/bin/python -c "
+          import sys; from pathlib import Path; sys.path.insert(0, 'scripts')
+          import run_tests_parallel as runner
+          files = sorted(runner._discover_files([Path('tests')]))
+          print(':'.join(str(f) for f in files[${{ matrix.shard }}::8]))")
+          HERMES_TEST_PATHS="$paths" ../.venv/bin/python scripts/run_tests_parallel.py -q -p crema_report || true
+          echo "$(cat "$CREMA_REPORT_DIR"/*.jsonl | wc -l) results"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: report-${{ matrix.tree }}-${{ matrix.shard }}
+          path: report
+
+  compare:
+    needs: tests
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: report-pruned-*
+          path: reports/pruned
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: report-upstream-*
+          path: reports/upstream
+      - name: Compare
+        run: |
+          python3 scripts/engine-tests/compare.py reports/pruned reports/upstream comparison
+          cat comparison/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: engine-test-comparison
+          path: comparison
