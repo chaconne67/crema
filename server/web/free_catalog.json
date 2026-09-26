@@ -1,0 +1,37 @@
+{
+  "version": "2026-09-26",
+  "providers": [
+    {
+      "id": "gemini",
+      "name": "Google Gemini",
+      "trains_on_input": true,
+      "models": [
+        { "match": "^gemini-[0-9.]+-flash-lite$", "tier": 1, "scarcity": "common", "vision": true },
+        { "match": "^gemini-[0-9.]+-flash$", "tier": 2, "scarcity": "rare", "vision": true }
+      ]
+    },
+    {
+      "id": "groq",
+      "name": "Groq",
+      "endpoint": { "base_url": "https://api.groq.com/openai/v1", "key_env": "GROQ_API_KEY", "url": "https://console.groq.com/keys" },
+      "models": [
+        { "id": "openai/gpt-oss-120b", "tier": 2, "scarcity": "common", "vision": false },
+        { "id": "openai/gpt-oss-20b", "tier": 1, "scarcity": "common", "vision": false }
+      ]
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "models": [{ "match": ":free$", "tier": 2, "scarcity": "rare", "vision": false }]
+    },
+    {
+      "id": "mistral",
+      "name": "Mistral",
+      "endpoint": { "base_url": "https://api.mistral.ai/v1", "key_env": "MISTRAL_API_KEY", "url": "https://console.mistral.ai/api-keys" },
+      "models": [
+        { "id": "mistral-small-latest", "tier": 1, "scarcity": "common", "vision": true },
+        { "id": "mistral-medium-latest", "tier": 2, "scarcity": "common", "vision": true }
+      ]
+    }
+  ]
+}

@@ -1,9 +1,9 @@
 import { REASONING_LEVELS } from "./desktop.js";
 import { closeColorPicker, openColorPicker } from "./color-picker.js";
 import { enhanceSelect } from "./dropdown.js";
-import { createModelPicker } from "./model-picker.js";
+import { AUTO_LABEL, createModelPicker } from "./model-picker.js";
 import { createProviderSection } from "./provider-panel.js";
-import { buildCatalog, locate, pickRoute, providerStatus } from "./providers.js";
+import { buildCatalog, freeChain, locate, pickRoute, providerStatus } from "./providers.js";
 import {
   COLOR_FIELDS,
   FONTS,
@@ -130,6 +130,7 @@ export function createSettingsPanel({
 
   /** The saved choice located in the Provider → model list. */
   function selection() {
+    if (connection.auto) return { auto: true, name: AUTO_LABEL, provider: "", fast: false };
     const found = locate(catalog, connection.provider, connection.model);
     return { key: found?.key, provider: found?.provider || connection.provider, name: connection.model, fast: Boolean(connection.fast) };
   }
@@ -226,7 +227,7 @@ export function createSettingsPanel({
       account: account?.email || "",
       connection: CONNECTION_STATES[connectionState] || "",
       providers: catalog.length ? `${catalog.length}개 연결됨` : "",
-      model: [connection.model, connection.fast && "빠른 속도", connection.reasoning && reasoning?.label].filter(Boolean).join(" · "),
+      model: [connection.auto ? AUTO_LABEL : connection.model, connection.fast && "빠른 속도", connection.reasoning && reasoning?.label].filter(Boolean).join(" · "),
       appearance: `시스템 ${current.systemSize}px · 본문 ${current.size}px`,
       theme: THEMES.find(([value]) => value === current.theme)?.[1] || "",
       input: [current.spellcheck && "맞춤법 검사", current.suggest && "다음 입력 예상"].filter(Boolean).join(" · ") || "꺼짐",
@@ -438,10 +439,17 @@ export function createSettingsPanel({
       modelPicker = createModelPicker({
         getCatalog: () => catalog,
         getSelection: selection,
-        onChoose({ model, fast }) {
+        offerAuto: () => Boolean(connection.auto) || freeChain(providers).length > 0,
+        onChoose({ model, fast, auto }) {
+          if (auto) {
+            Object.assign(connection, { auto: true, provider: "", model: "", fast: false });
+            renderModelOptions();
+            notifyConnection({ reconnect: false });
+            return;
+          }
           const route = pickRoute(model, fast, connection.provider);
           if (!route) return;
-          Object.assign(connection, { provider: route.providerId, model: route.modelId, fast });
+          Object.assign(connection, { auto: false, provider: route.providerId, model: route.modelId, fast });
           renderModelOptions();
           notifyConnection({ reconnect: false });
         },

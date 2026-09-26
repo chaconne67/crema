@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import bundled from "../server/web/free_catalog.json";
 import {
   addCategories,
   addableProviders,
+  autoRoute,
   buildCatalog,
   freeChain,
+  setFreeCatalog,
   locate,
   pickRoute,
   providerStatus,
@@ -110,6 +113,35 @@ describe("free Provider failover", () => {
     expect(turnRoute(chosen, chain, {}, 1000)).toBe(chosen);
     expect(turnRoute(chosen, chain, { gemini: 2000 }, 1000)).toEqual({ provider: "groq", model: "openai/gpt-oss-120b", reasoning: "", fast: false });
     expect(turnRoute(chosen, [], { gemini: 2000 }, 1000)).toBe(chosen);
+  });
+
+  it("picks an automatic turn's model: kept in the conversation, a common allowance before a scarce one, images read when needed", () => {
+    const connected = [
+      channel("gemini", ["gemini-3.5-flash", "gemini-3.5-flash-lite"]),
+      channel("groq", ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]),
+      channel("mistral", ["mistral-small-latest"]),
+    ];
+    expect(autoRoute(connected)).toEqual({ provider: "gemini", model: "gemini-3.5-flash-lite" });
+    // Hard requests skip tier 1, and keep the scarce Gemini Flash behind Groq's common allowance.
+    expect(autoRoute(connected, {}, { difficulty: 2 })).toEqual({ provider: "groq", model: "openai/gpt-oss-120b" });
+    expect(autoRoute(connected, { gemini: 2000 }, {}, null, 1000)).toEqual({ provider: "groq", model: "openai/gpt-oss-20b" });
+    expect(autoRoute(connected, { gemini: 2000 }, { vision: true }, null, 1000)).toEqual({ provider: "mistral", model: "mistral-small-latest" });
+    const kept = { provider: "mistral", model: "mistral-small-latest" };
+    expect(autoRoute(connected, {}, {}, kept)).toEqual(kept);
+    expect(autoRoute([channel("xai", ["grok-5"])])).toBeNull();
+  });
+
+  it("takes a catalog from the site and ignores one of another shape", () => {
+    const connected = [channel("groq", ["openai/gpt-oss-20b"]), channel("newfree", ["n-1"])];
+    setFreeCatalog({ providers: [{ id: "newfree", name: "NewFree", models: [{ id: "n-1", tier: 1, scarcity: "common" }] }] });
+    expect(freeChain(connected)).toEqual([{ provider: "newfree", model: "n-1" }]);
+    setFreeCatalog({ broken: true });
+    expect(freeChain(connected)).toEqual([{ provider: "newfree", model: "n-1" }]);
+    // The site cannot move where a key is sent.
+    setFreeCatalog({ providers: [{ id: "groq", name: "Groq", endpoint: { base_url: "https://elsewhere.example/v1", key_env: "GROQ_API_KEY" }, models: [{ id: "openai/gpt-oss-20b", tier: 1 }] }] });
+    expect(addableProviders([], {}, new Set()).find((group) => group.key === "groq").methods[0].endpoint.base_url).toBe("https://api.groq.com/openai/v1");
+    setFreeCatalog(bundled);
+    expect(freeChain(connected)).toEqual([{ provider: "groq", model: "openai/gpt-oss-20b" }]);
   });
 
   it("offers Groq and Mistral as OpenAI-compatible endpoints with their free model", () => {

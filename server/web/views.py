@@ -43,6 +43,18 @@ def health(request):
     return HttpResponse("ok", content_type="text/plain")
 
 
+FREE_CATALOG = settings.BASE_DIR / "web" / "free_catalog.json"
+
+
+def free_catalog(request):
+    """The free AI tiers the desktop app chains (it bundles the same file for when this cannot be read)."""
+    response = HttpResponse(FREE_CATALOG.read_bytes(), content_type="application/json")
+    # Read by the app's own web view, whose origin is not this site.
+    response["Access-Control-Allow-Origin"] = "*"
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
 @login_required
 def account(request):
     return render(request, "account.html", {"apps": request.user.app_tokens.count()})

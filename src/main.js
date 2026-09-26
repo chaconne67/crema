@@ -16,12 +16,24 @@ import {
   usableProviders,
 } from "./desktop.js";
 import { applyAppearance, loadAppearance, saveAppearance } from "./settings.js";
-import { PROVIDER_CHEVRON, ZAP_ICON, modelMenuRows } from "./model-picker.js";
+import { AUTO_LABEL, PROVIDER_CHEVRON, ZAP_ICON, modelMenuRows } from "./model-picker.js";
 
 // Lucide (ISC) "gauge": the reasoning-effort row in the model menu.
 const REASONING_ICON =
   '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>';
-import { COOL_MS, FREE_PROVIDERS, buildCatalog, freeChain, locate, pickRoute, providerOf, suggestionRoute, turnRoute } from "./providers.js";
+import {
+  COOL_MS,
+  autoRoute,
+  buildCatalog,
+  freeChain,
+  isFree,
+  locate,
+  pickRoute,
+  providerOf,
+  setFreeCatalog,
+  suggestionRoute,
+  turnRoute,
+} from "./providers.js";
 import { createSettingsPanel } from "./settings-panel.js";
 import { createSignIn } from "./sign-in.js";
 import { FOLDER_COLORS, createSidebar } from "./sidebar.js";
@@ -70,7 +82,7 @@ function connectedLabel() {
 }
 
 function syncModelChip() {
-  app.setModel({ name: connection.model || "Hermes 기본 모델", detail: connection.reasoning ? reasoningLabel() : "", fast: Boolean(connection.fast) });
+  app.setModel({ name: connection.auto ? AUTO_LABEL : connection.model || "Hermes 기본 모델", detail: connection.reasoning ? reasoningLabel() : "", fast: Boolean(connection.fast) });
 }
 
 /** Branch of the open chat's project folder (hidden outside Git). */
@@ -99,7 +111,7 @@ let syncedChain = null;
 
 /** Sits a free Provider out; a paid one is left as chosen. Returns whether it now sits out. */
 function coolOff(providerId) {
-  if (!FREE_PROVIDERS.some((free) => free.id === providerId)) return false;
+  if (!isFree(providerId)) return false;
   cooling[providerId] = Date.now() + COOL_MS;
   saveCooling(cooling);
   return true;
@@ -124,9 +136,16 @@ function describeServed(conversationId, runtime) {
     const rest = coolOff(turn.route.provider) ? ", 15분 쉼" : "";
     return `대신 답한 AI: ${providerName(runtime.provider)} · ${runtime.model} — ${providerName(turn.route.provider)} 한도 초과 또는 응답 없음${rest}`;
   }
+  if (turn.why === "auto") return `자동 선택: ${providerName(turn.route.provider)} · ${turn.route.model}`;
   const reason = { cooling: "쉬는 중", resume: `연결 끊김${turn.asked.provider in cooling ? ", 15분 쉼" : ""}` }[turn.why];
   return reason ? `대신 답한 AI: ${providerName(turn.route.provider)} · ${turn.route.model} — ${providerName(turn.asked.provider)} ${reason}` : "";
 }
+
+// Where the site's free catalog is served; the bundled copy stands when it cannot be read.
+const FREE_CATALOG_URL = "https://crema-agent.site/api/free-catalog";
+
+/** What an automatic turn needs from its model: images read when the request carries any. */
+const turnNeeds = (content) => ({ vision: Array.isArray(content) && content.some((part) => part.type === "image_url") });
 
 const hermesClient = createChatClient({
   async transport(args) {
@@ -141,11 +160,13 @@ const hermesClient = createChatClient({
     app.setStatus("connected", connectedLabel());
     const project = activeProject();
     // A reply cut off midway goes to the next free Provider; with none left the cut-off stands.
-    const asked = { ...((args.resume && sentTurns.get(args.conversationId)?.route) || connection) };
+    const last = sentTurns.get(args.conversationId)?.route;
+    const picked = connection.auto && !args.resume && autoRoute(providers, cooling, turnNeeds(args.content), last);
+    const asked = { ...((args.resume && last) || connection), ...(picked ? { ...picked, reasoning: "", fast: false } : {}) };
     if (args.resume) coolOff(asked.provider);
     const route = turnRoute(asked, freeChain(providers, cooling), args.resume ? { ...cooling, [asked.provider]: Infinity } : cooling);
     if (args.resume && route === asked) throw args.resume;
-    sentTurns.set(args.conversationId, { route, asked, why: args.resume ? "resume" : route === asked ? "" : "cooling" });
+    sentTurns.set(args.conversationId, { route, asked, why: args.resume ? "resume" : route !== asked ? "cooling" : picked ? "auto" : "" });
     await syncFallback().catch(() => {});
     return host.streamHermes({
       connection: route,
@@ -320,6 +341,10 @@ async function connect() {
     app.setStatus("connected", connectedLabel());
     refreshModels().catch(() => {});
     refreshAccess();
+    fetch(FREE_CATALOG_URL)
+      .then((response) => (response.ok ? response.json() : null))
+      .then(setFreeCatalog)
+      .catch(() => {});
     return { state: "connected", message: "Crema 엔진이 켜져 있습니다." };
   } catch (error) {
     app.setStatus("error", "연결 안 됨");
@@ -505,10 +530,20 @@ const commandHandlers = {
     const catalog = buildCatalog(providers, authChannels);
     const choose = (model, fast) => {
       const route = pickRoute(model, fast, connection.provider);
-      Object.assign(connection, { provider: route.providerId, model: route.modelId, fast });
+      Object.assign(connection, { auto: false, provider: route.providerId, model: route.modelId, fast });
       saveModelChoice();
       if (!ui.quiet) ui.notice({ title: "모델 선택", text: `다음 질문부터 ${route.modelId}${fast ? " · 빠른 속도" : ""}을 사용합니다.` });
     };
+    const offerAuto = Boolean(connection.auto) || freeChain(providers).length > 0;
+    const chooseAuto = () => {
+      Object.assign(connection, { auto: true, provider: "", model: "", fast: false });
+      saveModelChoice();
+      if (!ui.quiet) ui.notice({ title: "모델 선택", text: "다음 질문부터 연결된 무료 AI 중에서 알맞은 모델을 골라 답합니다." });
+    };
+    if (arg === "자동" && offerAuto) {
+      chooseAuto();
+      return;
+    }
     if (arg) {
       const { model: name, fast } = parseModelChoice(arg.replace(/\s*(⚡|·\s*빠른\s*속도)$/, "#fast"));
       const current = locate(catalog, connection.provider, connection.model);
@@ -525,10 +560,10 @@ const commandHandlers = {
     }
     // The Providers folded, the current model's one open with that model highlighted (as in settings).
     const current = locate(catalog, connection.provider, connection.model);
-    const selection = { key: current?.key, name: connection.model, fast: connection.fast };
+    const selection = { key: current?.key, name: connection.model, fast: connection.fast, auto: connection.auto };
     const show = (openKey, focusIndex) => {
       // Reasoning effort first (one row, opens its levels), then the Providers.
-      const rows = [{ kind: "reasoning", label: "추론 강도", hint: reasoningLabel() }, ...modelMenuRows(catalog, selection, openKey)];
+      const rows = [{ kind: "reasoning", label: "추론 강도", hint: reasoningLabel() }, ...modelMenuRows(catalog, selection, openKey, offerAuto)];
       const state = {
         title: "모델 선택",
         back: ui.back,
@@ -541,7 +576,8 @@ const commandHandlers = {
         ),
         active: focusIndex ?? Math.max(0, rows.findIndex((row) => row.selected)),
         onSelect: (item) => {
-          if (item.kind === "model") choose(item.model, item.fast);
+          if (item.kind === "auto") chooseAuto();
+          else if (item.kind === "model") choose(item.model, item.fast);
           else if (item.kind === "reasoning") {
             ui.picker({
               title: "추론 강도",
@@ -617,7 +653,7 @@ const commandHandlers = {
       tone: error ? "error" : "",
       rows: [
         ["연결", `Crema 엔진 · ${info ? "연결됨" : "연결 안 됨"}${info?.health?.version ? ` · Hermes v${info.health.version}` : ""}`],
-        ["모델", `${connection.model} · ${providerName}`],
+        ["모델", connection.auto ? AUTO_LABEL : `${connection.model} · ${providerName}`],
         ["추론 강도", reasoningLabel()],
         ["속도", connection.fast ? "빠른 속도" : "기본"],
         ["프로젝트", project ? `${project.name} — ${project.path}` : "없음 (일반 대화)"],

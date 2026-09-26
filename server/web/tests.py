@@ -25,6 +25,13 @@ class PagesTests(TestCase):
             self.assertEqual(self.client.get(path).status_code, 200)
         self.assertEqual(self.client.get("/health/").content, b"ok")
 
+    def test_free_catalog_is_the_file_the_app_bundles_readable_from_the_app(self):
+        response = self.client.get("/api/free-catalog")
+        self.assertEqual(response["Access-Control-Allow-Origin"], "*")
+        catalog = response.json()
+        self.assertEqual([item["id"] for item in catalog["providers"]], ["gemini", "groq", "openrouter", "mistral"])
+        self.assertTrue(all(model["tier"] in (1, 2, 3) for item in catalog["providers"] for model in item["models"]))
+
     def test_account_needs_sign_in(self):
         response = self.client.get("/account/")
         self.assertEqual(response.status_code, 302)

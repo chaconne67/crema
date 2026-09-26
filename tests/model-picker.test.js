@@ -38,6 +38,25 @@ describe("Provider → model picker", () => {
     expect(document.querySelector(".menu-item.active .menu-label").textContent).toBe("gpt-6-sol");
   });
 
+  it("offers the automatic choice first only when asked to, and reports it", () => {
+    document.body.innerHTML = "";
+    const choose = vi.fn();
+    const picker = createModelPicker({
+      getCatalog: () => CATALOG,
+      getSelection: () => ({ auto: true, name: "자동 (무료 AI)", provider: "" }),
+      onChoose: choose,
+      offerAuto: () => true,
+    });
+    document.body.append(picker.element);
+    picker.refresh();
+    expect(document.querySelector(".model-name").textContent).toBe("자동 (무료 AI)");
+    document.querySelector(".dropdown-button").click();
+    expect(labels()).toEqual(["자동 (무료 AI)", "OpenAI", "Anthropic"]);
+    expect(items()[0].getAttribute("aria-selected")).toBe("true");
+    items()[0].click();
+    expect(choose).toHaveBeenCalledWith({ auto: true });
+  });
+
   it("opens another Provider in place and reports the chosen model and speed", () => {
     const button = document.querySelector(".dropdown-button");
     button.click();

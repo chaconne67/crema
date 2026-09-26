@@ -15,5 +15,6 @@ urlpatterns = [
     path("api/app/token", views.api_token, name="api_token"),
     path("api/me", views.api_me, name="api_me"),
     path("api/app/logout", views.api_logout, name="api_logout"),
+    path("api/free-catalog", views.free_catalog, name="free_catalog"),
     path("accounts/", include("allauth.urls")),
 ]

@@ -1,3 +1,5 @@
+import bundledCatalog from "../server/web/free_catalog.json";
+
 // A Provider is the company the user holds access from. Hermes lists each way of reaching one as its
 // own channel ("openai-codex" = ChatGPT subscription, "openai-api" = OpenAI API key); these are merged.
 const GROUPS = {
@@ -106,33 +108,61 @@ export function locate(catalog, channelId, modelId) {
   return null;
 }
 
-// Free tiers chained so one running out does not end a reply, in failover order. Groq and Mistral are
-// not engine providers: they are added as named OpenAI-compatible endpoints (config `providers:`).
-export const FREE_PROVIDERS = [
-  { id: "gemini", model: /flash-lite/ },
-  {
-    id: "groq",
-    model: "openai/gpt-oss-120b",
-    endpoint: { name: "Groq", base_url: "https://api.groq.com/openai/v1", key_env: "GROQ_API_KEY", url: "https://console.groq.com/keys" },
-  },
-  { id: "openrouter", model: /:free$/ },
-  {
-    id: "mistral",
-    model: "mistral-small-latest",
-    endpoint: { name: "Mistral", base_url: "https://api.mistral.ai/v1", key_env: "MISTRAL_API_KEY", url: "https://console.mistral.ai/api-keys" },
-  },
-];
+// The free tiers Crema chains, in failover order: one catalog (server/web/free_catalog.json), bundled here
+// and served at crema-agent.site/api/free-catalog so it can change without an app update. Each model has
+// a tier (1 easy … 3 hard), a scarcity (common = a large daily allowance) and whether it reads images.
+// Groq and Mistral are not engine providers: their `endpoint` makes them named OpenAI-compatible ones.
+let freeCatalog = bundledCatalog;
+
+/**
+ * Replaces the catalog with one fetched from the site; one of another shape is ignored. Where a
+ * Provider's key is sent (`endpoint`) stays as shipped with the app: the site only updates models.
+ */
+export function setFreeCatalog(next) {
+  if (!Array.isArray(next?.providers) || !next.providers.every((item) => item.id && Array.isArray(item.models))) return;
+  const shipped = (id) => bundledCatalog.providers.find((item) => item.id === id)?.endpoint;
+  freeCatalog = { ...next, providers: next.providers.map(({ endpoint, ...item }) => ({ ...item, ...(shipped(item.id) ? { endpoint: shipped(item.id) } : {}) })) };
+}
+
+export const freeProviders = () => freeCatalog.providers;
+export const isFree = (providerId) => freeCatalog.providers.some((item) => item.id === providerId);
 
 // How long a Provider that failed a turn is left out.
 export const COOL_MS = 15 * 60 * 1000;
 
+/** A connected free Provider's catalog models it can serve, as { provider, model, tier, scarcity, vision }. */
+function servedModels({ id, models }, channels) {
+  const available = channels.find((channel) => channel.id === id)?.models || [];
+  return models.flatMap((entry) => {
+    const name = entry.match ? available.find((item) => new RegExp(entry.match).test(item)) : available.includes(entry.id) && entry.id;
+    return name ? [{ ...entry, provider: id, model: name }] : [];
+  });
+}
+
 /** The connected free Providers not cooling off, as `fallback_providers` entries in failover order. */
 export function freeChain(channels, cooling = {}, now = Date.now()) {
-  return FREE_PROVIDERS.flatMap(({ id, model }) => {
-    const models = channels.find((channel) => channel.id === id)?.models || [];
-    const pick = typeof model === "string" ? (models.includes(model) ? model : models[0]) : models.find((name) => model.test(name));
-    return pick && !(cooling[id] > now) ? [{ provider: id, model: pick }] : [];
+  return freeProviders().flatMap((item) => {
+    const [first] = servedModels(item, channels);
+    return first && !(cooling[item.id] > now) ? [{ provider: item.id, model: first.model }] : [];
   });
+}
+
+/**
+ * The model for an automatic ("자동 (무료 AI)") turn: among the connected free models not cooling off
+ * that read images when `needs.vision`, the one in the conversation's last turn when it still fits,
+ * else the lowest tier at or above `needs.difficulty`, a common allowance before a scarce one (the
+ * scarce ones are kept for hard requests), then catalog order. Null when none fits.
+ */
+export function autoRoute(channels, cooling = {}, needs = {}, previous = null, now = Date.now()) {
+  const difficulty = needs.difficulty ?? 1;
+  const fits = freeProviders()
+    .filter((item) => !(cooling[item.id] > now))
+    .flatMap((item) => servedModels(item, channels))
+    .filter((entry) => entry.tier >= difficulty && (!needs.vision || entry.vision));
+  const kept = fits.find((entry) => entry.provider === previous?.provider && entry.model === previous?.model);
+  const rank = (entry) => (entry.scarcity === "common" ? 0 : 10) + entry.tier;
+  const best = kept || [...fits].sort((a, b) => rank(a) - rank(b))[0];
+  return best ? { provider: best.provider, model: best.model } : null;
 }
 
 /** The route for a turn: the chosen one, or the first free Provider in `chain` while the chosen one cools off. */
@@ -163,8 +193,8 @@ export function addableProviders(accountRows, envRows, connectedKeys) {
     if (meta.category !== "provider" || !meta.provider || !/_(KEY|TOKEN)$/.test(envVar)) continue;
     add(meta.provider, meta.provider_label, { kind: "api_key", id: meta.provider, envVar, url: meta.url || "" });
   }
-  for (const { id, model, endpoint } of FREE_PROVIDERS) {
-    if (endpoint) add(id, endpoint.name, { kind: "api_key", id, envVar: endpoint.key_env, url: endpoint.url, endpoint: { ...endpoint, model } });
+  for (const { id, name, models, endpoint } of freeProviders()) {
+    if (endpoint) add(id, name, { kind: "api_key", id, envVar: endpoint.key_env, url: endpoint.url, endpoint: { ...endpoint, name, model: models[0].id } });
   }
   return [...groups.values()];
 }

@@ -16,8 +16,12 @@ function escapeHtml(value) {
  * models shown under it — each fast-capable model followed by its ⚡ variant. Shared by the settings
  * picker and the /model command menu. `selection` = { key, name, fast } of the saved choice.
  */
-export function modelMenuRows(catalog, selection, openKey) {
-  return catalog.flatMap((group) => [
+export const AUTO_LABEL = "자동 (무료 AI)";
+
+// `auto`: offer "자동 (무료 AI)" first (some free Provider is connected); `selection.auto` marks it chosen.
+export function modelMenuRows(catalog, selection, openKey, auto = false) {
+  const first = auto ? [{ kind: "auto", label: AUTO_LABEL, selected: Boolean(selection.auto) }] : [];
+  return first.concat(catalog.flatMap((group) => [
     { kind: "provider", key: group.key, label: group.provider, open: group.key === openKey },
     ...(group.key !== openKey
       ? []
@@ -30,14 +34,14 @@ export function modelMenuRows(catalog, selection, openKey) {
             selected: group.key === selection.key && model.name === selection.name && fast === Boolean(selection.fast),
           })),
         )),
-  ]);
+  ]));
 }
 
 /**
  * Settings model chooser: opens with the current model's Provider expanded and that model highlighted;
  * clicking another Provider opens it instead. getSelection() → { key, provider, name, fast }.
  */
-export function createModelPicker({ getCatalog, getSelection, onChoose }) {
+export function createModelPicker({ getCatalog, getSelection, onChoose, offerAuto = () => false }) {
   const wrapper = document.createElement("div");
   wrapper.className = "dropdown model-picker";
   wrapper.innerHTML = `
@@ -59,7 +63,7 @@ export function createModelPicker({ getCatalog, getSelection, onChoose }) {
 
   function render() {
     const catalog = getCatalog();
-    rows = modelMenuRows(catalog, getSelection(), openKey);
+    rows = modelMenuRows(catalog, getSelection(), openKey, offerAuto());
     active = Math.min(Math.max(active, 0), Math.max(rows.length - 1, 0));
     list.innerHTML = catalog.length
       ? rows
@@ -89,7 +93,7 @@ export function createModelPicker({ getCatalog, getSelection, onChoose }) {
     const room = (button.closest(".settings-body") || document.body).getBoundingClientRect().bottom - button.getBoundingClientRect().bottom;
     wrapper.classList.toggle("up", room < 300);
     openKey = getSelection().key;
-    rows = modelMenuRows(getCatalog(), getSelection(), openKey);
+    rows = modelMenuRows(getCatalog(), getSelection(), openKey, offerAuto());
     active = Math.max(0, rows.findIndex((row) => row.selected));
     render();
   }
@@ -106,7 +110,7 @@ export function createModelPicker({ getCatalog, getSelection, onChoose }) {
     }
     close();
     button.focus();
-    onChoose({ model: row.model, fast: row.fast });
+    onChoose(row.kind === "auto" ? { auto: true } : { model: row.model, fast: row.fast });
     refresh();
   }
 
