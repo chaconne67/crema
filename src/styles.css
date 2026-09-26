@@ -673,14 +673,14 @@ button {
 }
 
 /* The sign-up guide: the site on the right (a separate webview laid over .guide-frame), the chat on the left. */
-/* About half of the chat's side, so the chat keeps room to read the card and type. */
+/* About half of the chat's side, never leaving the chat under 480px to read the card and type. */
 .app-shell.guide-open {
-  --guide-width: min(760px, calc((100vw - var(--sidebar-width)) * 0.55));
+  --guide-width: min(760px, calc((100vw - var(--sidebar-width)) * 0.55), calc(100vw - var(--sidebar-width) - 480px));
   padding-right: var(--guide-width);
 }
 
 .workspace.sidebar-hidden .app-shell.guide-open {
-  --guide-width: min(760px, 55vw);
+  --guide-width: min(760px, 55vw, calc(100vw - 480px));
 }
 
 .guide-pane {

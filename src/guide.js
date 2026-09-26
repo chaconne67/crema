@@ -242,7 +242,11 @@ export function createGuide({ host, shell, showCard, onConnected }) {
   async function start(providerId) {
     const provider = freeProviders().find((item) => item.id === providerId);
     if (!provider?.signup) return;
-    if (active) stop("다른 안내를 시작해서 이 안내를 닫았어요.");
+    if (active) {
+      stop("다른 안내를 시작해서 이 안내를 닫았어요.");
+      // The old page must be gone before the new one opens under the same webview.
+      await host.guideClose();
+    }
     active = { name: provider.name, signup: provider.signup, card: card(`${provider.name} 연결`), lastSig: null, step: null, offered: "", busy: false };
     showCard(active.card);
     say("오른쪽에 가입 화면을 여는 중이에요. 클릭과 입력은 직접 하시고, 어디를 누를지는 제가 표시할게요.", baseActions());
