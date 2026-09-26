@@ -1618,7 +1618,12 @@ html[data-pointer] :focus-visible {
   font-size: 0.75rem;
 }
 
-.section-body > .text-button,
+.section-body > .text-button {
+  align-self: flex-start;
+  margin-top: 8px;
+  margin-left: -10px;
+}
+
 @media (max-width: 760px) {
   .app-shell.settings-open {
     padding-right: 0;
