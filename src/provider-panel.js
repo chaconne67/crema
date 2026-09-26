@@ -26,10 +26,9 @@ export function createProviderSection({ host, getStatus, onChanged }) {
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Provider 추가
     </button>
     <div class="provider-add" data-provider-form hidden>
-      <div class="provider-add-head">
+      <button class="provider-add-head" type="button" data-provider-cancel aria-expanded="true" aria-label="Provider 추가 닫기">
         <span class="field-label">Provider 추가</span>
-        <button class="text-button" type="button" data-provider-cancel>취소</button>
-      </div>
+      </button>
       <p class="provider-status" data-provider-loading role="status"></p>
       <div class="field-group" data-provider-fields hidden>
         <div class="provider-picker" data-provider-picker>

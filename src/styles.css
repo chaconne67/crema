@@ -1358,19 +1358,42 @@ html[data-pointer] :focus-visible {
   display: none;
 }
 
-/* The form's title row and the picked Provider's row: a name on the left, a text button on the right
-   whose text lines up with the edge. */
-.provider-add-head,
+/* The form's title row folds it shut, with the same chevron as the categories and 모양's groups
+   (open, so pointing up). */
+.provider-add-head {
+  display: flex;
+  width: 100%;
+  min-height: 36px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.provider-add-head .field-label {
+  margin: 0;
+}
+
+.provider-add-head::after {
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: rotate(-135deg) translate(-2px, -2px);
+  content: "";
+}
+
+/* The picked Provider's row: its name, and a text button whose text lines up with the edge. */
 .provider-chosen {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   margin-right: -10px;
-}
-
-.provider-add-head .field-label {
-  margin: 0;
 }
 
 .provider-picker {
