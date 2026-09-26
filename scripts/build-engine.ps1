@@ -2,7 +2,7 @@
 # tests) and a private Python with the engine's packages. Every installer build runs it (Tauri's
 # beforeBuildCommand); it does nothing when the pinned engine is already there. Needs git and uv.
 $ErrorActionPreference = "Stop"
-$engineCommit = "385c80f532907a320c4e2dc4d6a3bb0d1b6a019e"
+$engineCommit = "458f677c97e509f42a007824963520136188259a"
 $pythonVersion = "3.12.13"
 
 $root = Split-Path $PSScriptRoot

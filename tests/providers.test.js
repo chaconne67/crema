@@ -3,32 +3,31 @@ import { describe, expect, it } from "vitest";
 import { addableProviders, buildCatalog, locate, pickRoute, providerStatus, routesFor, suggestionRoute } from "../src/providers.js";
 
 const CHANNELS = [
-  { id: "anthropic", name: "Anthropic", models: ["claude-opus-5"], capabilities: {} },
+  { id: "nous", name: "Nous Portal", models: ["hermes-5"], capabilities: {} },
   { id: "openrouter", name: "OpenRouter", models: ["anthropic/claude-opus-5"], capabilities: {} },
-  // Reported by the engine but not offered by Crema: its mixture-of-agents channel, a Provider it no longer has.
   { id: "moa", name: "Mixture of Agents", models: ["moa-default"], capabilities: {} },
-  { id: "xai", name: "xAI", models: ["grok-5"], capabilities: {} },
-  { id: "openai-api", name: "OpenAI API", models: ["gpt-6-sol", "gpt-6-mini"], capabilities: {} },
+  { id: "xai", name: "xAI", models: ["grok-5", "grok-5-mini"], capabilities: {} },
   { id: "openai-codex", name: "ChatGPT or Codex Subscription", models: ["gpt-6-sol"], capabilities: { "gpt-6-sol": { fast: true } } },
+  { id: "xai-oauth", name: "xAI Grok OAuth", models: ["grok-5"], capabilities: {} },
 ];
 
-const KINDS = { anthropic: { kind: "oauth", relogin: true } };
+const KINDS = { nous: { kind: "oauth", relogin: true }, "xai-oauth": { kind: "oauth", relogin: false } };
 
 describe("Provider model list", () => {
-  it("groups the offered channels by Provider, leaving out re-login and channels Crema does not offer", () => {
+  it("groups channels by Provider, leaving out re-login and virtual channels", () => {
     const catalog = buildCatalog(CHANNELS, KINDS);
-    expect(catalog.map((group) => group.provider)).toEqual(["OpenRouter", "OpenAI"]);
-    expect(catalog[1].models.map((model) => model.name)).toEqual(["gpt-6-sol", "gpt-6-mini"]);
-    expect(catalog[1].models[0].fast).toBe(true);
+    expect(catalog.map((group) => group.provider)).toEqual(["OpenRouter", "xAI", "OpenAI"]);
+    expect(catalog[1].models.map((model) => model.name)).toEqual(["grok-5", "grok-5-mini"]);
+    expect(catalog[2].models[0].fast).toBe(true);
   });
 
   it("uses a Provider's subscription before its API key, keeping a working current channel", () => {
     const catalog = buildCatalog(CHANNELS, KINDS);
-    const sol = catalog[1].models[0];
-    expect(routesFor(sol, false).map((route) => route.providerId)).toEqual(["openai-codex", "openai-api"]);
-    expect(pickRoute(sol, false, "openrouter").providerId).toBe("openai-codex");
-    expect(pickRoute(sol, false, "openai-api").providerId).toBe("openai-api");
-    expect(locate(catalog, "openai-api", "gpt-6-sol")).toMatchObject({ key: "openai", provider: "OpenAI", model: sol });
+    const grok = catalog[1].models[0];
+    expect(routesFor(grok, false).map((route) => route.providerId)).toEqual(["xai-oauth", "xai"]);
+    expect(pickRoute(grok, false, "openai-codex").providerId).toBe("xai-oauth");
+    expect(pickRoute(grok, false, "xai").providerId).toBe("xai");
+    expect(locate(catalog, "xai", "grok-5")).toMatchObject({ key: "xai", provider: "xAI", model: grok });
   });
 });
 
@@ -36,13 +35,8 @@ describe("Provider status list", () => {
   it("shows each connected Provider and how it is signed in, leaving out lapsed sign-ins", () => {
     expect(providerStatus(CHANNELS, KINDS)).toEqual([
       { key: "openrouter", name: "OpenRouter", methods: ["api_key"] },
-      { key: "openai", name: "OpenAI", methods: ["subscription", "api_key"] },
-    ]);
-  });
-
-  it("counts a Claude login (an OAuth credential) as a subscription", () => {
-    expect(providerStatus([CHANNELS[0]], { anthropic: { kind: "oauth" } })).toEqual([
-      { key: "anthropic", name: "Anthropic", methods: ["subscription"] },
+      { key: "xai", name: "xAI", methods: ["subscription", "api_key"] },
+      { key: "openai", name: "OpenAI", methods: ["subscription"] },
     ]);
   });
 });
@@ -61,22 +55,21 @@ describe("Providers that can be added", () => {
     GEMINI_API_KEY: { category: "provider", provider: "gemini", provider_label: "Google AI Studio", url: "https://aistudio.google.com" },
     GEMINI_BASE_URL: { category: "provider", provider: "gemini", provider_label: "Google AI Studio", url: null },
     COPILOT_GITHUB_TOKEN: { category: "provider", provider: "copilot", provider_label: "GitHub Copilot", url: null },
-    GH_TOKEN: { category: "provider", provider: "copilot", provider_label: "GitHub Copilot", url: null },
     AWS_REGION: { category: "provider", provider: "bedrock", provider_label: "AWS Bedrock", url: null },
     HERMES_ANON_API_SECRET: { category: "provider", provider: "", provider_label: "" },
   };
 
-  it("lists the offered Providers not yet signed in, one entry per sign-in method", () => {
+  it("lists Providers not yet signed in, one entry per sign-in method", () => {
     const addable = addableProviders(ACCOUNTS, ENV, new Set(["openai"]));
-    // Nous Portal is not one Crema offers; Copilot is added with a GitHub token (one entry for its two names).
-    expect(addable.map((group) => group.name)).toEqual(["Anthropic", "Google", "GitHub Copilot"]);
-    expect(addable[2].methods).toEqual([{ kind: "api_key", id: "copilot", envVar: "COPILOT_GITHUB_TOKEN", url: "" }]);
-    const anthropic = addable[0];
+    expect(addable.map((group) => group.name)).toEqual(["Nous Portal", "Anthropic", "Google", "GitHub Copilot"]);
+    // Claude Code's borrowed login is not offered; Claude's subscription is the Anthropic login.
+    expect(addable.flatMap((group) => group.methods).some((method) => method.id === "claude-code")).toBe(false);
+    const anthropic = addable[1];
     expect(anthropic.methods.map((method) => [method.kind, method.id])).toEqual([
       ["subscription", "anthropic"],
       ["api_key", "anthropic"],
     ]);
-    expect(addable[1].methods).toEqual([
+    expect(addable[2].methods).toEqual([
       { kind: "api_key", id: "gemini", envVar: "GOOGLE_API_KEY", url: "https://aistudio.google.com" },
     ]);
   });
