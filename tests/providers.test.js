@@ -13,6 +13,7 @@ import {
   providerStatus,
   routesFor,
   suggestionRoute,
+  turnNeeds,
   turnRoute,
 } from "../src/providers.js";
 
@@ -129,6 +130,30 @@ describe("free Provider failover", () => {
     const kept = { provider: "mistral", model: "mistral-small-latest" };
     expect(autoRoute(connected, {}, {}, kept)).toEqual(kept);
     expect(autoRoute([channel("xai", ["grok-5"])])).toBeNull();
+  });
+
+  it("turns the site's judgment into what a turn needs", () => {
+    expect(turnNeeds("안녕", null)).toEqual({ vision: false });
+    expect(turnNeeds([{ type: "text", text: "이거 봐" }, { type: "image_url", image_url: { url: "data:" } }], null)).toEqual({ vision: true });
+    const judged = (fields) => turnNeeds("질문", { difficulty: 0, confidence: 1, needs_tools: 0, sensitive: 0, ...fields });
+    expect(judged({})).toEqual({ vision: false, difficulty: 1, private: false });
+    expect(judged({ difficulty: 2.99 })).toEqual({ vision: false, difficulty: 3, private: false });
+    // Unsure goes one up; the computer or live information needs at least tier 2; personal data asks for privacy.
+    expect(judged({ difficulty: 1.47, confidence: 0.5, sensitive: 0.98 })).toEqual({ vision: false, difficulty: 2, private: true });
+    expect(judged({ difficulty: 0.14, needs_tools: 0.92 })).toEqual({ vision: false, difficulty: 2, private: false });
+  });
+
+  it("eases a hard or private automatic turn step by step and says so", () => {
+    const connected = [channel("gemini", ["gemini-3.5-flash", "gemini-3.5-flash-lite"]), channel("groq", ["openai/gpt-oss-20b"])];
+    // No tier-3 free model: the best tier 2 (scarce Gemini Flash), noted as eased.
+    expect(autoRoute(connected, {}, { difficulty: 3 })).toEqual({ provider: "gemini", model: "gemini-3.5-flash", eased: "difficulty" });
+    // Personal data leaves out Gemini (trains on input) while anything else fits.
+    expect(autoRoute(connected, {}, { difficulty: 1, private: true })).toEqual({ provider: "groq", model: "openai/gpt-oss-20b" });
+    expect(autoRoute([connected[0]], {}, { difficulty: 1, private: true })).toEqual({
+      provider: "gemini",
+      model: "gemini-3.5-flash-lite",
+      eased: "private",
+    });
   });
 
   it("takes a catalog from the site and ignores one of another shape", () => {

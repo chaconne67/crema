@@ -1,6 +1,8 @@
 import base64
 import hashlib
+import io
 import json
+from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth import get_user_model
@@ -95,3 +97,45 @@ class AppSignInTests(TestCase):
         self.client.post("/account/delete/")
         self.assertFalse(get_user_model().objects.exists())
         self.assertEqual(self.client.get("/api/me", HTTP_AUTHORIZATION=f"Bearer {token}").status_code, 401)
+
+
+class JevReply:
+    def __init__(self, answers):
+        self.body = json.dumps({"model": "jev-1.13.0", "answers": answers}).encode()
+
+    def __enter__(self):
+        return io.BytesIO(self.body)
+
+    def __exit__(self, *exc):
+        return False
+
+
+@override_settings(SECURE_SSL_REDIRECT=False, TYPESAFE_API_KEY="ts-test")
+class RouteTests(TestCase):
+    ANSWERS = {
+        "difficulty": {"type": "score", "score": 2.1, "confidence": 0.8},
+        "needs_tools": {"type": "noul", "noul": 0.1},
+        "sensitive": {"type": "noul", "noul": 0.9},
+    }
+
+    def setUp(self):
+        self.auth = {"HTTP_AUTHORIZATION": f"Bearer {AppToken.issue(get_user_model().objects.create_user('u2'))}"}
+
+    def route(self, body, **extra):
+        return self.client.post("/api/route", json.dumps(body), content_type="application/json", **extra)
+
+    def test_judges_a_signed_in_apps_request_with_jev(self):
+        with mock.patch("web.views.urllib.request.urlopen", return_value=JevReply(self.ANSWERS)) as urlopen:
+            response = self.route({"text": "x" * 5000}, **self.auth)
+        self.assertEqual(response.json(), {"difficulty": 2.1, "confidence": 0.8, "needs_tools": 0.1, "sensitive": 0.9})
+        sent = urlopen.call_args.args[0]
+        self.assertEqual(sent.headers["Authorization"], "Bearer ts-test")
+        self.assertEqual(len(json.loads(sent.data)["state"]), 2000)
+
+    def test_refuses_without_sign_in_and_says_when_jev_is_unreachable(self):
+        self.assertEqual(self.route({"text": "안녕"}).status_code, 401)
+        self.assertEqual(self.route({"text": " "}, **self.auth).status_code, 400)
+        with mock.patch("web.views.urllib.request.urlopen", side_effect=OSError("timed out")):
+            self.assertEqual(self.route({"text": "안녕"}, **self.auth).status_code, 502)
+        with override_settings(TYPESAFE_API_KEY=""):
+            self.assertEqual(self.route({"text": "안녕"}, **self.auth).status_code, 503)

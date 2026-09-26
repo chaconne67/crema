@@ -122,4 +122,6 @@ SOCIALACCOUNT_PROVIDERS = {
 
 # Shown on the site; left empty until the operator confirms them.
 CREMA_CONTACT_EMAIL = os.environ.get("CREMA_CONTACT_EMAIL", "")
+# Jev (typesafe.ai) judges how hard an automatic free-AI request is; without it /api/route answers 503.
+TYPESAFE_API_KEY = os.environ.get("TYPESAFE_API_KEY", "")
 CREMA_DOWNLOAD_URL = "https://github.com/chaconne67/crema/releases/latest/download/Crema-setup-x64.exe"

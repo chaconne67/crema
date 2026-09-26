@@ -16,7 +16,7 @@ import {
   usableProviders,
 } from "./desktop.js";
 import { applyAppearance, loadAppearance, saveAppearance } from "./settings.js";
-import { AUTO_LABEL, PROVIDER_CHEVRON, ZAP_ICON, modelMenuRows } from "./model-picker.js";
+import { AUTO_LABEL, AUTO_NOTE, PROVIDER_CHEVRON, ZAP_ICON, modelMenuRows } from "./model-picker.js";
 
 // Lucide (ISC) "gauge": the reasoning-effort row in the model menu.
 const REASONING_ICON =
@@ -32,6 +32,7 @@ import {
   providerOf,
   setFreeCatalog,
   suggestionRoute,
+  turnNeeds,
   turnRoute,
 } from "./providers.js";
 import { createSettingsPanel } from "./settings-panel.js";
@@ -136,7 +137,7 @@ function describeServed(conversationId, runtime) {
     const rest = coolOff(turn.route.provider) ? ", 15분 쉼" : "";
     return `대신 답한 AI: ${providerName(runtime.provider)} · ${runtime.model} — ${providerName(turn.route.provider)} 한도 초과 또는 응답 없음${rest}`;
   }
-  if (turn.why === "auto") return `자동 선택: ${providerName(turn.route.provider)} · ${turn.route.model}`;
+  if (turn.why === "auto") return `자동 선택: ${providerName(turn.route.provider)} · ${turn.route.model}${turn.eased ? ` — ${EASED[turn.eased]}` : ""}`;
   const reason = { cooling: "쉬는 중", resume: `연결 끊김${turn.asked.provider in cooling ? ", 15분 쉼" : ""}` }[turn.why];
   return reason ? `대신 답한 AI: ${providerName(turn.route.provider)} · ${turn.route.model} — ${providerName(turn.asked.provider)} ${reason}` : "";
 }
@@ -144,8 +145,21 @@ function describeServed(conversationId, runtime) {
 // Where the site's free catalog is served; the bundled copy stands when it cannot be read.
 const FREE_CATALOG_URL = "https://crema-agent.site/api/free-catalog";
 
-/** What an automatic turn needs from its model: images read when the request carries any. */
-const turnNeeds = (content) => ({ vision: Array.isArray(content) && content.some((part) => part.type === "image_url") });
+// A request this short is answered as easy without asking the site; a judgment later than this is not waited for.
+const JUDGE_MIN_CHARS = 20;
+const JUDGE_WAIT_MS = 1500;
+
+/** The site's judgment of an automatic turn's request text, or null (short, signed out, slow, failed). */
+function judge(content) {
+  const text = typeof content === "string" ? content : content.filter((part) => part.type === "text").map((part) => part.text).join("\n");
+  if (text.trim().length < JUDGE_MIN_CHARS) return null;
+  return Promise.race([host.judge(text.slice(0, 2000)), new Promise((resolve) => setTimeout(resolve, JUDGE_WAIT_MS, null))]);
+}
+
+const EASED = {
+  difficulty: "오늘 쓸 수 있는 더 나은 무료 모델이 없어 가벼운 모델로 답함",
+  private: "개인정보가 있지만 입력을 학습에 쓰지 않는 무료 AI가 연결되어 있지 않음",
+};
 
 const hermesClient = createChatClient({
   async transport(args) {
@@ -161,13 +175,17 @@ const hermesClient = createChatClient({
     const project = activeProject();
     // A reply cut off midway goes to the next free Provider; with none left the cut-off stands.
     const last = sentTurns.get(args.conversationId)?.route;
-    const picked = connection.auto && !args.resume && autoRoute(providers, cooling, turnNeeds(args.content), last);
-    const asked = { ...((args.resume && last) || connection), ...(picked ? { ...picked, reasoning: "", fast: false } : {}) };
+    const automatic = connection.auto && !args.resume;
+    const needs = automatic ? turnNeeds(args.content, await judge(args.content)) : null;
+    const { eased = "", ...picked } = (automatic && autoRoute(providers, cooling, needs, last)) || {};
+    const asked = { ...((args.resume && last) || connection), ...(picked.provider ? { ...picked, reasoning: "", fast: false } : {}) };
     if (args.resume) coolOff(asked.provider);
     const route = turnRoute(asked, freeChain(providers, cooling), args.resume ? { ...cooling, [asked.provider]: Infinity } : cooling);
     if (args.resume && route === asked) throw args.resume;
-    sentTurns.set(args.conversationId, { route, asked, why: args.resume ? "resume" : route !== asked ? "cooling" : picked ? "auto" : "" });
+    sentTurns.set(args.conversationId, { route, asked, eased, why: args.resume ? "resume" : route !== asked ? "cooling" : picked.provider ? "auto" : "" });
     await syncFallback().catch(() => {});
+    // Stopped while the turn was being judged or the chain synced: no run starts.
+    if (args.signal?.aborted) throw new DOMException("응답 생성이 중지되었습니다.", "AbortError");
     return host.streamHermes({
       connection: route,
       ...args,
@@ -538,7 +556,7 @@ const commandHandlers = {
     const chooseAuto = () => {
       Object.assign(connection, { auto: true, provider: "", model: "", fast: false });
       saveModelChoice();
-      if (!ui.quiet) ui.notice({ title: "모델 선택", text: "다음 질문부터 연결된 무료 AI 중에서 알맞은 모델을 골라 답합니다." });
+      if (!ui.quiet) ui.notice({ title: "모델 선택", text: `다음 질문부터 연결된 무료 AI 중에서 알맞은 모델을 골라 답합니다. ${AUTO_NOTE}` });
     };
     if (arg === "자동" && offerAuto) {
       chooseAuto();

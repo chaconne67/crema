@@ -4,6 +4,7 @@ import hmac
 import json
 import re
 import secrets
+import urllib.request
 from datetime import timedelta
 
 from django.conf import settings
@@ -53,6 +54,62 @@ def free_catalog(request):
     response["Access-Control-Allow-Origin"] = "*"
     response["Cache-Control"] = "public, max-age=3600"
     return response
+
+
+JEV_URL = "https://api.typesafe.ai/v1/systemone"
+# Checked on Korean requests (2026-09-26): 10 of 12 difficulties matched, 0.2-0.6 s per call.
+JEV_QUESTIONS = {
+    "difficulty": {
+        "type": "score",
+        "instructions": "How capable must the AI model be to answer this user request well?",
+        "criteria": [
+            "Trivial: greeting, chit-chat, a one-line fact",
+            "Easy: short explanation, simple translation, summary of short text, simple rewrite",
+            "Hard: multi-step reasoning, careful writing of a long document, non-trivial code, analysis comparing several factors",
+            "Very hard: complex system design, large or tricky code, deep math or proofs, long agentic multi-step work",
+        ],
+    },
+    "needs_tools": {
+        "type": "noul",
+        "instructions": "Does answering require acting on the user's computer or fetching live web information, rather than only producing text?",
+    },
+    "sensitive": {
+        "type": "noul",
+        "instructions": "Does the request contain personal information, passwords, financial data, or confidential company material?",
+    },
+}
+
+
+@csrf_exempt
+@require_POST
+def api_route(request):
+    """How hard a signed-in app's automatic free-AI request is. The text is judged, never stored."""
+    if not bearer_token(request):
+        return JsonResponse({"error": "signed_out"}, status=401)
+    if not settings.TYPESAFE_API_KEY:
+        return JsonResponse({"error": "unavailable"}, status=503)
+    try:
+        text = str(json.loads(request.body or b"{}").get("text") or "")[:2000]
+    except ValueError:
+        return HttpResponseBadRequest()
+    if not text.strip():
+        return HttpResponseBadRequest()
+    call = urllib.request.Request(
+        JEV_URL,
+        data=json.dumps({"state": text, "model": "jev-latest", "questions": JEV_QUESTIONS}).encode(),
+        headers={"Authorization": f"Bearer {settings.TYPESAFE_API_KEY}", "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(call, timeout=3) as response:
+            answers = json.load(response)["answers"]
+        return JsonResponse({
+            "difficulty": answers["difficulty"]["score"],
+            "confidence": answers["difficulty"]["confidence"],
+            "needs_tools": answers["needs_tools"]["noul"],
+            "sensitive": answers["sensitive"]["noul"],
+        })
+    except (OSError, ValueError, KeyError, TypeError):
+        return JsonResponse({"error": "judge_failed"}, status=502)
 
 
 @login_required

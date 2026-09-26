@@ -17,6 +17,8 @@ function escapeHtml(value) {
  * picker and the /model command menu. `selection` = { key, name, fast } of the saved choice.
  */
 export const AUTO_LABEL = "자동 (무료 AI)";
+// Told wherever the automatic choice is made: its judging sends the request's start to Crema's site.
+export const AUTO_NOTE = "알맞은 모델을 고르려고 질문 앞부분(최대 2,000자)을 Crema 서버에 보내 판정하며, 저장하지 않습니다.";
 
 // `auto`: offer "자동 (무료 AI)" first (some free Provider is connected); `selection.auto` marks it chosen.
 export function modelMenuRows(catalog, selection, openKey, auto = false) {

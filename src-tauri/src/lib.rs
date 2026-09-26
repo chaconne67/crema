@@ -293,6 +293,24 @@ async fn sign_out() -> Result<(), String> {
   }
 }
 
+/// How hard an automatic free-AI request is, judged by crema-agent.site for a signed-in app.
+#[tauri::command]
+async fn judge_request(text: String) -> Result<serde_json::Value, String> {
+  let token = account_entry()?.get_password().map_err(|_| "signed_out".to_string())?;
+  let response = http_client()?
+    .post(format!("{ACCOUNT_SITE}/api/route"))
+    .bearer_auth(&token)
+    .json(&serde_json::json!({ "text": text }))
+    .timeout(Duration::from_secs(3))
+    .send()
+    .await
+    .map_err(|_| "account_unreachable".to_string())?;
+  if !response.status().is_success() {
+    return Err(status_error(response.status()));
+  }
+  response.json().await.map_err(|_| "server".to_string())
+}
+
 /// Starts the engine if needed and confirms it accepts our token without running the agent.
 #[tauri::command]
 async fn check_connection(app: AppHandle) -> Result<(), String> {
@@ -777,6 +795,7 @@ pub fn run() {
       sign_in,
       account_status,
       sign_out,
+      judge_request,
       check_connection,
       model_options,
       chat_stream,

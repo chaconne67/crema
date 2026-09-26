@@ -155,6 +155,8 @@ export function createDesktopHost() {
     signIn: () => call("sign_in"),
     accountStatus: () => call("account_status"),
     signOut: () => call("sign_out"),
+    /** How hard an automatic free-AI request is (crema-agent.site with Jev); null when it cannot say. */
+    judge: (text) => call("judge_request", { text }).catch(() => null),
     warn: (text) => messageDialog(text, { title: "Crema", kind: "error" }).catch(() => {}),
 
     /** Starts Crema's engine if needed and checks it answers. */

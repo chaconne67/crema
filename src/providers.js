@@ -148,21 +148,44 @@ export function freeChain(channels, cooling = {}, now = Date.now()) {
 }
 
 /**
+ * What an automatic turn needs from its model: image reading when the request carries images, and from
+ * the site's judgment (null when it was not judged) a tier — one higher when the judge is unsure, at
+ * least 2 when it needs the computer or live information — and privacy when it holds personal data.
+ */
+export function turnNeeds(content, judgment) {
+  const vision = Array.isArray(content) && content.some((part) => part.type === "image_url");
+  if (!judgment) return { vision };
+  let difficulty = Math.max(1, Math.round(judgment.difficulty)) + (judgment.confidence < 0.75 ? 1 : 0);
+  if (judgment.needs_tools >= 0.5) difficulty = Math.max(difficulty, 2);
+  return { vision, difficulty: Math.min(difficulty, 3), private: judgment.sensitive >= 0.5 };
+}
+
+/**
  * The model for an automatic ("자동 (무료 AI)") turn: among the connected free models not cooling off
- * that read images when `needs.vision`, the one in the conversation's last turn when it still fits,
- * else the lowest tier at or above `needs.difficulty`, a common allowance before a scarce one (the
- * scarce ones are kept for hard requests), then catalog order. Null when none fits.
+ * that read images when `needs.vision` and, when `needs.private`, whose Provider does not train on
+ * input, the one in the conversation's last turn when it still fits, else the lowest tier at or above
+ * `needs.difficulty`, a common allowance before a scarce one (the scarce ones are kept for hard
+ * requests), then catalog order. When nothing fits it eases the tier step by step, then privacy, and
+ * says which in `eased` ("difficulty" | "private"). Null when not even that fits.
  */
 export function autoRoute(channels, cooling = {}, needs = {}, previous = null, now = Date.now()) {
-  const difficulty = needs.difficulty ?? 1;
-  const fits = freeProviders()
+  const wanted = needs.difficulty ?? 1;
+  const served = freeProviders()
     .filter((item) => !(cooling[item.id] > now))
-    .flatMap((item) => servedModels(item, channels))
-    .filter((entry) => entry.tier >= difficulty && (!needs.vision || entry.vision));
-  const kept = fits.find((entry) => entry.provider === previous?.provider && entry.model === previous?.model);
+    .flatMap((item) => servedModels(item, channels).map((entry) => ({ ...entry, trains: Boolean(item.trains_on_input) })))
+    .filter((entry) => !needs.vision || entry.vision);
   const rank = (entry) => (entry.scarcity === "common" ? 0 : 10) + entry.tier;
-  const best = kept || [...fits].sort((a, b) => rank(a) - rank(b))[0];
-  return best ? { provider: best.provider, model: best.model } : null;
+  const tiers = Array.from({ length: wanted }, (_, index) => wanted - index);
+  const tries = [...tiers.map((tier) => [tier, true]), ...(needs.private ? tiers.map((tier) => [tier, false]) : [])];
+  for (const [tier, privacy] of tries) {
+    const fits = served.filter((entry) => entry.tier >= tier && !(privacy && needs.private && entry.trains));
+    const best = fits.find((entry) => entry.provider === previous?.provider && entry.model === previous?.model) || [...fits].sort((a, b) => rank(a) - rank(b))[0];
+    if (best) {
+      const eased = !privacy ? "private" : tier < wanted ? "difficulty" : "";
+      return { provider: best.provider, model: best.model, ...(eased ? { eased } : {}) };
+    }
+  }
+  return null;
 }
 
 /** The route for a turn: the chosen one, or the first free Provider in `chain` while the chosen one cools off. */

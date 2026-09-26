@@ -1,7 +1,7 @@
 import { REASONING_LEVELS } from "./desktop.js";
 import { closeColorPicker, openColorPicker } from "./color-picker.js";
 import { enhanceSelect } from "./dropdown.js";
-import { AUTO_LABEL, createModelPicker } from "./model-picker.js";
+import { AUTO_LABEL, AUTO_NOTE, createModelPicker } from "./model-picker.js";
 import { createProviderSection } from "./provider-panel.js";
 import { buildCatalog, freeChain, locate, pickRoute, providerStatus } from "./providers.js";
 import {
@@ -216,7 +216,9 @@ export function createSettingsPanel({
     providerSection?.render();
     panel.querySelector("#reasoning-select").value = connection.reasoning || "";
     refreshDropdowns();
-    panel.querySelector("[data-model-note]").textContent = providers.length
+    panel.querySelector("[data-model-note]").textContent = connection.auto
+      ? AUTO_NOTE
+      : providers.length
       ? "선택한 모델은 다음 질문부터 적용됩니다."
       : "연결되면 사용할 수 있는 모델 목록을 불러옵니다.";
   }
