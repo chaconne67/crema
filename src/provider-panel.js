@@ -1,5 +1,5 @@
 import { enhanceSelect } from "./dropdown.js";
-import { METHOD_LABELS, addCategories, addableProviders } from "./providers.js";
+import { METHOD_LABELS, addCategories, addableProviders, freeProviders } from "./providers.js";
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
@@ -16,7 +16,7 @@ const methodLabel = (method) => (method.kind === "api_key" && method.envVar?.end
  * runs that sign-in through Crema's engine. Model choice and speed live in the AI section; nothing here touches them.
  * getStatus() → providerStatus() rows; onChanged() reloads them after a sign-in.
  */
-export function createProviderSection({ host, getStatus, onChanged }) {
+export function createProviderSection({ host, getStatus, onChanged, onGuide = () => {} }) {
   const element = document.createElement("div");
   element.className = "provider-section";
   element.innerHTML = `
@@ -147,12 +147,18 @@ export function createProviderSection({ host, getStatus, onChanged }) {
       return;
     }
     if (method.kind === "api_key") {
+      const guided = freeProviders().some((item) => item.id === method.id && item.signup);
       step.innerHTML = `
+        ${guided ? '<button class="primary-button" type="button" data-guide-signup>Crema에서 안내받으며 가입</button><p class="field-note">가입 화면을 옆에 열고 어디를 누를지 표시해 드려요. 키가 이미 있으면 아래에 붙여넣으세요.</p>' : ""}
         <label for="provider-key">${methodLabel(method)}</label>
         <input id="provider-key" type="password" autocomplete="off" spellcheck="false" placeholder="붙여넣으세요" />
         <p class="field-note">이 PC의 Crema 엔진에만 저장됩니다.${method.url ? ' <button class="link-button" type="button" data-key-page>키 발급 페이지</button>' : ""}</p>
         <button class="primary-button" type="button" data-save-key>확인하고 저장</button>`;
       step.querySelector("[data-key-page]")?.addEventListener("click", () => host.openLink(method.url));
+      step.querySelector("[data-guide-signup]")?.addEventListener("click", () => {
+        closeForm();
+        onGuide(method.id);
+      });
       step.querySelector("[data-save-key]").addEventListener("click", () => saveKey(method));
     } else if (method.flow === "device_code") {
       step.innerHTML = `

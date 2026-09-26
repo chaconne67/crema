@@ -116,12 +116,16 @@ let freeCatalog = bundledCatalog;
 
 /**
  * Replaces the catalog with one fetched from the site; one of another shape is ignored. Where a
- * Provider's key is sent (`endpoint`) stays as shipped with the app: the site only updates models.
+ * Provider's key is sent (`endpoint`) and which site the sign-up guide opens (`signup`) stay as shipped
+ * with the app: the site only updates models.
  */
 export function setFreeCatalog(next) {
   if (!Array.isArray(next?.providers) || !next.providers.every((item) => item.id && Array.isArray(item.models))) return;
-  const shipped = (id) => bundledCatalog.providers.find((item) => item.id === id)?.endpoint;
-  freeCatalog = { ...next, providers: next.providers.map(({ endpoint, ...item }) => ({ ...item, ...(shipped(item.id) ? { endpoint: shipped(item.id) } : {}) })) };
+  const shipped = (id) => {
+    const { endpoint, signup } = bundledCatalog.providers.find((item) => item.id === id) || {};
+    return { ...(endpoint ? { endpoint } : {}), ...(signup ? { signup } : {}) };
+  };
+  freeCatalog = { ...next, providers: next.providers.map(({ endpoint, signup, ...item }) => ({ ...item, ...shipped(item.id) })) };
 }
 
 export const freeProviders = () => freeCatalog.providers;

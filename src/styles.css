@@ -672,6 +672,62 @@ button {
   display: none;
 }
 
+/* The sign-up guide: the site on the right (a separate webview laid over .guide-frame), the chat on the left. */
+/* About half of the chat's side, so the chat keeps room to read the card and type. */
+.app-shell.guide-open {
+  --guide-width: min(760px, calc((100vw - var(--sidebar-width)) * 0.55));
+  padding-right: var(--guide-width);
+}
+
+.workspace.sidebar-hidden .app-shell.guide-open {
+  --guide-width: min(760px, 55vw);
+}
+
+.guide-pane {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: var(--guide-width);
+  background: var(--sidebar-surface);
+  border-left: 1px solid var(--hairline);
+}
+
+.guide-pane[hidden] {
+  display: none;
+}
+
+.guide-pane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.guide-card img[hidden] {
+  display: none;
+}
+
+.guide-card img {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+}
+
+.guide-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .assistant-note {
   align-self: center;
   color: var(--soft-muted);

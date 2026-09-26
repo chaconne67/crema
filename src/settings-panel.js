@@ -114,6 +114,7 @@ export function createSettingsPanel({
   onConnect,
   onProvidersChanged,
   onSignOut,
+  onGuide = () => {},
 }) {
   let current = appearance;
   let account = null;
@@ -461,6 +462,11 @@ export function createSettingsPanel({
         host,
         getStatus: () => providerStatus(providers, authKinds),
         onChanged: onProvidersChanged,
+        // The sign-up guide takes the chat's side of the window, so settings step aside.
+        onGuide(providerId) {
+          close();
+          onGuide(providerId);
+        },
       });
       panel.querySelector("[data-provider-section]").replaceWith(providerSection.element);
       makeSectionsCollapsible();

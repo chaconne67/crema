@@ -5,6 +5,12 @@
       "id": "gemini",
       "name": "Google Gemini",
       "trains_on_input": true,
+      "signup": {
+        "url": "https://aistudio.google.com/apikey",
+        "goal": "Get a Gemini API key in Google AI Studio: sign in with a Google account if asked, accept the terms if asked, open API keys, press Create API key, choose or create a project if asked, then show the new key.",
+        "env": "GEMINI_API_KEY",
+        "key_pattern": "AIza[0-9A-Za-z_-]{35}"
+      },
       "models": [
         { "match": "^gemini-[0-9.]+-flash-lite$", "tier": 1, "scarcity": "common", "vision": true },
         { "match": "^gemini-[0-9.]+-flash$", "tier": 2, "scarcity": "rare", "vision": true }

@@ -993,6 +993,13 @@ export function createChatApp({
   }
 
   return {
+    /** Puts a card (e.g. the sign-up guide's) at the end of the open chat; it is not saved with it. */
+    showCard(card) {
+      conversation.append(card);
+      emptyState.hidden = true;
+      scrollToBottom(true);
+    },
+
     /** Shows a stored chat; an in-flight reply is stopped and saved to its own chat. */
     showConversation(id, { project: nextProject = null } = {}) {
       closeMenu();

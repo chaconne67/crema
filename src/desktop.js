@@ -156,7 +156,18 @@ export function createDesktopHost() {
     accountStatus: () => call("account_status"),
     signOut: () => call("sign_out"),
     /** How hard an automatic free-AI request is (crema-agent.site with Jev); null when it cannot say. */
-    judge: (text) => call("judge_request", { text }).catch(() => null),
+    judge: (text) => call("site_post", { path: "/api/route", body: { text } }).catch(() => null),
+    /** The sign-up guide's next step for a page (crema-agent.site with Jev). */
+    guideStep: (body) => call("site_post", { path: "/api/onboarding/step", body }),
+
+    /** The sign-up guide's webview: an https page placed over `rect` ({x, y, width, height}) of the window. */
+    guideOpen: (url, rect) => call("guide_open", { url, ...rect }),
+    guideBounds: (rect) => call("guide_bounds", rect).catch(() => {}),
+    guideClose: () => call("guide_close").catch(() => {}),
+    /** Runs a script in the guide page; its result, parsed. */
+    guideEval: async (script) => JSON.parse(await call("guide_eval", { script })),
+    /** The guide page as a PNG (ArrayBuffer). */
+    guideCapture: () => call("guide_capture"),
     warn: (text) => messageDialog(text, { title: "Crema", kind: "error" }).catch(() => {}),
 
     /** Starts Crema's engine if needed and checks it answers. */

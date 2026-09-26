@@ -80,6 +80,66 @@ JEV_QUESTIONS = {
 }
 
 
+def ask_jev(state, questions):
+    """Jev's answers to typed questions about `state` (raises OSError/ValueError/KeyError on failure)."""
+    call = urllib.request.Request(
+        JEV_URL,
+        data=json.dumps({"state": state, "model": "jev-latest", "questions": questions}).encode(),
+        headers={"Authorization": f"Bearer {settings.TYPESAFE_API_KEY}", "Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(call, timeout=3) as response:
+        return json.load(response)["answers"]
+
+
+def json_body(request):
+    body = json.loads(request.body or b"{}")
+    if not isinstance(body, dict):
+        raise ValueError
+    return body
+
+
+@csrf_exempt
+@require_POST
+def api_onboarding_step(request):
+    """The sign-up guide's next step: which of the page's elements the user acts on next, and whether
+    the page asks for consent or something only the user can do. Labels are judged, never stored."""
+    if not bearer_token(request):
+        return JsonResponse({"error": "signed_out"}, status=401)
+    if not settings.TYPESAFE_API_KEY:
+        return JsonResponse({"error": "unavailable"}, status=503)
+    try:
+        body = json_body(request)
+        goal = str(body["goal"])[:600]
+        elements = {str(key)[:8]: str(label)[:120] for key, label in list(dict(body["elements"]).items())[:200]}
+        page = {"url": str(body.get("url") or "")[:300], "title": str(body.get("title") or "")[:200]}
+    except (ValueError, KeyError, TypeError):
+        return HttpResponseBadRequest()
+    questions = {
+        "next": {
+            "type": "choice",
+            "instructions": "Which one element should the user act on next to move toward `goal` on this page? "
+            "Choose none when the page is still loading or no element on it moves toward the goal.",
+            "criteria": {**elements, "none": "No element fits: wait, or the goal is already reached"},
+        },
+        "consent": {"type": "noul", "instructions": "Is the page asking the user to accept terms, a privacy notice, or cookies?"},
+        "blocked": {
+            "type": "noul",
+            "instructions": "Does the page show an error message, a CAPTCHA, or a request for a verification code sent to a phone or e-mail?",
+        },
+    }
+    try:
+        answers = ask_jev({"goal": goal, "page": page}, questions)
+        target = answers["next"]["choice"]
+        return JsonResponse({
+            "target": None if target == "none" else target,
+            "confidence": answers["next"]["confidence"],
+            "consent": answers["consent"]["noul"],
+            "blocked": answers["blocked"]["noul"],
+        })
+    except (OSError, ValueError, KeyError, TypeError):
+        return JsonResponse({"error": "judge_failed"}, status=502)
+
+
 @csrf_exempt
 @require_POST
 def api_route(request):
@@ -89,19 +149,13 @@ def api_route(request):
     if not settings.TYPESAFE_API_KEY:
         return JsonResponse({"error": "unavailable"}, status=503)
     try:
-        text = str(json.loads(request.body or b"{}").get("text") or "")[:2000]
+        text = str(json_body(request).get("text") or "")[:2000]
     except ValueError:
         return HttpResponseBadRequest()
     if not text.strip():
         return HttpResponseBadRequest()
-    call = urllib.request.Request(
-        JEV_URL,
-        data=json.dumps({"state": text, "model": "jev-latest", "questions": JEV_QUESTIONS}).encode(),
-        headers={"Authorization": f"Bearer {settings.TYPESAFE_API_KEY}", "Content-Type": "application/json"},
-    )
     try:
-        with urllib.request.urlopen(call, timeout=3) as response:
-            answers = json.load(response)["answers"]
+        answers = ask_jev(text, JEV_QUESTIONS)
         return JsonResponse({
             "difficulty": answers["difficulty"]["score"],
             "confidence": answers["difficulty"]["confidence"],

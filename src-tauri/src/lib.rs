@@ -293,15 +293,22 @@ async fn sign_out() -> Result<(), String> {
   }
 }
 
-/// How hard an automatic free-AI request is, judged by crema-agent.site for a signed-in app.
+// What the signed-in app asks crema-agent.site to judge with Jev: how hard an automatic free-AI request
+// is, and the sign-up guide's next step.
+const SITE_POSTS: [&str; 2] = ["/api/route", "/api/onboarding/step"];
+
+/// Posts to one of SITE_POSTS on crema-agent.site with this app's sign-in.
 #[tauri::command]
-async fn judge_request(text: String) -> Result<serde_json::Value, String> {
+async fn site_post(path: String, body: serde_json::Value) -> Result<serde_json::Value, String> {
+  if !SITE_POSTS.contains(&path.as_str()) {
+    return Err("server".into());
+  }
   let token = account_entry()?.get_password().map_err(|_| "signed_out".to_string())?;
   let response = http_client()?
-    .post(format!("{ACCOUNT_SITE}/api/route"))
+    .post(format!("{ACCOUNT_SITE}{path}"))
     .bearer_auth(&token)
-    .json(&serde_json::json!({ "text": text }))
-    .timeout(Duration::from_secs(3))
+    .json(&body)
+    .timeout(Duration::from_secs(5))
     .send()
     .await
     .map_err(|_| "account_unreachable".to_string())?;
@@ -309,6 +316,132 @@ async fn judge_request(text: String) -> Result<serde_json::Value, String> {
     return Err(status_error(response.status()));
   }
   response.json().await.map_err(|_| "server".to_string())
+}
+
+// The sign-up guide: a free AI's sign-up site shown as a second webview over the right of the main
+// window. It is a remote page, so it gets no app commands; the app reads and marks it only through
+// guide_eval, and the user does every click and every entry.
+const GUIDE: &str = "guide";
+
+fn guide_webview(app: &AppHandle) -> Result<tauri::Webview, String> {
+  app.get_webview(GUIDE).ok_or_else(|| "guide_closed".to_string())
+}
+
+fn guide_rect(x: f64, y: f64, width: f64, height: f64) -> (tauri::LogicalPosition<f64>, tauri::LogicalSize<f64>) {
+  (tauri::LogicalPosition::new(x, y), tauri::LogicalSize::new(width.max(1.0), height.max(1.0)))
+}
+
+/// Opens (or moves to) an https sign-up page in the guide webview at the given place in the window.
+#[tauri::command]
+async fn guide_open(app: AppHandle, url: String, x: f64, y: f64, width: f64, height: f64) -> Result<(), String> {
+  let url: tauri::Url = url.parse().map_err(|_| "guide_url".to_string())?;
+  if url.scheme() != "https" {
+    return Err("guide_url".into());
+  }
+  let (position, size) = guide_rect(x, y, width, height);
+  if let Some(webview) = app.get_webview(GUIDE) {
+    webview.navigate(url).map_err(|_| "guide_open".to_string())?;
+    webview.set_position(position).map_err(|_| "guide_open".to_string())?;
+    webview.set_size(size).map_err(|_| "guide_open".to_string())?;
+    return webview.show().map_err(|_| "guide_open".to_string());
+  }
+  let window = app.get_window("main").ok_or_else(|| "guide_open".to_string())?;
+  window
+    .add_child(tauri::webview::WebviewBuilder::new(GUIDE, tauri::WebviewUrl::External(url)), position, size)
+    .map(|_| ())
+    .map_err(|_| "guide_open".to_string())
+}
+
+#[tauri::command]
+fn guide_bounds(app: AppHandle, x: f64, y: f64, width: f64, height: f64) -> Result<(), String> {
+  let webview = guide_webview(&app)?;
+  let (position, size) = guide_rect(x, y, width, height);
+  webview.set_position(position).map_err(|_| "guide_open".to_string())?;
+  webview.set_size(size).map_err(|_| "guide_open".to_string())
+}
+
+#[tauri::command]
+fn guide_close(app: AppHandle) -> Result<(), String> {
+  match app.get_webview(GUIDE) {
+    Some(webview) => webview.close().map_err(|_| "guide_open".to_string()),
+    None => Ok(()),
+  }
+}
+
+/// Runs a script in the guide page and returns its result as JSON text.
+#[tauri::command]
+async fn guide_eval(app: AppHandle, script: String) -> Result<String, String> {
+  let webview = guide_webview(&app)?;
+  let (tx, rx) = tokio::sync::oneshot::channel();
+  let tx = Mutex::new(Some(tx));
+  webview
+    .eval_with_callback(script, move |result| {
+      if let Some(tx) = tx.lock().unwrap().take() {
+        let _ = tx.send(result);
+      }
+    })
+    .map_err(|_| "guide_eval".to_string())?;
+  tokio::time::timeout(Duration::from_secs(5), rx)
+    .await
+    .map_err(|_| "guide_eval".to_string())?
+    .map_err(|_| "guide_eval".to_string())
+}
+
+/// The guide page as it looks now, a PNG (WebView2 CapturePreview).
+#[tauri::command]
+async fn guide_capture(app: AppHandle) -> Result<tauri::ipc::Response, String> {
+  let webview = guide_webview(&app)?;
+  let (tx, rx) = tokio::sync::oneshot::channel::<Option<Vec<u8>>>();
+  webview
+    .with_webview(move |platform| capture_png(platform, tx))
+    .map_err(|_| "guide_capture".to_string())?;
+  let png = tokio::time::timeout(Duration::from_secs(5), rx)
+    .await
+    .map_err(|_| "guide_capture".to_string())?
+    .ok()
+    .flatten()
+    .ok_or_else(|| "guide_capture".to_string())?;
+  Ok(tauri::ipc::Response::new(png))
+}
+
+#[cfg(windows)]
+fn capture_png(platform: tauri::webview::PlatformWebview, tx: tokio::sync::oneshot::Sender<Option<Vec<u8>>>) {
+  use webview2_com::CapturePreviewCompletedHandler;
+  use webview2_com::Microsoft::Web::WebView2::Win32::COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_PNG;
+  use windows::Win32::System::Com::StructuredStorage::{CreateStreamOnHGlobal, GetHGlobalFromStream};
+  use windows::Win32::System::Memory::{GlobalLock, GlobalSize, GlobalUnlock};
+
+  let started = (|| unsafe {
+    let core = platform.controller().CoreWebView2()?;
+    let stream = CreateStreamOnHGlobal(Default::default(), true)?;
+    let target = stream.clone();
+    core.CapturePreview(
+      COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_PNG,
+      &stream,
+      &CapturePreviewCompletedHandler::create(Box::new(move |result| {
+        let bytes = result.ok().and_then(|_| {
+          let memory = GetHGlobalFromStream(&target).ok()?;
+          let size = GlobalSize(memory);
+          let data = GlobalLock(memory) as *const u8;
+          if data.is_null() {
+            return None;
+          }
+          let bytes = std::slice::from_raw_parts(data, size).to_vec();
+          let _ = GlobalUnlock(memory);
+          Some(bytes)
+        });
+        let _ = tx.send(bytes);
+        Ok(())
+      })),
+    )
+  })();
+  // A failed start drops tx, which the command reads as no capture.
+  let _ = started;
+}
+
+#[cfg(not(windows))]
+fn capture_png(_platform: tauri::webview::PlatformWebview, tx: tokio::sync::oneshot::Sender<Option<Vec<u8>>>) {
+  let _ = tx.send(None);
 }
 
 /// Starts the engine if needed and confirms it accepts our token without running the agent.
@@ -795,7 +928,12 @@ pub fn run() {
       sign_in,
       account_status,
       sign_out,
-      judge_request,
+      site_post,
+      guide_open,
+      guide_bounds,
+      guide_close,
+      guide_eval,
+      guide_capture,
       check_connection,
       model_options,
       chat_stream,

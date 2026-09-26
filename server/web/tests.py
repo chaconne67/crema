@@ -139,3 +139,22 @@ class RouteTests(TestCase):
             self.assertEqual(self.route({"text": "안녕"}, **self.auth).status_code, 502)
         with override_settings(TYPESAFE_API_KEY=""):
             self.assertEqual(self.route({"text": "안녕"}, **self.auth).status_code, 503)
+
+    def test_picks_the_sign_up_guides_next_element_with_jev(self):
+        answers = {
+            "next": {"type": "choice", "choice": "e2", "confidence": 0.9},
+            "consent": {"type": "noul", "noul": 0.1},
+            "blocked": {"type": "noul", "noul": 0.05},
+        }
+        body = {"goal": "Get a Gemini API key", "url": "https://aistudio.google.com/apikey", "elements": {"e1": "link: Docs", "e2": "button: Get API key"}}
+        with mock.patch("web.views.urllib.request.urlopen", return_value=JevReply(answers)) as urlopen:
+            response = self.client.post("/api/onboarding/step", json.dumps(body), content_type="application/json", **self.auth)
+        self.assertEqual(response.json(), {"target": "e2", "confidence": 0.9, "consent": 0.1, "blocked": 0.05})
+        sent = json.loads(urlopen.call_args.args[0].data)
+        self.assertEqual(set(sent["questions"]["next"]["criteria"]), {"e1", "e2", "none"})
+        answers["next"]["choice"] = "none"
+        with mock.patch("web.views.urllib.request.urlopen", return_value=JevReply(answers)):
+            response = self.client.post("/api/onboarding/step", json.dumps(body), content_type="application/json", **self.auth)
+        self.assertIsNone(response.json()["target"])
+        self.assertEqual(self.client.post("/api/onboarding/step", json.dumps(body), content_type="application/json").status_code, 401)
+        self.assertEqual(self.client.post("/api/onboarding/step", json.dumps({"goal": "x"}), content_type="application/json", **self.auth).status_code, 400)

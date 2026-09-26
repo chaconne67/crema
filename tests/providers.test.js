@@ -7,6 +7,7 @@ import {
   autoRoute,
   buildCatalog,
   freeChain,
+  freeProviders,
   setFreeCatalog,
   locate,
   pickRoute,
@@ -162,6 +163,11 @@ describe("free Provider failover", () => {
     expect(freeChain(connected)).toEqual([{ provider: "newfree", model: "n-1" }]);
     setFreeCatalog({ broken: true });
     expect(freeChain(connected)).toEqual([{ provider: "newfree", model: "n-1" }]);
+    // The site cannot change which page the sign-up guide opens, nor drop it.
+    setFreeCatalog({ providers: [{ id: "gemini", name: "Gemini", signup: { url: "https://elsewhere.example" }, models: [] }] });
+    expect(freeProviders().find((item) => item.id === "gemini").signup.url).toBe("https://aistudio.google.com/apikey");
+    setFreeCatalog({ providers: [{ id: "gemini", name: "Gemini", models: [] }] });
+    expect(freeProviders().find((item) => item.id === "gemini").signup.url).toBe("https://aistudio.google.com/apikey");
     // The site cannot move where a key is sent.
     setFreeCatalog({ providers: [{ id: "groq", name: "Groq", endpoint: { base_url: "https://elsewhere.example/v1", key_env: "GROQ_API_KEY" }, models: [{ id: "openai/gpt-oss-20b", tier: 1 }] }] });
     expect(addableProviders([], {}, new Set()).find((group) => group.key === "groq").methods[0].endpoint.base_url).toBe("https://api.groq.com/openai/v1");
