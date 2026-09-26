@@ -1358,13 +1358,36 @@ html[data-pointer] :focus-visible {
   display: none;
 }
 
+/* The form's title row and the picked Provider's row: a name on the left, a text button on the right
+   whose text lines up with the edge. */
+.provider-add-head,
+.provider-chosen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-right: -10px;
+}
+
+.provider-add-head .field-label {
+  margin: 0;
+}
+
 .provider-picker {
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
-.provider-picker input {
-  margin-bottom: 4px;
+/* A line under each category (not over it, as .settings-group draws), so none sits right under the
+   search box. */
+.settings-group.provider-group {
+  border-top: 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.settings-group.provider-group:last-of-type {
+  border-bottom: 0;
 }
 
 .provider-group > summary {
@@ -1383,7 +1406,7 @@ html[data-pointer] :focus-visible {
 }
 
 .provider-choices {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   padding: 0;
   list-style: none;
 }
@@ -1411,11 +1434,7 @@ html[data-pointer] :focus-visible {
 }
 
 .provider-chosen {
-  display: flex;
   min-height: 40px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
 }
 
 .provider-chosen-name {
@@ -1600,12 +1619,6 @@ html[data-pointer] :focus-visible {
 }
 
 .section-body > .text-button,
-.provider-add > .text-button {
-  align-self: flex-start;
-  margin-top: 8px;
-  margin-left: -10px;
-}
-
 @media (max-width: 760px) {
   .app-shell.settings-open {
     padding-right: 0;
