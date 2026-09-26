@@ -186,6 +186,12 @@ export function createProviderSection({ host, getStatus, onChanged }) {
     }
     setStatus("키를 확인하고 있습니다…");
     try {
+      if (method.endpoint) {
+        await saveEndpoint(method.id, method.endpoint, value);
+        input.value = "";
+        await finish();
+        return;
+      }
       const check = await host.hermesAdmin("POST", "/api/providers/validate", { key: method.envVar, value });
       if (!check.ok && check.reachable) {
         setStatus("Provider가 이 키를 받아들이지 않았습니다. 키를 다시 확인해 주세요.", "error");
@@ -197,6 +203,15 @@ export function createProviderSection({ host, getStatus, onChanged }) {
     } catch (error) {
       setStatus(error.userMessage, "error");
     }
+  }
+
+  /** A Provider the engine does not carry (Groq, Mistral): its key, then its OpenAI-compatible endpoint. */
+  async function saveEndpoint(id, { name, base_url, key_env, model }, value) {
+    await host.hermesAdmin("PUT", "/api/env", { key: key_env, value });
+    const config = { providers: { [id]: { name, base_url, key_env, api_mode: "chat_completions", model } } };
+    // The engine resolves a named endpoint only once some Provider is set up: the first one becomes its default.
+    if (!getStatus().length) config.model = { provider: id, default: model };
+    await host.hermesAdmin("PUT", "/api/config", { config });
   }
 
   async function deviceLogin(method, button) {

@@ -672,6 +672,12 @@ button {
   display: none;
 }
 
+.assistant-note {
+  align-self: center;
+  color: var(--soft-muted);
+  font-size: 12px;
+}
+
 .message-copy-button {
   display: inline-grid;
   width: 44px;

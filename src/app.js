@@ -109,6 +109,8 @@ export function createChatApp({
   suggestNext = null,
   answerApproval = null,
   onRenameChat = () => {},
+  // (conversationId, {provider, model} that answered) → the line under an answer another Provider gave, or "".
+  describeServed = () => "",
 }) {
   let messages = [];
   let chatId = null;
@@ -263,11 +265,14 @@ export function createChatApp({
     const footer = document.createElement("div");
     footer.className = "assistant-footer";
     footer.hidden = message.status === "streaming" || !message.content;
-    footer.append(createCopyButton(message.id, "답변 복사"));
+    const note = document.createElement("span");
+    note.className = "assistant-note";
+    note.textContent = message.note || "";
+    footer.append(createCopyButton(message.id, "답변 복사"), note);
 
     article.append(status, content, error, footer);
     turn.append(article);
-    elements.set(message.id, { turn, status, content, error, footer });
+    elements.set(message.id, { turn, status, content, error, footer, note });
     return turn;
   }
 
@@ -327,6 +332,7 @@ export function createChatApp({
     refs.error.hidden = message.status !== "error";
     refs.error.textContent = message.errorMessage || "응답을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
     refs.footer.hidden = message.status === "streaming" || !message.content;
+    refs.note.textContent = message.note || "";
     if (shouldFollow) scrollToBottom(true);
   }
 
@@ -890,6 +896,10 @@ export function createChatApp({
           settleApproval();
           activeTool = activity.status === "running" ? activity.tool || "도구" : null;
           showWork();
+        },
+        onServed(runtime) {
+          const note = describeServed(conversationId, runtime);
+          if (note) assistantMessage.note = note;
         },
         onApproval(request) {
           settleApproval();

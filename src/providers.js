@@ -106,6 +106,42 @@ export function locate(catalog, channelId, modelId) {
   return null;
 }
 
+// Free tiers chained so one running out does not end a reply, in failover order. Groq and Mistral are
+// not engine providers: they are added as named OpenAI-compatible endpoints (config `providers:`).
+export const FREE_PROVIDERS = [
+  { id: "gemini", model: /flash-lite/ },
+  {
+    id: "groq",
+    model: "openai/gpt-oss-120b",
+    endpoint: { name: "Groq", base_url: "https://api.groq.com/openai/v1", key_env: "GROQ_API_KEY", url: "https://console.groq.com/keys" },
+  },
+  { id: "openrouter", model: /:free$/ },
+  {
+    id: "mistral",
+    model: "mistral-small-latest",
+    endpoint: { name: "Mistral", base_url: "https://api.mistral.ai/v1", key_env: "MISTRAL_API_KEY", url: "https://console.mistral.ai/api-keys" },
+  },
+];
+
+// How long a Provider that failed a turn is left out.
+export const COOL_MS = 15 * 60 * 1000;
+
+/** The connected free Providers not cooling off, as `fallback_providers` entries in failover order. */
+export function freeChain(channels, cooling = {}, now = Date.now()) {
+  return FREE_PROVIDERS.flatMap(({ id, model }) => {
+    const models = channels.find((channel) => channel.id === id)?.models || [];
+    const pick = typeof model === "string" ? (models.includes(model) ? model : models[0]) : models.find((name) => model.test(name));
+    return pick && !(cooling[id] > now) ? [{ provider: id, model: pick }] : [];
+  });
+}
+
+/** The route for a turn: the chosen one, or the first free Provider in `chain` while the chosen one cools off. */
+export function turnRoute(chosen, chain, cooling = {}, now = Date.now()) {
+  if (!(cooling[chosen.provider] > now)) return chosen;
+  const next = chain.find((entry) => entry.provider !== chosen.provider);
+  return next ? { ...chosen, ...next, reasoning: "", fast: false } : chosen;
+}
+
 /**
  * Providers that can still be added, with their sign-in methods, from Hermes' settings backend:
  * account sign-ins (`/api/providers/oauth`) and API-key variables (`/api/env`). Providers already
@@ -127,6 +163,9 @@ export function addableProviders(accountRows, envRows, connectedKeys) {
     if (meta.category !== "provider" || !meta.provider || !/_(KEY|TOKEN)$/.test(envVar)) continue;
     add(meta.provider, meta.provider_label, { kind: "api_key", id: meta.provider, envVar, url: meta.url || "" });
   }
+  for (const { id, model, endpoint } of FREE_PROVIDERS) {
+    if (endpoint) add(id, endpoint.name, { kind: "api_key", id, envVar: endpoint.key_env, url: endpoint.url, endpoint: { ...endpoint, model } });
+  }
   return [...groups.values()];
 }
 
@@ -136,7 +175,7 @@ export function addableProviders(accountRows, envRows, connectedKeys) {
 const ADD_CATEGORIES = [
   { label: "많이 쓰는 AI", open: true, keys: ["openai", "anthropic", "google", "xai", "copilot", "meta-ai"] },
   { label: "여러 AI를 한 곳에서", keys: ["openrouter", "ai-gateway", "kilocode", "opencode-zen", "opencode-go", "nous"] },
-  { label: "오픈소스 모델 서비스", keys: ["huggingface", "fireworks", "deepinfra", "novita", "gmi", "nebius-token-factory", "nvidia", "ollama-cloud", "arcee"] },
+  { label: "오픈소스 모델 서비스", keys: ["groq", "mistral", "huggingface", "fireworks", "deepinfra", "novita", "gmi", "nebius-token-factory", "nvidia", "ollama-cloud", "arcee"] },
   {
     label: "중국 AI",
     keys: ["deepseek", "qwen", "kimi-coding", "kimi-coding-cn", "zai", "minimax", "minimax-cn", "stepfun", "xiaomi",

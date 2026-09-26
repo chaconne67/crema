@@ -61,6 +61,52 @@ describe("chat client streams", () => {
     );
   });
 
+  it("reports which Provider actually answered a run", async () => {
+    const served = [];
+    const response = new Response(
+      'data: {"event":"run.completed","output":"답","runtime":{"provider":"groq","model":"openai/gpt-oss-120b"}}\n\n',
+    );
+    expect(await collect(readResponseBody(response, { onServed: (runtime) => served.push(runtime) }))).toBe("답");
+    expect(served).toEqual([{ provider: "groq", model: "openai/gpt-oss-120b" }]);
+  });
+
+  it("hands a reply cut off midway to the transport once, from where it stopped", async () => {
+    const event = (fields) => `data: ${JSON.stringify(fields)}\n\n`;
+    const calls = [];
+    const client = createChatClient({
+      async transport(args) {
+        calls.push(args);
+        return calls.length === 1
+          ? new Response(event({ event: "message.delta", delta: "앞부분" }) + event({ event: "run.failed", error: "dropped" }))
+          : new Response(event({ event: "message.delta", delta: " 뒷부분" }) + event({ event: "run.completed", output: " 뒷부분" }));
+      },
+    });
+    const text = await collect(client.streamReply({ messages: [{ role: "user", content: "질문" }], conversationId: "c1" }));
+    expect(text).toBe("앞부분 뒷부분");
+    expect(calls[1].resume).toBeInstanceOf(Error);
+    expect(calls[1].content).toContain("[받은 부분의 끝]\n앞부분");
+  });
+
+  it("keeps the cut-off when nothing can take the reply over, and does not resume before any text", async () => {
+    const event = (fields) => `data: ${JSON.stringify(fields)}\n\n`;
+    const cutOff = createChatClient({
+      async transport(args) {
+        if (args.resume) throw args.resume;
+        return new Response(event({ event: "message.delta", delta: "앞" }) + event({ event: "run.failed", error: "dropped" }));
+      },
+    });
+    await expect(collect(cutOff.streamReply({ messages: [{ role: "user", content: "질문" }], conversationId: "c1" }))).rejects.toThrow("dropped");
+    let calls = 0;
+    const early = createChatClient({
+      async transport() {
+        calls += 1;
+        return new Response(event({ event: "run.failed", error: "no key" }));
+      },
+    });
+    await expect(collect(early.streamReply({ messages: [{ role: "user", content: "질문" }], conversationId: "c1" }))).rejects.toThrow("no key");
+    expect(calls).toBe(1);
+  });
+
   it("does not treat an empty Hermes stream as a completed answer", async () => {
     const client = createChatClient({
       transport: async () => new Response('data: {"event":"run.completed","run_id":"run_1","output":""}\n\n'),
