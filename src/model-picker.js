@@ -42,8 +42,10 @@ export function modelMenuRows(catalog, selection, openKey, auto = false) {
 /**
  * Settings model chooser: opens with the current model's Provider expanded and that model highlighted;
  * clicking another Provider opens it instead. getSelection() → { key, provider, name, fast }.
+ * onOpen() reloads the models (the engine refreshes each Provider's list in the background), and the
+ * open list is redrawn from them.
  */
-export function createModelPicker({ getCatalog, getSelection, onChoose, offerAuto = () => false }) {
+export function createModelPicker({ getCatalog, getSelection, onChoose, offerAuto = () => false, onOpen = async () => {} }) {
   const wrapper = document.createElement("div");
   wrapper.className = "dropdown model-picker";
   wrapper.innerHTML = `
@@ -98,6 +100,11 @@ export function createModelPicker({ getCatalog, getSelection, onChoose, offerAut
     rows = modelMenuRows(getCatalog(), getSelection(), openKey, offerAuto());
     active = Math.max(0, rows.findIndex((row) => row.selected));
     render();
+    onOpen()
+      .then(() => {
+        if (!list.hidden) render();
+      })
+      .catch(() => {});
   }
 
   function pick(index) {

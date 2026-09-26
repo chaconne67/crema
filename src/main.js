@@ -523,14 +523,6 @@ function renameChat(chat, title) {
   persistWorkspace();
 }
 
-async function loadProviders() {
-  if (!providers.length) {
-    providers = usableProviders(await host.modelOptions());
-    panel.setProviders(providers);
-  }
-  return providers;
-}
-
 const REASONING_WORDS = {
   기본: "", 기본값: "", default: "",
   낮음: "low", low: "low",
@@ -543,7 +535,8 @@ const REASONING_WORDS = {
 const commandHandlers = {
   async model(arg, ui) {
     try {
-      await loadProviders();
+      // Each time: the engine refreshes each Provider's list in the background.
+      await refreshModels();
     } catch (error) {
       ui.notice({ title: "모델 선택", text: error.userMessage, tone: "error" });
       return;

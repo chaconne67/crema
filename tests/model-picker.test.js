@@ -57,6 +57,26 @@ describe("Provider → model picker", () => {
     expect(choose).toHaveBeenCalledWith({ auto: true });
   });
 
+  it("reloads the models each time it opens and redraws the open list with them", async () => {
+    document.body.innerHTML = "";
+    let catalog = CATALOG;
+    const onOpen = vi.fn(async () => {
+      catalog = buildCatalog([{ id: "openai-codex", name: "ChatGPT", models: ["gpt-6-sol", "gpt-7"], capabilities: {} }]);
+    });
+    const picker = createModelPicker({
+      getCatalog: () => catalog,
+      getSelection: () => ({ key: "openai", provider: "OpenAI", name: "gpt-6-sol", fast: false }),
+      onChoose: vi.fn(),
+      onOpen,
+    });
+    document.body.append(picker.element);
+    document.querySelector(".dropdown-button").click();
+    expect(labels()).toContain("gpt-6-astra");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(labels()).toEqual(["OpenAI", "gpt-6-sol", "gpt-7"]);
+  });
+
   it("opens another Provider in place and reports the chosen model and speed", () => {
     const button = document.querySelector(".dropdown-button");
     button.click();
