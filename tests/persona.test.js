@@ -21,9 +21,12 @@ describe("first-run persona setup", () => {
 
   it("puts the persona in front of the current SOUL.md, only the fields given", () => {
     expect(withPersona(DEFAULT_SOUL, { userName: "주인님", polite: true, agentName: "루나", wishes: "결론부터 말해 줘." })).toBe(
-      `당신의 이름은 루나입니다.\n사용자를 "주인님"(이)라고 부릅니다.\n사용자에게 항상 존댓말을 씁니다.\n사용자가 바라는 점:\n결론부터 말해 줘.\n\n${DEFAULT_SOUL}\n`,
+      `당신의 이름은 루나입니다.\n사용자를 "주인님"이라고 부릅니다.\n사용자에게 항상 존댓말을 씁니다.\n사용자가 바라는 점:\n결론부터 말해 줘.\n\n${DEFAULT_SOUL}\n`,
     );
     expect(withPersona(DEFAULT_SOUL, { userName: "", polite: false, agentName: "", wishes: "" })).toBe(`사용자에게 편한 반말을 씁니다.\n\n${DEFAULT_SOUL}\n`);
+    // 이라고 after a final consonant, 라고 otherwise.
+    expect(withPersona("", { userName: "철수", polite: true, agentName: "", wishes: "" })).toBe('사용자를 "철수"라고 부릅니다.\n사용자에게 항상 존댓말을 씁니다.\n');
+    expect(withPersona("", { userName: "Boss", polite: true, agentName: "", wishes: "" })).toContain('"Boss"라고 부릅니다.');
   });
 
   it("writes the answers into SOUL.md and is not shown again", async () => {
@@ -33,7 +36,7 @@ describe("first-run persona setup", () => {
     document.querySelector("[data-persona-form]").dispatchEvent(new Event("submit", { cancelable: true }));
     await done;
 
-    expect(host.writeSoul).toHaveBeenCalledWith(`사용자를 "민수님"(이)라고 부릅니다.\n사용자에게 편한 반말을 씁니다.\n\n${DEFAULT_SOUL}\n`);
+    expect(host.writeSoul).toHaveBeenCalledWith(`사용자를 "민수님"이라고 부릅니다.\n사용자에게 편한 반말을 씁니다.\n\n${DEFAULT_SOUL}\n`);
     expect(document.querySelector(".persona-setup")).toBeNull();
     await createPersonaSetup({ host, storage }).show();
     expect(document.querySelector(".persona-setup")).toBeNull();

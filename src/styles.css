@@ -1,7 +1,9 @@
 :root {
   color-scheme: light;
-  --accent: #339cff;
-  --accent-strong: #0b6fd6;
+  /* The logo's crema (docs/icons/crema-c-bubble.svg): #F6D19A → #D99A55 → #9A5527 over espresso #1A0F0A. */
+  --accent: #d99a55;
+  --accent-strong: #9a5527;
+  --on-accent: #ffffff;
   --settings-width: 348px;
   --sidebar-width: 264px;
   --theme-sidebar-surface: #f6f6f6;
@@ -22,8 +24,8 @@
   --error: #b42318;
   --on: #f97316;
   --ok: #16a34a;
-  --selection: #d9ecff;
-  --focus: #006fc9;
+  --selection: #f6e3c8;
+  --focus: #9a5527;
   --font-ui: "Nanum Gothic", "Malgun Gothic", system-ui, sans-serif;
   --font-body: "Nanum Gothic", "Malgun Gothic", system-ui, sans-serif;
   --system-size: 16px;
@@ -55,9 +57,10 @@
   --error: #ff8c82;
   --on: #fb923c;
   --ok: #4ade80;
-  --selection: #174d78;
-  --focus: #68b7ff;
-  --accent-strong: #2f8ae6;
+  --selection: #5a3a22;
+  --focus: #f6d19a;
+  --accent-strong: #d99a55;
+  --on-accent: #1a0f0a;
 }
 
 *,
@@ -1411,7 +1414,7 @@ html[data-pointer] :focus-visible {
 }
 
 .primary-button {
-  color: #ffffff;
+  color: var(--on-accent);
   background: var(--accent-strong);
   border: 0;
 }
@@ -3028,7 +3031,7 @@ svg.zap {
   border-color: var(--swatch);
 }
 
-/* Chat row status: spinner while a reply is being written, blue dot for a reply not seen yet. */
+/* Chat row status: spinner while a reply is being written, an accent dot for a reply not seen yet. */
 .row-status {
   flex: none;
 }
@@ -3114,7 +3117,7 @@ svg.zap {
   display: none;
 }
 
-/* Sidebar width handle on its right edge: a blue line on hover, focus or drag. */
+/* Sidebar width handle on its right edge: an accent line on hover, focus or drag. */
 .sidebar-resizer {
   position: absolute;
   z-index: 20;
@@ -3391,8 +3394,22 @@ svg.zap {
   text-align: left;
 }
 
+/* One heading style for every field, with room between fields. */
+.persona-form label,
+.persona-form .field-label {
+  margin-top: 10px;
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.persona-form > label:first-child {
+  margin-top: 0;
+}
+
 .persona-form .primary-button {
   align-self: stretch;
+  margin-top: 12px;
 }
 
 .persona-form .text-button {

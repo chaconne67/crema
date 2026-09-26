@@ -1,6 +1,6 @@
 # Third-party notices
 
-App icon glyph in `app-icon.svg`; UI icons in `src/`.
+UI icons in `src/`.
 
 ## Lucide
 
