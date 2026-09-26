@@ -213,11 +213,12 @@ export function addableProviders(accountRows, envRows, connectedKeys) {
     const methods = groups.get(key).methods;
     if (!methods.some((item) => item.kind === method.kind)) methods.push(method);
   };
-  // Only sign-ins done inside Crema (a browser page and a code). The engine leaves the others to a
-  // terminal ("external": Claude's subscription, the Qwen and Copilot CLIs), which most people will not use;
-  // those Providers are offered by their API key or token instead.
+  // Only sign-ins done inside Crema: a code shown in Crema and entered on the Provider's page
+  // ("device_code"), or Claude's page giving a code to paste into Crema ("pkce"). The engine leaves the
+  // others to a terminal ("external": the Qwen and Copilot CLIs), which most people will not use; those
+  // Providers are offered by their API key or token instead.
   for (const row of accountRows) {
-    if (row.flow !== "device_code") continue;
+    if (row.flow !== "device_code" && row.flow !== "pkce") continue;
     add(row.id, row.name, { kind: "subscription", id: row.id, flow: row.flow });
   }
   for (const [envVar, meta] of Object.entries(envRows)) {

@@ -61,7 +61,7 @@ describe("Providers that can be added", () => {
   const ACCOUNTS = [
     { id: "nous", name: "Nous Portal", flow: "device_code", cli_command: "hermes auth add nous" },
     { id: "openai-codex", name: "ChatGPT or Codex Subscription", flow: "device_code" },
-    { id: "anthropic", name: "Anthropic API Key", flow: "external", cli_command: "hermes auth add anthropic" },
+    { id: "anthropic", name: "Anthropic API Key", flow: "pkce" },
     { id: "claude-code", name: "Anthropic OAuth", flow: "external", cli_command: "claude setup-token" },
   ];
   const ENV = {
@@ -78,10 +78,11 @@ describe("Providers that can be added", () => {
   it("lists Providers not yet signed in, one entry per sign-in method done inside Crema", () => {
     const addable = addableProviders(ACCOUNTS, ENV, new Set(["openai"]));
     expect(addable.map((group) => group.name)).toEqual(["Nous Portal", "Anthropic", "Google", "GitHub Copilot", "Groq", "Mistral"]);
-    // Sign-ins the engine leaves to a terminal (Claude's subscription, Claude Code's token) are not offered.
+    // Sign-ins the engine leaves to a terminal (Claude Code's token) are not offered; Claude's own
+    // subscription sign-in (a code pasted into Crema) is, ahead of its API key.
     expect(addable.flatMap((group) => group.methods).some((method) => method.id === "claude-code")).toBe(false);
     const anthropic = addable[1];
-    expect(anthropic.methods.map((method) => [method.kind, method.id])).toEqual([["api_key", "anthropic"]]);
+    expect(anthropic.methods.map((method) => [method.kind, method.id])).toEqual([["subscription", "anthropic"], ["api_key", "anthropic"]]);
     expect(addable[2].methods).toEqual([
       { kind: "api_key", id: "gemini", envVar: "GOOGLE_API_KEY", url: "https://aistudio.google.com" },
     ]);

@@ -160,6 +160,16 @@ export function createProviderSection({ host, getStatus, onChanged, onGuide = ()
         onGuide(method.id);
       });
       step.querySelector("[data-save-key]").addEventListener("click", () => saveKey(method));
+    } else if (method.flow === "pkce") {
+      step.innerHTML = `
+        <button class="primary-button" type="button" data-start-login>로그인 시작</button>
+        <div class="device-login" data-paste hidden>
+          <p class="field-note">열린 페이지에서 승인하면 코드가 나옵니다. 그 코드를 그대로 붙여넣으세요.</p>
+          <input id="provider-code" type="text" autocomplete="off" spellcheck="false" placeholder="코드 붙여넣기" />
+          <button class="primary-button" type="button" data-submit-code>연결</button>
+          <button class="secondary-button" type="button" data-open-login>로그인 페이지 다시 열기</button>
+        </div>`;
+      step.querySelector("[data-start-login]").addEventListener("click", (event) => pasteLogin(method, event.currentTarget));
     } else {
       step.innerHTML = `
         <button class="primary-button" type="button" data-start-login>로그인 시작</button>
@@ -245,6 +255,39 @@ export function createProviderSection({ host, getStatus, onChanged, onGuide = ()
         setStatus(error.userMessage, "error");
         button.disabled = false;
       }
+    }
+  }
+
+  /** Claude's sign-in: its page shows a code once approved, pasted back here (the terminal's `hermes auth add anthropic`). */
+  async function pasteLogin(method, button) {
+    button.disabled = true;
+    setStatus("로그인을 준비하고 있습니다…");
+    try {
+      const session = await host.hermesAdmin("POST", `/api/providers/oauth/${method.id}/start`);
+      button.hidden = true;
+      $("[data-paste]").hidden = false;
+      $("[data-open-login]").addEventListener("click", () => host.openLink(session.auth_url));
+      host.openLink(session.auth_url);
+      setStatus("");
+      $("[data-submit-code]").addEventListener("click", async () => {
+        const code = $("#provider-code").value.trim();
+        if (!code) {
+          setStatus("코드를 붙여넣어 주세요.", "error");
+          return;
+        }
+        setStatus("연결하고 있습니다…");
+        try {
+          await host.hermesAdmin("POST", `/api/providers/oauth/${method.id}/submit`, { session_id: session.session_id, code });
+          await finish();
+        } catch {
+          // The engine forgets a login once its code is used or refused, so it starts over.
+          showStep();
+          setStatus("코드가 받아들여지지 않았습니다. 로그인을 다시 시작해 주세요.", "error");
+        }
+      });
+    } catch (error) {
+      setStatus(error.userMessage, "error");
+      button.disabled = false;
     }
   }
 

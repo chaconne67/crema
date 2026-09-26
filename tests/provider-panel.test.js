@@ -5,7 +5,7 @@ import { createProviderSection } from "../src/provider-panel.js";
 const ACCOUNTS = {
   providers: [
     { id: "openai-codex", name: "ChatGPT or Codex Subscription", flow: "device_code" },
-    { id: "anthropic", name: "Anthropic API Key", flow: "external", cli_command: "hermes auth add anthropic" },
+    { id: "anthropic", name: "Anthropic API Key", flow: "pkce" },
   ],
 };
 const ENV = {
@@ -66,7 +66,7 @@ describe("Provider section", () => {
     await flush();
     // Only the popular ones open; a Provider no category names falls under the last; a GitHub token is not an API key.
     expect(groups()).toEqual([
-      { label: "많이 쓰는 AI", open: true, items: ["Claude (Anthropic)API 키", "GitHub Copilot토큰"] },
+      { label: "많이 쓰는 AI", open: true, items: ["Claude (Anthropic)구독 · API 키", "GitHub Copilot토큰"] },
       { label: "여러 AI를 한 곳에서", open: false, items: ["OpenRouterAPI 키"] },
       { label: "오픈소스 모델 서비스", open: false, items: ["GroqAPI 키", "MistralAPI 키"] },
       { label: "중국 AI", open: false, items: ["DeepSeekAPI 키"] },
@@ -75,9 +75,9 @@ describe("Provider section", () => {
     choose("Claude");
     expect($("[data-chosen-name]").textContent).toBe("Claude (Anthropic)");
     expect($("[data-provider-picker]").hidden).toBe(true);
-    // Claude's subscription sign-in needs a terminal, so only its API key is offered, and asked for at once.
-    expect($("[data-method-field]").hidden).toBe(true);
-    expect($("#provider-key")).not.toBeNull();
+    // Claude has a subscription sign-in and an API key, so the method is asked, subscription first.
+    expect($("[data-method-field]").hidden).toBe(false);
+    expect($("[data-start-login]")).not.toBeNull();
   });
 
   it("finds a Provider by name, and goes back to the list to pick another", async () => {
@@ -108,6 +108,52 @@ describe("Provider section", () => {
     expect(onChanged).toHaveBeenCalled();
     expect($("[data-provider-form]").hidden).toBe(true);
     expect(rows()).toContain("OpenRouterON API 키");
+  });
+
+  it("signs in to Claude's subscription: opens its page, then sends the pasted code to the engine", async () => {
+    const authUrl = "https://claude.ai/oauth/authorize?state=s";
+    host.hermesAdmin.mockImplementation(async (method, path) => {
+      if (path === "/api/providers/oauth") return ACCOUNTS;
+      if (path === "/api/env") return ENV;
+      if (path === "/api/providers/oauth/anthropic/start") return { session_id: "sid", flow: "pkce", auth_url: authUrl };
+      return { ok: true };
+    });
+    $("[data-provider-add]").click();
+    await flush();
+    choose("Claude");
+    $("[data-start-login]").click();
+    await flush();
+    expect(host.openLink).toHaveBeenCalledWith(authUrl);
+    expect($("[data-paste]").hidden).toBe(false);
+
+    $("#provider-code").value = " the-code#s ";
+    $("[data-submit-code]").click();
+    await flush();
+    await flush();
+    expect(host.hermesAdmin).toHaveBeenCalledWith("POST", "/api/providers/oauth/anthropic/submit", { session_id: "sid", code: "the-code#s" });
+    expect(onChanged).toHaveBeenCalled();
+    expect($("[data-provider-form]").hidden).toBe(true);
+  });
+
+  it("starts Claude's sign-in over when the engine refuses the code", async () => {
+    host.hermesAdmin.mockImplementation(async (method, path) => {
+      if (path === "/api/providers/oauth") return ACCOUNTS;
+      if (path === "/api/env") return ENV;
+      if (path.endsWith("/start")) return { session_id: "sid", flow: "pkce", auth_url: "https://claude.ai/oauth/authorize" };
+      throw Object.assign(new Error("server"), { userMessage: "server" });
+    });
+    $("[data-provider-add]").click();
+    await flush();
+    choose("Claude");
+    $("[data-start-login]").click();
+    await flush();
+    $("#provider-code").value = "old-code#x";
+    $("[data-submit-code]").click();
+    await flush();
+    await flush();
+    expect(onChanged).not.toHaveBeenCalled();
+    expect($("[data-start-login]").hidden).toBe(false);
+    expect($("[data-step-status]").textContent).toBe("코드가 받아들여지지 않았습니다. 로그인을 다시 시작해 주세요.");
   });
 
   it("adds Groq as the engine's OpenAI-compatible endpoint, the default only when nothing else is set up", async () => {
