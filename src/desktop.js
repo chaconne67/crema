@@ -160,14 +160,14 @@ export function createDesktopHost() {
     /** The sign-up guide's next step for a page (crema-agent.site with Jev). */
     guideStep: (body) => call("site_post", { path: "/api/onboarding/step", body }),
 
-    /** The sign-up guide's webview: an https page placed over `rect` ({x, y, width, height}) of the window. */
+    /** The sign-up guide's webview: an https page laid over `rect` ({x, y, width, height}) of the window. */
     guideOpen: (url, rect) => call("guide_open", { url, ...rect }),
     guideBounds: (rect) => call("guide_bounds", rect).catch(() => {}),
     guideClose: () => call("guide_close").catch(() => {}),
     /** Runs a script in the guide page; its result, parsed. */
     guideEval: async (script) => JSON.parse(await call("guide_eval", { script })),
-    /** The guide page as a PNG (ArrayBuffer). */
-    guideCapture: () => call("guide_capture"),
+    /** Hides the guide page while something of the app lies over its place, and shows it again. */
+    guideVisible: (visible) => call("guide_visible", { visible }).catch(() => {}),
     warn: (text) => messageDialog(text, { title: "Crema", kind: "error" }).catch(() => {}),
 
     /** Starts Crema's engine if needed and checks it answers. */

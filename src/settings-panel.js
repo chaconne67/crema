@@ -115,6 +115,8 @@ export function createSettingsPanel({
   onProvidersChanged,
   onSignOut,
   onGuide = () => {},
+  // (open) → the panel opened or closed; the sign-up guide's page must not cover it.
+  onOpenChange = () => {},
 }) {
   let current = appearance;
   let account = null;
@@ -305,6 +307,7 @@ export function createSettingsPanel({
   function close() {
     panel.hidden = true;
     shell.classList.remove("settings-open");
+    onOpenChange(false);
     opener?.focus();
   }
 
@@ -313,6 +316,7 @@ export function createSettingsPanel({
       opener = trigger || document.activeElement;
       panel.hidden = false;
       shell.classList.add("settings-open");
+      onOpenChange(true);
       panel.querySelector("[data-close-settings]").focus();
     },
 
@@ -462,7 +466,7 @@ export function createSettingsPanel({
         host,
         getStatus: () => providerStatus(providers, authKinds),
         onChanged: onProvidersChanged,
-        // The sign-up guide takes the chat's side of the window, so settings step aside.
+        // The sign-up guide takes over the chat, so settings step aside.
         onGuide(providerId) {
           close();
           onGuide(providerId);

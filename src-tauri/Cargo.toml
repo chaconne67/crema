@@ -39,6 +39,3 @@ getrandom = "0.3"
 # Ends the bundled engine with the app (a Windows job object); already in the dependency tree through Tauri.
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = ["Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }
-# The sign-up guide's screen capture (WebView2 CapturePreview); both already in the tree through Tauri's wry.
-webview2-com = "0.38"
-windows = { version = "0.61", features = ["Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_System_Memory"] }

@@ -149,7 +149,7 @@ export function createProviderSection({ host, getStatus, onChanged, onGuide = ()
     if (method.kind === "api_key") {
       const guided = freeProviders().some((item) => item.id === method.id && item.signup);
       step.innerHTML = `
-        ${guided ? '<button class="primary-button" type="button" data-guide-signup>Crema에서 안내받으며 가입</button><p class="field-note">가입 화면을 옆에 열고 어디를 누를지 표시해 드려요. 키가 이미 있으면 아래에 붙여넣으세요.</p>' : ""}
+        ${guided ? '<button class="primary-button" type="button" data-guide-signup>Crema에서 안내받으며 가입</button><p class="field-note">가입 화면을 대화창에 열고 다음에 누를 곳을 알려 드려요. 키가 이미 있으면 아래에 붙여넣으세요.</p>' : ""}
         <label for="provider-key">${methodLabel(method)}</label>
         <input id="provider-key" type="password" autocomplete="off" spellcheck="false" placeholder="붙여넣으세요" />
         <p class="field-note">이 PC의 Crema 엔진에만 저장됩니다.${method.url ? ' <button class="link-button" type="button" data-key-page>키 발급 페이지</button>' : ""}</p>

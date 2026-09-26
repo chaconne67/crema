@@ -672,60 +672,162 @@ button {
   display: none;
 }
 
-/* The sign-up guide: the site on the right (a separate webview laid over .guide-frame), the chat on the left. */
-/* About half of the chat's side, never leaving the chat under 480px to read the card and type. */
-.app-shell.guide-open {
-  --guide-width: min(760px, calc((100vw - var(--sidebar-width)) * 0.55), calc(100vw - var(--sidebar-width) - 480px));
-  padding-right: var(--guide-width);
+/* The sign-up guide: the chat becomes one block — the line saying what to do, and the live sign-up page
+   under it (a separate webview laid over .guide-frame). "이전 대화 보기" brings the chat back meanwhile. */
+.app-shell.guiding:not(.guide-peek) > .conversation-scroll,
+.app-shell.guiding > .composer-shell {
+  display: none;
 }
 
-.workspace.sidebar-hidden .app-shell.guide-open {
-  --guide-width: min(760px, 55vw, calc(100vw - 480px));
+.guide-view {
+  display: grid;
+  grid-row: 2 / 4;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+  max-width: var(--content-width);
+  min-height: 0;
+  margin: 0 auto;
+  padding: 0 16px 14px;
 }
 
-.guide-pane {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
+.guide-view[hidden] {
+  display: none;
+}
+
+.app-shell.guide-peek .guide-view {
+  grid-row: 3;
+  grid-template-rows: auto auto;
+  padding-top: 8px;
+}
+
+.app-shell.guide-peek .guide-frame {
+  display: none;
+}
+
+.guide-earlier {
+  justify-self: stretch;
+  min-height: 36px;
+  padding: 8px 12px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.guide-earlier[hidden] {
+  display: none;
+}
+
+/* Row 2 even when "이전 대화 보기" is hidden (a new chat), so the page gets the rest of the height. */
+.guide-block {
+  grid-row: 2;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  width: var(--guide-width);
-  background: var(--sidebar-surface);
-  border-left: 1px solid var(--hairline);
+  min-height: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--hairline));
+  border-radius: 14px;
 }
 
-.guide-pane[hidden] {
-  display: none;
+.guide-bar {
+  padding: 10px 14px 12px;
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 30%, var(--hairline));
 }
 
-.guide-pane-head {
+.guide-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  font-size: 13px;
-  font-weight: 600;
-  border-bottom: 1px solid var(--hairline);
-}
-
-.guide-card img[hidden] {
-  display: none;
-}
-
-.guide-card img {
-  display: block;
-  width: 100%;
-  margin-top: 10px;
-  border: 1px solid var(--hairline);
-  border-radius: 8px;
+  gap: 4px 10px;
+  color: var(--accent-strong);
+  font-size: 12px;
 }
 
 .guide-actions {
   display: flex;
+  gap: 2px;
+}
+
+.guide-actions button {
+  min-height: 32px;
+  padding: 6px 8px;
+  color: var(--accent-strong);
+  font: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.guide-actions button:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.guide-say {
+  margin: 4px 0 0;
+  color: color-mix(in srgb, var(--accent-strong) 80%, var(--ink));
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.guide-save {
+  display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+
+.guide-save[hidden] {
+  display: none;
+}
+
+.guide-save-note {
+  font-size: 12px;
+}
+
+.guide-save .primary-button {
+  min-height: 44px;
+  background: var(--ok);
+  border-color: var(--ok);
+}
+
+.guide-block.found {
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--hairline));
+}
+
+.guide-block.found .guide-bar {
+  background: color-mix(in srgb, var(--ok) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--ok) 35%, var(--hairline));
+}
+
+.guide-block.found .guide-top,
+.guide-block.found .guide-say,
+.guide-block.found .guide-save-note {
+  color: color-mix(in srgb, var(--ok) 75%, var(--ink));
+}
+
+.guide-frame {
+  min-height: 160px;
+  background: var(--sidebar-surface);
+}
+
+.guide-done {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
 }
 
 .assistant-note {

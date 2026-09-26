@@ -318,8 +318,8 @@ async fn site_post(path: String, body: serde_json::Value) -> Result<serde_json::
   response.json().await.map_err(|_| "server".to_string())
 }
 
-// The sign-up guide: a free AI's sign-up site shown as a second webview over the right of the main
-// window. It is a remote page, so it gets no app commands; the app reads and marks it only through
+// The sign-up guide: a free AI's sign-up site shown as a second webview laid over the chat of the main
+// window. It is a remote page, so it gets no app commands; the app only reads it, through
 // guide_eval, and the user does every click and every entry.
 const GUIDE: &str = "guide";
 
@@ -387,61 +387,11 @@ async fn guide_eval(app: AppHandle, script: String) -> Result<String, String> {
     .map_err(|_| "guide_eval".to_string())
 }
 
-/// The guide page as it looks now, a PNG (WebView2 CapturePreview).
+/// Hides the guide page while an app overlay (settings) covers its place, and shows it again.
 #[tauri::command]
-async fn guide_capture(app: AppHandle) -> Result<tauri::ipc::Response, String> {
+fn guide_visible(app: AppHandle, visible: bool) -> Result<(), String> {
   let webview = guide_webview(&app)?;
-  let (tx, rx) = tokio::sync::oneshot::channel::<Option<Vec<u8>>>();
-  webview
-    .with_webview(move |platform| capture_png(platform, tx))
-    .map_err(|_| "guide_capture".to_string())?;
-  let png = tokio::time::timeout(Duration::from_secs(5), rx)
-    .await
-    .map_err(|_| "guide_capture".to_string())?
-    .ok()
-    .flatten()
-    .ok_or_else(|| "guide_capture".to_string())?;
-  Ok(tauri::ipc::Response::new(png))
-}
-
-#[cfg(windows)]
-fn capture_png(platform: tauri::webview::PlatformWebview, tx: tokio::sync::oneshot::Sender<Option<Vec<u8>>>) {
-  use webview2_com::CapturePreviewCompletedHandler;
-  use webview2_com::Microsoft::Web::WebView2::Win32::COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_PNG;
-  use windows::Win32::System::Com::StructuredStorage::{CreateStreamOnHGlobal, GetHGlobalFromStream};
-  use windows::Win32::System::Memory::{GlobalLock, GlobalSize, GlobalUnlock};
-
-  let started = (|| unsafe {
-    let core = platform.controller().CoreWebView2()?;
-    let stream = CreateStreamOnHGlobal(Default::default(), true)?;
-    let target = stream.clone();
-    core.CapturePreview(
-      COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_PNG,
-      &stream,
-      &CapturePreviewCompletedHandler::create(Box::new(move |result| {
-        let bytes = result.ok().and_then(|_| {
-          let memory = GetHGlobalFromStream(&target).ok()?;
-          let size = GlobalSize(memory);
-          let data = GlobalLock(memory) as *const u8;
-          if data.is_null() {
-            return None;
-          }
-          let bytes = std::slice::from_raw_parts(data, size).to_vec();
-          let _ = GlobalUnlock(memory);
-          Some(bytes)
-        });
-        let _ = tx.send(bytes);
-        Ok(())
-      })),
-    )
-  })();
-  // A failed start drops tx, which the command reads as no capture.
-  let _ = started;
-}
-
-#[cfg(not(windows))]
-fn capture_png(_platform: tauri::webview::PlatformWebview, tx: tokio::sync::oneshot::Sender<Option<Vec<u8>>>) {
-  let _ = tx.send(None);
+  if visible { webview.show() } else { webview.hide() }.map_err(|_| "guide_open".to_string())
 }
 
 /// Starts the engine if needed and confirms it accepts our token without running the agent.
@@ -904,7 +854,7 @@ pub fn run() {
       guide_bounds,
       guide_close,
       guide_eval,
-      guide_capture,
+      guide_visible,
       check_connection,
       model_options,
       chat_stream,

@@ -390,6 +390,7 @@ const panel = createSettingsPanel({
   onConnect: connect,
   onProvidersChanged: () => refreshModels().catch(() => {}),
   onGuide: (providerId) => guide.start(providerId),
+  onOpenChange: (open) => guide.setCovered(open),
   async onSignOut() {
     const message = "Crema에서 로그아웃할까요?\n다시 쓰려면 구글 계정으로 다시 로그인해야 합니다. 대화 기록은 이 PC에 그대로 남습니다.";
     if (!(await host.confirm(message, "로그아웃"))) return;
@@ -865,8 +866,13 @@ panel.mount(root.querySelector(".app-shell"));
 const guide = createGuide({
   host,
   shell: root.querySelector(".app-shell"),
+  hasConversation: () => app.hasMessages(),
   showCard: (card) => app.showCard(card),
   onConnected: () => refreshModels(),
+  onUseAuto() {
+    Object.assign(connection, { auto: true, provider: "", model: "", fast: false });
+    saveModelChoice();
+  },
 });
 syncModelChip();
 host.onFileDrop((paths) => app.addFiles(paths));
