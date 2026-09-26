@@ -410,12 +410,13 @@ async fn check_connection(app: AppHandle) -> Result<(), String> {
   Ok(())
 }
 
-/// The engine's model-picker inventory (providers, their models, current default).
+/// The engine's model-picker inventory (providers, their models, current default). `refresh` fetches
+/// each Provider's own model list now; without it the engine answers from the lists it last fetched.
 #[tauri::command]
-async fn model_options(app: AppHandle) -> Result<serde_json::Value, String> {
+async fn model_options(app: AppHandle, refresh: bool) -> Result<serde_json::Value, String> {
   let (api, _, token) = engine(&app).await?;
   let response = http_client()?
-    .get(format!("{api}/api/model/options"))
+    .get(format!("{api}/api/model/options?refresh={refresh}"))
     .bearer_auth(token)
     .send()
     .await

@@ -185,7 +185,8 @@ export function createDesktopHost() {
     /** Channel credential kinds and re-login needs, from the engine's own records. */
     authKinds: () => call("auth_kinds").catch(() => ({})),
 
-    modelOptions: () => call("model_options"),
+    /** `refresh`: each Provider's model list fetched now (at start and after adding one), not the last one. */
+    modelOptions: (refresh = false) => call("model_options", { refresh }),
 
     /** The engine's settings API (Provider sign-ins, API keys, approval mode). */
     hermesAdmin: (method, path, body) => call("hermes_admin", { method, path, body: body ?? null }),

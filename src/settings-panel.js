@@ -447,7 +447,6 @@ export function createSettingsPanel({
         getCatalog: () => catalog,
         getSelection: selection,
         offerAuto: () => Boolean(connection.auto) || freeChain(providers).length > 0,
-        onOpen: async () => onProvidersChanged?.(),
         onChoose({ model, fast, auto }) {
           if (auto) {
             Object.assign(connection, { auto: true, provider: "", model: "", fast: false });
