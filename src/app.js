@@ -222,14 +222,14 @@ export function createChatApp({
     };
     const type = imageTypeOf(path);
     if (!type) {
-      note("Hermes가 만든 파일");
+      note("Crema가 만든 파일");
       return figure;
     }
     if (!mediaUrls.has(path)) {
       mediaUrls.set(path, host.readFile(path).then((bytes) => URL.createObjectURL(new Blob([bytes], { type }))));
     }
     const image = document.createElement("img");
-    image.alt = "Hermes가 만든 그림";
+    image.alt = "Crema가 만든 그림";
     figure.append(image);
     mediaUrls
       .get(path)
@@ -245,7 +245,7 @@ export function createChatApp({
 
     const article = document.createElement("article");
     article.className = "assistant-message";
-    article.setAttribute("aria-label", "Hermes 답변");
+    article.setAttribute("aria-label", "Crema 답변");
 
     const status = document.createElement("div");
     status.className = "work-status";
@@ -882,7 +882,7 @@ export function createChatApp({
 
     runs.set(runChatId, run);
     if (runChatId === chatId) setRunning(true);
-    announce("Hermes가 답변을 작성하고 있습니다.");
+    announce("Crema가 답변을 작성하고 있습니다.");
 
     try {
       const conversationId = sessionFor(runChatId);
@@ -987,7 +987,7 @@ export function createChatApp({
   function setProject(nextProject) {
     project = nextProject;
     projectChip.querySelector("[data-project-name]").textContent = project?.name || "프로젝트 없음";
-    projectChip.title = project?.path || "프로젝트를 고르면 Hermes가 그 폴더에서 일합니다";
+    projectChip.title = project?.path || "프로젝트를 고르면 Crema가 그 폴더에서 일합니다";
     projectChip.classList.toggle("is-empty", !project);
     projectChip.querySelector("svg").style.color = project?.color || "";
   }
@@ -1096,7 +1096,7 @@ export function createChatApp({
             <div class="conversation-content" data-conversation></div>
             <div class="empty-state" data-empty-state>
               <p data-empty-title>무엇을 도와드릴까요?</p>
-              <button class="text-button" type="button" data-connect hidden>Hermes 연결하기</button>
+              <button class="text-button" type="button" data-connect hidden>Crema 엔진 연결하기</button>
             </div>
           </main>
           <footer class="composer-shell">

@@ -85,7 +85,7 @@ function connectedLabel() {
 }
 
 function syncModelChip() {
-  app.setModel({ name: connection.auto ? AUTO_LABEL : connection.model || "Hermes 기본 모델", detail: connection.reasoning ? reasoningLabel() : "", fast: Boolean(connection.fast) });
+  app.setModel({ name: connection.auto ? AUTO_LABEL : connection.model || "기본 모델", detail: connection.reasoning ? reasoningLabel() : "", fast: Boolean(connection.fast) });
 }
 
 /** Branch of the open chat's project folder (hidden outside Git). */
@@ -277,7 +277,7 @@ const sidebar = createSidebar({
   onAddProject: addProject,
   async onRemoveProject(projectId) {
     const project = workspace.projects.find((item) => item.id === projectId);
-    const message = `'${project?.name}'을 목록에서 뺄까요?\n폴더와 파일은 그대로 두고, 이 프로젝트의 대화 기록과 Hermes 세션을 지웁니다.`;
+    const message = `'${project?.name}'을 목록에서 뺄까요?\n폴더와 파일은 그대로 두고, 이 프로젝트의 대화 기록과 Crema 엔진 세션을 지웁니다.`;
     if (!project || !(await host.confirm(message, "목록에서 빼기"))) return;
     const removed = workspace.chats.filter((chat) => chat.projectId === projectId);
     workspace.projects = workspace.projects.filter((item) => item.id !== projectId);
@@ -296,7 +296,7 @@ const sidebar = createSidebar({
   },
   async onDeleteChat(chatId) {
     const chat = workspace.chats.find((item) => item.id === chatId);
-    const message = `'${chat?.title}' 대화를 영구 삭제할까요?\nHermes에 저장된 이 대화의 세션도 함께 지웁니다.`;
+    const message = `'${chat?.title}' 대화를 영구 삭제할까요?\nCrema 엔진에 저장된 이 대화의 세션도 함께 지웁니다.`;
     if (!chat || !(await host.confirm(message, "삭제"))) return;
     workspace.chats = workspace.chats.filter((item) => item.id !== chatId);
     app.discardReply(chatId);
@@ -674,7 +674,7 @@ const commandHandlers = {
       title: "상태",
       tone: error ? "error" : "",
       rows: [
-        ["연결", `Crema 엔진 · ${info ? "연결됨" : "연결 안 됨"}${info?.health?.version ? ` · Hermes v${info.health.version}` : ""}`],
+        ["연결", `Crema 엔진 · ${info ? "연결됨" : "연결 안 됨"}${info?.health?.version ? ` · 엔진 v${info.health.version}` : ""}`],
         ["모델", connection.auto ? AUTO_LABEL : `${connection.model} · ${providerName}`],
         ["추론 강도", reasoningLabel()],
         ["속도", connection.fast ? "빠른 속도" : "기본"],
@@ -682,7 +682,7 @@ const commandHandlers = {
         ["세션", current ? `${hermesSessionId(current)} · 이 대화의 ${sessions.length}번째 세션` : "-"],
         ["이번 세션", session
           ? `메시지 ${formatNumber(session.message_count)}개 · 입력 ${formatNumber(session.input_tokens)} · 출력 ${formatNumber(session.output_tokens)} 토큰`
-          : "아직 Hermes에 기록이 없습니다"],
+          : "아직 엔진에 기록이 없습니다"],
       ],
       text: error,
     });
@@ -711,7 +711,7 @@ const commandHandlers = {
         ["캐시 재사용", formatNumber(sum("cache_read_tokens"))],
         ...(cost ? [["예상 비용", `$${cost.toFixed(4)}`]] : []),
       ],
-      text: "구독의 남은 한도는 Hermes API에서 제공하지 않아 표시하지 않습니다.",
+      text: "구독의 남은 한도는 Crema 엔진에서 제공하지 않아 표시하지 않습니다.",
     });
   },
 

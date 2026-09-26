@@ -112,7 +112,7 @@ export function projectInstruction(path) {
 }
 
 export const REASONING_LEVELS = [
-  { value: "", label: "Hermes 기본값" },
+  { value: "", label: "기본값" },
   { value: "low", label: "낮음" },
   { value: "medium", label: "보통" },
   { value: "high", label: "높음" },

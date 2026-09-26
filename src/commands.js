@@ -28,12 +28,12 @@ export const COMMANDS = [
   { id: "model", alias: "모델", label: "모델 선택", hint: "다음 질문부터 적용", group: "모델", whileRunning: true },
   { id: "reasoning", alias: "추론", label: "추론 강도", hint: "낮음 · 보통 · 높음 · 매우 높음", group: "모델", whileRunning: true },
   { id: "fast", alias: "빠르게", label: "빠른 속도", hint: "지원 모델에서 빠른 속도 켜기/끄기", group: "모델", whileRunning: true },
-  { id: "status", alias: "상태", label: "상태 보기", hint: "연결 · 모델 · 세션 정보", group: "Hermes", whileRunning: true },
-  { id: "usage", alias: "사용량", label: "사용량 보기", hint: "이 대화의 토큰 사용량", group: "Hermes", whileRunning: true },
-  { id: "help", alias: "도움말", label: "명령어 도움말", hint: "사용할 수 있는 명령 목록", group: "Hermes", whileRunning: true },
+  { id: "status", alias: "상태", label: "상태 보기", hint: "연결 · 모델 · 세션 정보", group: "Crema", whileRunning: true },
+  { id: "usage", alias: "사용량", label: "사용량 보기", hint: "이 대화의 토큰 사용량", group: "Crema", whileRunning: true },
+  { id: "help", alias: "도움말", label: "명령어 도움말", hint: "사용할 수 있는 명령 목록", group: "Crema", whileRunning: true },
 ].map((command) => ({ ...command, icon: ICONS[command.id] }));
 
-export const COMMAND_GROUPS = ["대화", "모델", "Hermes"];
+export const COMMAND_GROUPS = ["대화", "모델", "Crema"];
 
 /** `/model gpt-6-luna` → { command, arg: "gpt-6-luna" }; English names and Korean aliases both work. */
 export function parseCommand(text) {

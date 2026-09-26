@@ -57,7 +57,7 @@ describe("chat client streams", () => {
       new Response(events.map((fields) => `data: ${JSON.stringify({ run_id: "run_1", ...fields })}\n\n`).join(""));
     expect(await collect(readResponseBody(run({ event: "run.completed", output: "완료" })))).toBe("완료");
     await expect(collect(readResponseBody(run({ event: "run.failed", error: "boom" })))).rejects.toThrow(
-      "Hermes 응답이 완료되지 않았습니다.",
+      "Crema 엔진 응답이 완료되지 않았습니다.",
     );
   });
 
@@ -114,6 +114,6 @@ describe("chat client streams", () => {
     await expect(collect(client.streamReply({
       messages: [{ role: "user", content: "질문" }],
       conversationId: "conversation-1",
-    }))).rejects.toThrow("Hermes 응답에 내용이 없습니다.");
+    }))).rejects.toThrow("Crema 엔진 응답에 내용이 없습니다.");
   });
 });

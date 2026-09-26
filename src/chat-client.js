@@ -14,7 +14,7 @@ function runEventText(event, { onActivity, onApproval }) {
       return "";
     case "run.failed":
     case "run.interrupted":
-      throw new Error(`Hermes 응답이 완료되지 않았습니다. (${event.error || event.event})`);
+      throw new Error(`Crema 엔진 응답이 완료되지 않았습니다. (${event.error || event.event})`);
     case "run.cancelled":
       throw new DOMException("응답 생성이 중지되었습니다.", "AbortError");
     default:
@@ -91,7 +91,7 @@ async function* streamTransportResponse({ transport, messages, conversationId, s
     }
   }
   if (!text) {
-    throw new Error("Hermes 응답에 내용이 없습니다.");
+    throw new Error("Crema 엔진 응답에 내용이 없습니다.");
   }
 }
 
