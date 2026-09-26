@@ -24,9 +24,9 @@ PC에 따로 설치한 Hermes가 있어도 Crema는 그것을 읽거나 바꾸�
 ## 처음 실행할 때
 
 1. 구글 계정으로 Crema에 로그인합니다(처음 한 번).
-2. 오른쪽 위 설정 버튼 → **Provider**에서 쓸 AI 서비스에 로그인하거나 API 키를 넣습니다.
-   - ChatGPT 구독, Claude 구독·API 키, OpenAI·Gemini·OpenRouter API 키
-   - Claude 구독 로그인에는 [Claude Code](https://claude.com/claude-code)가 필요합니다.
+2. 오른쪽 위 설정 버튼 → **Provider** → **Provider 추가**에서 쓸 AI 서비스에 로그인하거나 API 키를 넣습니다.
+   - 많이 쓰는 AI(ChatGPT, Claude, Gemini, Grok, GitHub Copilot, Meta AI)가 먼저 보이고, 나머지 40여 개는 "여러 AI를 한 곳에서", "오픈소스 모델 서비스", "중국 AI" 등으로 접혀 있습니다. 이름으로 찾을 수도 있습니다.
+   - Crema는 PC에 있는 다른 프로그램(Claude Code, GitHub CLI 등)의 로그인을 가져다 쓰지 않습니다. Crema에서 직접 추가한 것만 쓰입니다.
 3. **AI**에서 모델과 추론 강도를 고릅니다.
 
 음성 입력은 OpenAI API 키가 있으면 그 키로 받아씁니다.
