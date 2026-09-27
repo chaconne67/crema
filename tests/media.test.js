@@ -94,11 +94,11 @@ describe("Settings → 서비스 연동", () => {
     section.render();
     await flush();
     expect([...document.querySelectorAll(".feature-name")].map((item) => item.textContent)).toEqual(["이미지 생성", "동영상 생성", "웹 검색"]);
-    expect([state("image"), state("video"), state("web")]).toEqual(["사용 가능", "사용 가능", "사용 가능"]);
+    expect([state("image"), state("video"), state("web")]).toEqual(["ON", "ON", "ON"]);
     expect(detail("image")).toEqual({ "사용 중인 서비스": "ChatGPT 구독 자동 선택" });
     expect(detail("video")).toEqual({ "사용 중인 서비스": "OpenRouter", "모델": "기본 (MiniMax: Hailuo 3 Max)" });
     expect(detail("web")["사용 중인 검색"]).toBe("기본 검색 (무료)");
-    expect(section.summary()).toBe("3개 중 3개 사용 가능");
+    expect(section.summary()).toBe("3개 중 3개 ON");
   });
 
   it("changes the service and the model only on 적용, and keeps them", async () => {
@@ -149,9 +149,9 @@ describe("Settings → 서비스 연동", () => {
     document.body.append(section.element);
     section.render();
     await flush();
-    expect(state("image")).toBe("사용 불가");
+    expect(state("image")).toBe("OFF");
     expect(detail("image")["사용 중인 서비스"]).toBe("없음");
-    expect(section.summary()).toBe("3개 중 1개 사용 가능");
+    expect(section.summary()).toBe("3개 중 1개 ON");
 
     click("image", "[data-edit]");
     expect([...card("image").querySelectorAll("[data-pick]")].map((item) => item.dataset.pick)).toEqual(["openai-codex", "openrouter"]);

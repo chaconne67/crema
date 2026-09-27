@@ -176,7 +176,7 @@ export function createMediaSection({ host, getConnected, onChange, onGuide = () 
     <details class="settings-group feature" data-media="${key}" data-on="${on}"${opened.has(key) || editing === key ? " open" : ""}>
       <summary>
         <span class="feature-name">${label}</span>
-        <span class="feature-state" data-state="${on ? "on" : "off"}">${on ? "사용 가능" : "사용 불가"}</span>
+        <span class="feature-state" data-state="${on ? "on" : "off"}">${on ? "ON" : "OFF"}</span>
       </summary>
       <div class="settings-group-body">
         ${body}
@@ -400,7 +400,7 @@ export function createMediaSection({ host, getConnected, onChange, onGuide = () 
     summary: () => {
       const shown = mediaPlan(getConnected(), choices).filter(({ kind }) => SHOWN.includes(kind.key));
       // Web search is always usable.
-      return `${shown.length + 1}개 중 ${shown.filter(({ route }) => route).length + 1}개 사용 가능`;
+      return `${shown.length + 1}개 중 ${shown.filter(({ route }) => route).length + 1}개 ON`;
     },
     refreshDropdowns: () => dropdowns.forEach((dropdown) => dropdown.refresh()),
   };

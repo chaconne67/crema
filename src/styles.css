@@ -3042,7 +3042,7 @@ svg.zap {
   margin-right: 12px;
 }
 
-/* The state as a pill: green 사용 가능, gray 사용 불가. */
+/* The state as a pill: green ON, gray OFF. */
 .feature-state {
   display: inline-flex;
   flex: none;
