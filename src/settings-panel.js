@@ -2,6 +2,7 @@ import { REASONING_LEVELS } from "./desktop.js";
 import { closeColorPicker, openColorPicker } from "./color-picker.js";
 import { enhanceSelect } from "./dropdown.js";
 import { AUTO_LABEL, AUTO_NOTE, createModelPicker } from "./model-picker.js";
+import { createMediaSection } from "./media.js";
 import { createProviderSection } from "./provider-panel.js";
 import { buildCatalog, freeChain, locate, pickRoute, providerStatus } from "./providers.js";
 import {
@@ -54,6 +55,8 @@ const SECTION_ICONS = {
   providers: icon('<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>'),
   connection: icon('<path d="M12 22v-5"/><path d="M15 8V2"/><path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z"/><path d="M9 8V2"/>'),
   model: icon('<path d="M12 20v2"/><path d="M12 2v2"/><path d="M17 20v2"/><path d="M17 2v2"/><path d="M2 12h2"/><path d="M2 17h2"/><path d="M2 7h2"/><path d="M20 12h2"/><path d="M20 17h2"/><path d="M20 7h2"/><path d="M7 20v2"/><path d="M7 2v2"/><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/>'),
+  // Lucide (ISC) "image".
+  media: icon('<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>'),
   // Lucide (ISC) "smile".
   persona: icon('<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/>'),
   appearance: icon('<path d="M12 4v16"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 20h6"/>'),
@@ -115,6 +118,8 @@ export function createSettingsPanel({
   onConnectionChange,
   onConnect,
   onProvidersChanged,
+  // (plan) → media backends to use (media.js), after a choice in 미디어.
+  onMediaChange = () => {},
   onSignOut,
   onGuide = () => {},
   // (open) → the panel opened or closed; the sign-up guide's page must not cover it.
@@ -130,6 +135,7 @@ export function createSettingsPanel({
   let connectionState = "checking";
   let modelPicker = null;
   let providerSection = null;
+  let mediaSection = null;
   let authKinds = {};
   let catalog = [];
 
@@ -219,6 +225,7 @@ export function createSettingsPanel({
     queueMicrotask(updateSummaries);
     modelPicker?.refresh();
     providerSection?.render();
+    mediaSection?.render();
     panel.querySelector("#reasoning-select").value = connection.reasoning || "";
     refreshDropdowns();
     panel.querySelector("[data-model-note]").textContent = connection.auto
@@ -234,6 +241,7 @@ export function createSettingsPanel({
       account: account?.email || "",
       connection: CONNECTION_STATES[connectionState] || "",
       providers: catalog.length ? `${catalog.length}개 연결됨` : "",
+      media: (mediaSection?.plan() || []).filter((item) => item.route).map((item) => item.kind.label.split(" ")[0]).join(" · "),
       model: [connection.auto ? AUTO_LABEL : connection.model, connection.fast && "빠른 속도", connection.reasoning && reasoning?.label].filter(Boolean).join(" · "),
       appearance: `시스템 ${current.systemSize}px · 본문 ${current.size}px`,
       theme: THEMES.find(([value]) => value === current.theme)?.[1] || "",
@@ -394,6 +402,9 @@ export function createSettingsPanel({
 
     getCatalog: () => catalog,
 
+    /** Media backends for the Providers connected now (media.js mediaPlan). */
+    mediaPlan: () => mediaSection?.plan() || [],
+
     /** Which model writes next-input predictions (shown under the setting). */
     setSuggestModel(text) {
       panel.querySelector("[data-suggest-note]").textContent = text;
@@ -441,6 +452,12 @@ export function createSettingsPanel({
               ${REASONING_LEVELS.map((level) => `<option value="${level.value}">${level.label}</option>`).join("")}
             </select>
             <p class="field-note" data-model-note></p>
+          </section>
+
+          <section class="settings-section" aria-labelledby="media-title">
+            <h3 id="media-title">미디어</h3>
+            <p class="field-note">이미지·영상·소리를 만들고 듣는 기능이에요. 연결한 Provider로 할 수 있는 건 자동으로 켜져요.</p>
+            <div data-media-section></div>
           </section>
 
           <section class="settings-section" aria-labelledby="persona-title">
@@ -527,6 +544,14 @@ export function createSettingsPanel({
         },
       });
       panel.querySelector("[data-provider-section]").replaceWith(providerSection.element);
+      mediaSection = createMediaSection({
+        getConnected: () => new Set(providers.map((provider) => provider.id)),
+        onChange(plan) {
+          updateSummaries();
+          onMediaChange(plan);
+        },
+      });
+      panel.querySelector("[data-media-section]").replaceWith(mediaSection.element);
       makeSectionsCollapsible();
       updateSummaries();
 

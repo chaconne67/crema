@@ -1,4 +1,4 @@
-import { blobToDataUrl, fileName, imageTypeOf, previewOf, requestContent } from "./attachments.js";
+import { blobToDataUrl, fileName, imageTypeOf, playableTypeOf, previewOf, requestContent } from "./attachments.js";
 import { renderMarkdown } from "./markdown.js";
 import { ZAP_ICON } from "./model-picker.js";
 import { BACK_ICON, CHECK_ICON, COMMAND_GROUPS, MENU_ICON, filterCommands, parseCommand } from "./commands.js";
@@ -252,7 +252,9 @@ export function createChatApp({
       caption.textContent = `${text}: ${path}`;
       figure.replaceChildren(caption);
     };
-    const type = imageTypeOf(path);
+    // A picture as an image, a video or sound with its player, anything else by its path.
+    const playable = playableTypeOf(path);
+    const type = imageTypeOf(path) || playable?.type;
     if (!type) {
       note("Crema가 만든 파일");
       return figure;
@@ -260,13 +262,19 @@ export function createChatApp({
     if (!mediaUrls.has(path)) {
       mediaUrls.set(path, host.readFile(path).then((bytes) => URL.createObjectURL(new Blob([bytes], { type }))));
     }
-    const image = document.createElement("img");
-    image.alt = "Crema가 만든 그림";
-    figure.append(image);
+    const element = document.createElement(playable ? playable.kind : "img");
+    if (playable) {
+      element.controls = true;
+      element.preload = "metadata";
+      figure.classList.add(`media-${playable.kind}`);
+    } else {
+      element.alt = "Crema가 만든 그림";
+    }
+    figure.append(element);
     mediaUrls
       .get(path)
-      .then((url) => (image.src = url))
-      .catch(() => note("그림 파일을 열지 못했습니다"));
+      .then((url) => (element.src = url))
+      .catch(() => note(playable ? "재생할 파일을 열지 못했습니다" : "그림 파일을 열지 못했습니다"));
     return figure;
   }
 

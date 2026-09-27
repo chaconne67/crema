@@ -7,6 +7,17 @@ const TEXT_EXTENSIONS = new Set([
 const extensionOf = (name) => name.split(".").pop().toLowerCase();
 export const fileName = (path) => path.split(/[\\/]/).pop();
 
+const VIDEO_TYPES = { mp4: "video/mp4", m4v: "video/mp4", webm: "video/webm", mov: "video/quicktime" };
+const AUDIO_TYPES = { mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg", oga: "audio/ogg", opus: "audio/ogg", m4a: "audio/mp4", aac: "audio/aac", flac: "audio/flac" };
+
+/** Video or audio type of a file the engine made ({ kind, type }), else null. */
+export function playableTypeOf(name) {
+  const extension = extensionOf(name);
+  if (VIDEO_TYPES[extension]) return { kind: "video", type: VIDEO_TYPES[extension] };
+  if (AUDIO_TYPES[extension]) return { kind: "audio", type: AUDIO_TYPES[extension] };
+  return null;
+}
+
 /** Image type for an image the model can take inline, else "". */
 export function imageTypeOf(name) {
   return IMAGE_TYPES[extensionOf(name)] || "";

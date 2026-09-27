@@ -36,6 +36,7 @@ import {
   turnRoute,
 } from "./providers.js";
 import { createGuide } from "./guide.js";
+import { mediaConfig } from "./media.js";
 import { createSettingsPanel } from "./settings-panel.js";
 import { createPersonaSetup } from "./persona.js";
 import { createSignIn } from "./sign-in.js";
@@ -390,6 +391,7 @@ const panel = createSettingsPanel({
   },
   onConnect: connect,
   onProvidersChanged: () => refreshModels().catch(() => {}),
+  onMediaChange: (plan) => applyMedia(plan).catch(() => {}),
   onGuide: (providerId) => guide.start(providerId),
   onOpenChange: (open) => guide.setCovered(open),
   async onSignOut() {
@@ -417,6 +419,19 @@ async function refreshModels() {
   providers = usableProviders(await host.modelOptions(true));
   panel.setProviders(providers);
   describeSuggestModel();
+  applyMedia(panel.mediaPlan()).catch(() => {});
+}
+
+// The media config last written to the engine this session: written again only when it changes.
+let appliedMedia = "";
+
+/** Media backends (image, video, speech, dictation) for the connected Providers, into the engine's config. */
+async function applyMedia(plan) {
+  const config = mediaConfig(plan);
+  const text = JSON.stringify(config);
+  if (text === appliedMedia) return;
+  await host.hermesAdmin("PUT", "/api/config", { config });
+  appliedMedia = text;
 }
 
 // Next-input prediction: one short extra Hermes turn after each answer, in a throwaway session.

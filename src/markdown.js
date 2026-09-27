@@ -110,8 +110,8 @@ function enhanceTables(container) {
   }
 }
 
-// Hermes marks a file it produced (e.g. a generated image) as `MEDIA:<absolute path>` on its own.
-const MEDIA_TAG = /MEDIA:\s*(`[^`\n]+`|"[^"\n]+"|(?:[A-Za-z]:[\\/]|\/)[^\n]*?\.(?:png|jpe?g|gif|webp|bmp))/gi;
+// The engine marks a file it produced (a generated image, video or sound) as `MEDIA:<absolute path>` on its own.
+const MEDIA_TAG = /MEDIA:\s*(`[^`\n]+`|"[^"\n]+"|(?:[A-Za-z]:[\\/]|\/)[^\n]*?\.(?:png|jpe?g|gif|webp|bmp|mp4|webm|mov|m4v|mp3|wav|ogg|oga|opus|m4a|aac|flac))/gi;
 const MEDIA_TOKEN = "AGENTCLIENTMEDIA";
 
 /**

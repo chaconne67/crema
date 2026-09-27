@@ -2939,6 +2939,43 @@ svg.zap {
   border-radius: 12px;
 }
 
+.media-image video {
+  display: block;
+  width: min(100%, 560px);
+  max-height: 560px;
+  background: #000000;
+  border-radius: 12px;
+}
+
+.media-image audio {
+  display: block;
+  width: min(100%, 420px);
+}
+
+/* Settings → 미디어: one row per kind, what it runs on now. */
+.media-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.media-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.media-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.media-status[data-on="true"] {
+  color: var(--ink);
+  font-weight: 700;
+}
+
 .media-image figcaption {
   color: var(--muted);
   font-size: 0.875rem;

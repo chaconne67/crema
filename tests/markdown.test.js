@@ -53,6 +53,17 @@ describe("renderMarkdown", () => {
     expect(container.textContent).toContain("다른 분위기도 돼요.");
   });
 
+  it("takes a made video or sound the same way", () => {
+    const paths = [];
+    renderMarkdown(container, "영상이에요.\n\nMEDIA:C:\\cache\\video\\clip.mp4\n\n소리도요.\n\nMEDIA:/tmp/voice.mp3", {
+      media: (path) => {
+        paths.push(path);
+        return document.createElement("figure");
+      },
+    });
+    expect(paths).toEqual(["C:\\cache\\video\\clip.mp4", "/tmp/voice.mp3"]);
+  });
+
   it("leaves MEDIA text as written when no media renderer is given", () => {
     renderMarkdown(container, "MEDIA:/tmp/a.png");
     expect(container.textContent).toContain("MEDIA:/tmp/a.png");
