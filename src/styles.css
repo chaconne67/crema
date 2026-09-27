@@ -3028,7 +3028,7 @@ svg.zap {
   width: min(100%, 420px);
 }
 
-/* Settings → 기능: one row per feature — on (✓, and a choice when there is one) or one 연결하기. */
+/* Settings → 서비스 연동: one row per service — what it is connected through (and choices under it), or 연결. */
 .media-section {
   display: flex;
   flex-direction: column;
@@ -3036,7 +3036,7 @@ svg.zap {
 
 .feature-row {
   display: grid;
-  grid-template-columns: 5.5em minmax(0, 1fr);
+  grid-template-columns: 6.5em minmax(0, 1fr) auto;
   align-items: center;
   gap: 6px 10px;
   min-height: 48px;
@@ -3051,19 +3051,23 @@ svg.zap {
   font-weight: 700;
 }
 
-.feature-on {
-  color: var(--ok);
-  font-weight: 700;
+.feature-state {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
 }
 
-/* A choice sits under the ✓. */
+.feature-row[data-on="true"] .feature-state {
+  color: var(--ink);
+}
+
+/* Choices (service, model) sit under the state, as wide as the row allows. */
 .feature-row .dropdown,
 .feature-row select {
-  grid-column: 2;
+  grid-column: 2 / -1;
 }
 
 .feature-connect {
-  justify-self: start;
   min-height: 36px;
   color: var(--accent-strong);
   border-color: color-mix(in srgb, var(--accent) 45%, var(--hairline));

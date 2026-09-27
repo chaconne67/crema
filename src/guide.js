@@ -12,6 +12,8 @@ const CONTROLS =
   "a[href], button, input:not([type=hidden]), select, textarea, [role=button], [role=link], [role=checkbox], [role=tab], [role=menuitem], [role=option]";
 const MAX_CONTROLS = 120;
 const MAX_ERRORS = 5;
+// Icons inside a control, whose own names (a Material Symbols "key") are not what it says.
+const ICONS = "[aria-hidden=true], [class*=material-icons], [class*=material-symbols], mat-icon, svg";
 
 // A sign-in page on the way: Google's, or a site's own log-in / sign-up address.
 const SIGN_IN = "accounts\\.google\\.com|/(log-?in|sign-?in|sign-?up|authenticate)\\b";
@@ -56,6 +58,13 @@ export const GUIDES = {
     // The page with the code to bring into Crema.
     pasteAt: "(console\\.anthropic\\.com|platform\\.claude\\.com)/oauth/code",
   },
+  // A tool's key, not an AI model's: web search. `feature` is what it turns on.
+  brave: {
+    name: "Brave 검색", kind: "key", tool: true, feature: "웹 검색", env: "BRAVE_SEARCH_API_KEY",
+    url: "https://api-dashboard.search.brave.com/app/keys", keyPattern: "BSA[0-9A-Za-z_-]{20,}", sample: "BSA로 시작하는 글자",
+    goal: "Get a Brave Search API key: sign in or sign up if asked, subscribe to the free plan if asked, open API Keys, press Add API Key, give it any name, then show the new key.",
+    steps: [["Brave에 로그인하세요", SIGN_IN], ["API 키를 만드세요", "search\\.brave\\.com"]],
+  },
 };
 
 /** The steps shown as "n/N": the guide's own, then bringing the value into Crema (not for a device code), then the check. */
@@ -91,7 +100,14 @@ export function collectScript(keyPattern) {
     const type = (node.getAttribute("type") || "").toLowerCase();
     const role = node.getAttribute("role") || (tag === "a" ? "link" : tag === "select" ? "select" : tag === "textarea" ? "input"
       : tag === "input" ? (type === "checkbox" || type === "radio" ? "checkbox" : ["button", "submit"].includes(type) ? "button" : "input") : "button");
-    const label = (node.getAttribute("aria-label") || (node.innerText ?? node.textContent) || node.getAttribute("placeholder") || node.getAttribute("title")
+    // An icon's own name ("key" in a Material Symbols span) is not part of what the control says.
+    let text = node.innerText ?? node.textContent;
+    if (node.querySelector(${JSON.stringify(ICONS)})) {
+      const copy = node.cloneNode(true);
+      copy.querySelectorAll(${JSON.stringify(ICONS)}).forEach((icon) => icon.remove());
+      text = copy.textContent;
+    }
+    const label = (node.getAttribute("aria-label") || text || node.getAttribute("placeholder") || node.getAttribute("title")
       || (["button", "submit"].includes(type) ? node.value : "") || "").replace(/\\s+/g, " ").trim().slice(0, 80);
     if (!label) continue;
     node.setAttribute("data-crema-e", "e" + count);
@@ -370,13 +386,20 @@ export function createGuide({
     await confirm(current);
   }
 
-  /** The last step: the Providers read again (each asked for its models) and this one found among them. */
+  /**
+   * The last step: the Providers read again (each asked for its models) and this one found among them;
+   * for a tool's key, the engine holding it.
+   */
   async function confirm(current) {
     setStep(stepTitles(current.guide).length - 1);
     say("실제로 쓸 수 있는지 확인하고 있어요…");
     await onConnected().catch(() => {});
     if (active !== current) return;
-    const connected = isConnected(current.id);
+    const { guide } = current;
+    const connected = guide.tool
+      ? await host.hermesAdmin("GET", "/api/env").then((env) => Boolean(env?.[guide.env]?.is_set), () => false)
+      : isConnected(current.id);
+    if (active !== current) return;
     stop();
     showCard(doneCard(current, connected));
   }
@@ -386,7 +409,7 @@ export function createGuide({
     card.className = "notice-card guide-done";
     card.setAttribute("role", "status");
     card.innerHTML = "<span></span>";
-    const features = featuresOf(id);
+    const features = guide.tool ? [guide.feature] : featuresOf(id);
     card.firstChild.textContent = connected
       ? `✓ ${guide.name} 연결 완료${features.length ? ` · 켜진 기능: ${features.join(" · ")}` : ""}`
       : `${guide.name} 연결을 저장했지만 아직 쓸 수 있는지 확인하지 못했어요. 잠시 뒤 설정의 고급 > Provider에서 확인해 주세요.`;
@@ -576,7 +599,9 @@ export function createGuide({
       return;
     }
     if (active !== current) return;
+    // The block is centred: a wider window (or the sidebar folding) moves it without resizing it.
     resized.observe(frame);
+    resized.observe(shell);
     current.timer = setInterval(tick, POLL_MS);
     if (guide.kind === "device") pollDevice(current);
   }

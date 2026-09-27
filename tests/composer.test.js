@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createChatApp } from "../src/app.js";
+import { createChatApp, listContinuation } from "../src/app.js";
 import { documentNote, requestContent } from "../src/attachments.js";
 
 function submit(text) {
@@ -68,6 +68,36 @@ describe("composer", () => {
     app.mount(document.querySelector("#app"));
     return app;
   }
+
+  it("continues a list on Shift+Enter, as in Claude Code, and ends it on an empty item", () => {
+    expect(listContinuation("- 첫째")).toBe("- ");
+    expect(listContinuation("  * 둘째")).toBe("  * ");
+    expect(listContinuation("9. 아홉")).toBe("10. ");
+    expect(listContinuation("3) 셋")).toBe("4) ");
+    expect(listContinuation("1. ")).toBe("");
+    expect(listContinuation("그냥 글")).toBeNull();
+    expect(listContinuation("1.5배")).toBeNull();
+
+    mount();
+    const prompt = document.querySelector("#prompt");
+    const shiftEnter = () => prompt.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true, cancelable: true }));
+    prompt.value = "할 일\n1. 장보기";
+    prompt.setSelectionRange(prompt.value.length, prompt.value.length);
+    shiftEnter();
+    expect(prompt.value).toBe("할 일\n1. 장보기\n2. ");
+    prompt.setRangeText("빨래", prompt.value.length, prompt.value.length, "end");
+    shiftEnter();
+    expect(prompt.value).toBe("할 일\n1. 장보기\n2. 빨래\n3. ");
+    // An empty item ends the list: its number goes, the line stays for plain text.
+    shiftEnter();
+    expect(prompt.value).toBe("할 일\n1. 장보기\n2. 빨래\n");
+    // Not a list line: Shift+Enter is left to make a plain new line.
+    prompt.value = "그냥 글";
+    prompt.setSelectionRange(prompt.value.length, prompt.value.length);
+    const event = new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true, cancelable: true });
+    prompt.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+  });
 
   it("queues a turn typed during a reply and sends it when the reply ends", async () => {
     const app = mount();

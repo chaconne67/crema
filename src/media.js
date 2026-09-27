@@ -7,48 +7,57 @@ const CHOICES_KEY = "agent-client:media:v1";
  * What each kind of media can be made with, best first: [connected engine channel, the engine's backend
  * for it, how it is shown]. A backend reached only through a subscription that the provider refuses for
  * that use is left out (xAI's SuperGrok sign-in for speech and dictation). `guides`: the connections the
- * AI setup guide leads that turn the kind on, the one to offer first first.
+ * AI setup guide leads that turn the kind on, the one to offer first first. Only image and video are
+ * shown in 서비스 연동; speech and dictation follow the connected Providers on their own.
  */
 export const MEDIA_KINDS = [
   {
-    key: "image", label: "그림", config: "image_gen", toolset: "image_gen", guides: ["openai-codex", "openrouter"],
+    key: "image", label: "이미지 생성", config: "image_gen", toolset: "image_gen", guides: ["openai-codex", "openrouter"],
     routes: [["openai-codex", "openai-codex", "ChatGPT 구독"], ["xai-oauth", "xai", "Grok 구독"], ["openai-api", "openai", "OpenAI API 키"], ["xai", "xai", "xAI API 키"], ["openrouter", "openrouter", "OpenRouter"]],
   },
   {
-    key: "video", label: "영상", config: "video_gen", toolset: "video_gen", guides: ["openrouter"],
+    key: "video", label: "동영상 생성", config: "video_gen", toolset: "video_gen", guides: ["openrouter"],
     routes: [["xai-oauth", "xai", "Grok 구독"], ["xai", "xai", "xAI API 키"], ["openrouter", "openrouter", "OpenRouter"]],
   },
   {
-    key: "speech", label: "말하기", config: "tts", toolset: "tts", guides: ["gemini"],
+    key: "speech", label: "말하기", config: "tts", toolset: "tts",
     routes: [["openai-api", "openai", "OpenAI API 키"], ["gemini", "gemini", "Gemini API 키"], ["xai", "xai", "xAI API 키"]],
   },
   {
-    key: "listen", label: "받아쓰기", config: "stt", guides: ["groq"],
+    key: "listen", label: "받아쓰기", config: "stt",
     routes: [["openai-api", "openai", "OpenAI API 키"], ["groq", "groq", "Groq"], ["xai", "xai", "xAI API 키"]],
   },
 ].map((kind) => ({ ...kind, routes: kind.routes.map(([channel, provider, label]) => ({ channel, provider, label })) }));
 
 /**
- * Per kind, the routes the connected channels allow and the one in use: the chosen channel while it is
- * still connected, else the best available ("자동"). `choices`: { [kind]: channel | "auto" }.
+ * Per kind, the routes the connected channels allow, the one in use (the chosen channel while it is still
+ * connected, else the best available: "자동"), and on OpenRouter the chosen model ("" = its default).
+ * `choices`: { [kind]: channel | "auto", models: { [kind]: model id } }.
  */
 export function mediaPlan(connected, choices = {}) {
   return MEDIA_KINDS.map((kind) => {
     const available = kind.routes.filter((route) => connected.has(route.channel));
     const route = available.find((item) => item.channel === choices[kind.key]) || available[0] || null;
-    return { kind, available, route };
+    const model = route?.provider === "openrouter" ? choices.models?.[kind.key] || "" : "";
+    return { kind, available, route, model };
   });
 }
 
 /**
  * The engine config for a plan: each backend in use, and the run API's tools — its own set plus the
  * media tools that have a backend. A kind with none keeps its setting; its tool is simply not offered.
+ * The OpenRouter image model goes under its own key (image_gen.openrouter.model), so the other image
+ * services keep theirs; video has one shared model key, cleared ("" = default) off OpenRouter.
  */
 export function mediaConfig(plan) {
   const config = { platform_toolsets: { api_server: ["hermes-api-server"] } };
-  for (const { kind, route } of plan) {
+  for (const { kind, route, model } of plan) {
     if (!route) continue;
-    config[kind.config] = kind.key === "listen" ? { enabled: true, provider: route.provider } : { provider: route.provider };
+    config[kind.config] =
+      kind.key === "listen" ? { enabled: true, provider: route.provider }
+      : kind.key === "image" && route.provider === "openrouter" ? { provider: route.provider, openrouter: { model } }
+      : kind.key === "video" ? { provider: route.provider, model }
+      : { provider: route.provider };
     if (kind.toolset) config.platform_toolsets.api_server.push(kind.toolset);
   }
   return config;
@@ -70,52 +79,123 @@ function saveMediaChoices(choices, storage = window.localStorage) {
   }
 }
 
-// Chat is on once any Provider has models to choose from (hasChat); which one answers is chosen under 고급 > AI.
-const CHAT = { key: "chat", label: "대화", guides: ["gemini", "openai-codex", "anthropic", "groq", "openrouter"] };
-
-const guideLabel = (id) => `${GUIDES[id].name}${GUIDES[id].free ? " · 무료" : ""}`;
+const SHOWN = ["image", "video"];
+const BRAVE = "BRAVE_SEARCH_API_KEY";
 
 /**
- * Settings "기능": one row per feature. On: ✓, and a choice only when more than one connected Provider
- * can do it. Off: one 연결하기, which starts the AI setup guide (asking which connection first when
- * there is more than one). getConnected() → Set of connected channel ids; onChange(plan) applies a new
- * choice; onGuide(id) starts the guide for a connection; hasChat() says whether chat is on.
+ * Settings "서비스 연동": the services the AI models alone cannot stand in for. Image and video generation
+ * show what they are connected through (a choice when more than one connected service can, and the model
+ * on OpenRouter, from the engine's live catalog); web search runs on the engine's free search unless Brave
+ * is connected. Off, 연결 starts the AI setup guide (asking which service first when there is more than
+ * one). getConnected() → Set of connected channel ids; onChange(plan) applies a new choice; onGuide(id)
+ * starts the guide; host reads the engine (model catalogs, whether the Brave key is set); onUpdate() runs
+ * when what was read from the engine changes the summary.
  */
-export function createMediaSection({ getConnected, onChange, onGuide = () => {}, hasChat = () => getConnected().size > 0 }) {
+export function createMediaSection({ host, getConnected, onChange, onGuide = () => {}, onUpdate = () => {} }) {
   const element = document.createElement("div");
   element.className = "media-section";
   let choices = loadMediaChoices();
   let dropdowns = [];
+  // Per kind, OpenRouter's catalog once read: { models, default }.
+  const catalogs = {};
+  const loading = new Set();
+  let brave = null; // whether the Brave key is set; null until read
 
-  function row(kind, on, available = []) {
-    const options = [["auto", `자동${available[0] ? ` (${available[0].label})` : ""}`], ...available.map((item) => [item.channel, item.label])];
+  const option = (value, label, chosen) => `<option value="${value}"${value === chosen ? " selected" : ""}>${label}</option>`;
+
+  function modelSelect(kind, model) {
+    const catalog = catalogs[kind.key];
+    if (!catalog) return "";
+    const known = catalog.models.find((item) => item.id === catalog.default);
+    const chosen = catalog.models.some((item) => item.id === model) ? model : "";
+    return `<select data-model aria-label="${kind.label} 모델">${[
+      option("", `기본 (${known?.display || catalog.default})`, chosen),
+      ...catalog.models.filter((item) => item.id !== catalog.default).map((item) => option(item.id, item.display, chosen)),
+    ].join("")}</select>`;
+  }
+
+  function mediaRow({ kind, available, route, model }) {
     const chosen = available.some((item) => item.channel === choices[kind.key]) ? choices[kind.key] : "auto";
+    const services = available.length > 1
+      ? `<select data-service aria-label="${kind.label}에 쓸 서비스">${[
+        option("auto", `자동 (${available[0].label})`, chosen),
+        ...available.map((item) => option(item.channel, item.label, chosen)),
+      ].join("")}</select>`
+      : "";
     return `
-      <div class="feature-row" data-media="${kind.key}" data-on="${on}">
+      <div class="feature-row" data-media="${kind.key}" data-on="${Boolean(route)}">
         <span class="feature-name">${kind.label}</span>
-        ${on
-          ? `<span class="feature-on" aria-label="켜짐">✓</span>${available.length > 1
-            ? `<select aria-label="${kind.label}에 쓸 AI">${options.map(([value, label]) => `<option value="${value}"${value === chosen ? " selected" : ""}>${label}</option>`).join("")}</select>`
-            : ""}`
-          : `<button class="secondary-button feature-connect" type="button" data-connect>연결하기</button>
-            <div class="feature-choices" data-choices hidden>${kind.guides.map((id) => `<button class="text-button" type="button" data-guide="${id}">${guideLabel(id)}</button>`).join("")}</div>`}
+        ${route
+          ? `<span class="feature-state">연결됨 · ${route.label}</span>${services}${route.provider === "openrouter" ? modelSelect(kind, model) : ""}`
+          : `<span class="feature-state">연결 안 됨</span>
+            <button class="secondary-button feature-connect" type="button" data-connect>연결</button>
+            <div class="feature-choices" data-choices hidden>${kind.guides.map((id) => `<button class="text-button" type="button" data-guide="${id}">${GUIDES[id].name}</button>`).join("")}</div>`}
       </div>`;
   }
 
-  function render() {
-    const connected = getConnected();
-    element.innerHTML = row(CHAT, hasChat()) + mediaPlan(connected, choices).map(({ kind, available, route }) => row(kind, Boolean(route), available)).join("");
-    dropdowns = [...element.querySelectorAll("select")].map(enhanceSelect);
-    for (const select of element.querySelectorAll("select")) {
-      select.addEventListener("change", () => {
-        const key = select.closest("[data-media]").dataset.media;
-        choices = { ...choices, [key]: select.value };
-        saveMediaChoices(choices);
+  const webRow = () => `
+    <div class="feature-row" data-media="web" data-on="${Boolean(brave)}">
+      <span class="feature-name">웹 검색</span>
+      ${brave
+        ? '<span class="feature-state">연결됨 · Brave 검색</span>'
+        : '<span class="feature-state">기본 검색 (무료)</span><button class="secondary-button feature-connect" type="button" data-guide="brave">Brave 연결</button>'}
+    </div>`;
+
+  /**
+   * OpenRouter's catalog for a kind, from the engine once it has OpenRouter as that kind's backend. Asked
+   * right after OpenRouter is connected or chosen, the engine may still answer for the previous service
+   * (its config is written just after): then it is asked again a little later.
+   */
+  async function loadCatalog(kind) {
+    loading.add(kind.key);
+    for (let attempt = 0; attempt < 4 && !catalogs[kind.key]; attempt += 1) {
+      if (attempt) await new Promise((resolve) => setTimeout(resolve, 1500));
+      try {
+        const reply = await host.hermesAdmin("GET", `/api/tools/toolsets/${kind.config}/models`);
+        if (reply?.plugin === "openrouter" && reply.models?.length) catalogs[kind.key] = { models: reply.models, default: reply.default };
+      } catch {
+        // No catalog this time.
+      }
+    }
+    loading.delete(kind.key);
+    // Without one the model stays the default and no choice is shown.
+    if (catalogs[kind.key]) render();
+  }
+
+  async function loadBrave() {
+    try {
+      const env = await host.hermesAdmin("GET", "/api/env");
+      const set = Boolean(env?.[BRAVE]?.is_set);
+      if (set !== brave) {
+        brave = set;
         render();
-        onChange(mediaPlan(getConnected(), choices));
-      });
+        onUpdate();
+      }
+    } catch {
+      // Unread: shown as the free search.
     }
   }
+
+  function render() {
+    const plan = mediaPlan(getConnected(), choices).filter(({ kind }) => SHOWN.includes(kind.key));
+    element.innerHTML = plan.map(mediaRow).join("") + webRow();
+    dropdowns = [...element.querySelectorAll("select")].map(enhanceSelect);
+    for (const item of plan) {
+      if (item.route?.provider === "openrouter" && !catalogs[item.kind.key] && !loading.has(item.kind.key)) loadCatalog(item.kind);
+    }
+  }
+
+  element.addEventListener("change", (event) => {
+    const select = event.target.closest("select");
+    if (!select) return;
+    const key = select.closest("[data-media]").dataset.media;
+    choices = select.matches("[data-model]")
+      ? { ...choices, models: { ...choices.models, [key]: select.value } }
+      : { ...choices, [key]: select.value };
+    saveMediaChoices(choices);
+    render();
+    onChange(mediaPlan(getConnected(), choices));
+  });
 
   element.addEventListener("click", (event) => {
     const guide = event.target.closest("[data-guide]")?.dataset.guide;
@@ -123,7 +203,7 @@ export function createMediaSection({ getConnected, onChange, onGuide = () => {},
     const connect = event.target.closest("[data-connect]");
     if (!connect) return;
     const key = connect.closest("[data-media]").dataset.media;
-    const { guides } = key === CHAT.key ? CHAT : MEDIA_KINDS.find((kind) => kind.key === key);
+    const { guides } = MEDIA_KINDS.find((kind) => kind.key === key);
     if (guides.length === 1) return onGuide(guides[0]);
     const list = connect.nextElementSibling;
     list.hidden = !list.hidden;
@@ -132,9 +212,18 @@ export function createMediaSection({ getConnected, onChange, onGuide = () => {},
 
   return {
     element,
-    render,
+    /** Draws the rows and reads again whether Brave is connected. */
+    render() {
+      render();
+      loadBrave();
+    },
     /** The plan for the Providers connected now, with the saved choices. */
     plan: () => mediaPlan(getConnected(), choices),
+    /** What is connected, for the section's folded line. */
+    summary: () => [
+      ...mediaPlan(getConnected(), choices).filter(({ kind, route }) => SHOWN.includes(kind.key) && route).map(({ kind }) => kind.label),
+      brave && "Brave 검색",
+    ].filter(Boolean).join(" · "),
     refreshDropdowns: () => dropdowns.forEach((dropdown) => dropdown.refresh()),
   };
 }

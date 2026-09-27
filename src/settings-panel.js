@@ -241,7 +241,7 @@ export function createSettingsPanel({
       plan: ["무료", account?.email].filter(Boolean).join(" · "),
       connection: CONNECTION_STATES[connectionState] || "",
       providers: catalog.length ? `${catalog.length}개 연결됨` : "",
-      media: [catalog.length && "대화", ...(mediaSection?.plan() || []).filter((item) => item.route).map((item) => item.kind.label)].filter(Boolean).join(" · "),
+      media: mediaSection?.summary() || "",
       model: [connection.auto ? AUTO_LABEL : connection.model, connection.fast && "빠른 속도", connection.reasoning && reasoning?.label].filter(Boolean).join(" · "),
       appearance: `시스템 ${current.systemSize}px · 본문 ${current.size}px`,
       theme: THEMES.find(([value]) => value === current.theme)?.[1] || "",
@@ -437,7 +437,7 @@ export function createSettingsPanel({
           </section>
 
           <section class="settings-section" aria-labelledby="media-title">
-            <h3 id="media-title">기능</h3>
+            <h3 id="media-title">서비스 연동</h3>
             <div data-media-section></div>
           </section>
 
@@ -550,9 +550,9 @@ export function createSettingsPanel({
       });
       panel.querySelector("[data-provider-section]").replaceWith(providerSection.element);
       mediaSection = createMediaSection({
+        host,
         getConnected: () => new Set(providers.map((provider) => provider.id)),
-        // The same list as 고급 > AI: a channel that is not a Provider or needs a new sign-in has no models there.
-        hasChat: () => catalog.length > 0,
+        onUpdate: () => updateSummaries(),
         onChange(plan) {
           updateSummaries();
           onMediaChange(plan);

@@ -44,6 +44,7 @@ describe("AI setup guide", () => {
   it("reads a page's controls, errors and a shown key, never a password field's value, and tags them for the ring", () => {
     document.body.innerHTML = `
       <button>Get API key</button>
+      <button><span class="material-symbols-outlined">key</span>API 키 만들기</button>
       <a href="/docs">Docs</a>
       <input type="password" value="${"AIza" + "C".repeat(35)}" />
       <div role="alert">Something went wrong</div>
@@ -51,7 +52,8 @@ describe("AI setup guide", () => {
     // jsdom lays nothing out: give every control a size.
     const box = vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({ left: 1, top: 1, width: 40, height: 20, bottom: 21 });
     const page = (0, eval)(collectScript(PATTERN));
-    expect(page.elements).toEqual({ e0: "button: Get API key", e1: "link: Docs" });
+    // An icon's own name ("key") is not part of the label.
+    expect(page.elements).toEqual({ e0: "button: Get API key", e1: "button: API 키 만들기", e2: "link: Docs" });
     expect(page.errors).toEqual(["Something went wrong"]);
     expect(page.key).toBe(KEY);
     expect(document.querySelector("button").dataset.cremaE).toBe("e0");
@@ -210,6 +212,26 @@ describe("AI setup guide flow", () => {
     await vi.advanceTimersByTimeAsync(1600);
     expect($(".guide-task").textContent).toBe("OpenRouter에 로그인하세요");
     expect(line()).toBe("아래 화면에서 로그인 방법을 골라 진행해 주세요.");
+    vi.useRealTimers();
+  });
+
+  it("connects Brave for web search: its key into the engine, checked there, and says web search is on", async () => {
+    let set = false;
+    host.hermesAdmin = vi.fn(async (method, path) => {
+      if (path === "/api/env" && method === "GET") return { BRAVE_SEARCH_API_KEY: { is_set: set } };
+      if (path === "/api/env" && method === "PUT") set = true;
+      return { ok: true, reachable: false };
+    });
+    await begin("brave");
+    expect(host.guideOpen).toHaveBeenCalledWith("https://api-dashboard.search.brave.com/app/keys", expect.any(Object));
+    const key = "BSA" + "x".repeat(27);
+    page = { url: "https://api-dashboard.search.brave.com/app/keys", title: "API Keys", elements: {}, errors: [], key };
+    await vi.advanceTimersByTimeAsync(1600);
+    $("[data-guide-put-button]").click();
+    await vi.advanceTimersByTimeAsync(10);
+    expect(host.hermesAdmin).toHaveBeenCalledWith("PUT", "/api/env", { key: "BRAVE_SEARCH_API_KEY", value: key });
+    expect(cards[0].textContent).toContain("✓ Brave 검색 연결 완료 · 켜진 기능: 웹 검색");
+    expect(cards[0].querySelector("button")).toBeNull();
     vi.useRealTimers();
   });
 

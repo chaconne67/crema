@@ -94,6 +94,19 @@ const ACCESS_LABELS = { off: "승인 없이 실행", manual: "승인 요청", sm
 export const FOLDER_ICON = `
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>`;
 
+/**
+ * A list line in the draft (before the caret) and what Shift+Enter puts on the next line, as in Claude
+ * Code: the same bullet ("- ", "* ", "• ") or the next number ("2. ", "2) "), at the same indent. "" when
+ * the item is still empty (the list ends there); null when the line is not a list item.
+ */
+export function listContinuation(line) {
+  const match = /^(\s*)(?:([-*•])|(\d{1,4})([.)]))\s(.*)$/.exec(line);
+  if (!match) return null;
+  const [, indent, bullet, number, delimiter, rest] = match;
+  if (!rest.trim()) return "";
+  return `${indent}${bullet ? `${bullet} ` : `${Number(number) + 1}${delimiter} `}`;
+}
+
 export function createChatApp({
   client,
   host,
@@ -381,6 +394,27 @@ export function createChatApp({
     stopButton.hidden = !running;
     newChatButton.disabled = running || messages.length === 0;
     textarea.setAttribute("aria-busy", String(running));
+  }
+
+  /**
+   * Shift+Enter on a list item: the next item's marker on the new line, or on an item still empty, the
+   * marker taken away (the list ends). False when the caret is not on a list item: a plain new line.
+   */
+  function continueList() {
+    const { selectionStart: start, selectionEnd: end, value } = textarea;
+    if (start !== end) return false;
+    const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+    const next = listContinuation(value.slice(lineStart, start));
+    if (next === null) return false;
+    const lineEnd = value.includes("\n", start) ? value.indexOf("\n", start) : value.length;
+    if (next === "") {
+      if (value.slice(start, lineEnd).trim()) return false;
+      textarea.setRangeText("", lineStart, lineEnd, "end");
+    } else {
+      textarea.setRangeText(`\n${next}`, start, start, "end");
+    }
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    return true;
   }
 
   function resizeComposer() {
@@ -1358,6 +1392,10 @@ export function createChatApp({
         if (event.key === "Escape" && menuState) {
           event.preventDefault();
           closeMenu();
+          return;
+        }
+        if (event.key === "Enter" && event.shiftKey && continueList()) {
+          event.preventDefault();
           return;
         }
         if (event.key === "Enter" && !event.shiftKey) {
