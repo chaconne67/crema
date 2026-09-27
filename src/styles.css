@@ -3028,130 +3028,239 @@ svg.zap {
   width: min(100%, 420px);
 }
 
-/* Settings → 서비스 연동: a table, one row per feature — whether it can be used, through what service,
-   and what can be done about it; its choices (service, model) in rows under it. */
+/* Settings → 서비스 연동: one card per feature. Its name and state on top; what it does; the details of
+   that state; one button that opens, in the card, what changing it takes. */
 .media-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feature {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+}
+
+.feature-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.settings-section .feature-name {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 800;
+}
+
+/* The state as a pill: green 사용 가능, gray 사용 불가. */
+.feature-state {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px 3px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.feature-state::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.feature-state[data-state="on"] {
+  color: color-mix(in srgb, var(--ok) 80%, var(--ink));
+  background: color-mix(in srgb, var(--ok) 12%, var(--surface));
+}
+
+.feature-state[data-state="off"] {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--ink) 7%, var(--surface));
+}
+
+.feature-about,
+.feature-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.feature-about {
+  margin-top: -4px;
+}
+
+/* Details: term on the left, value on the right, one per line. */
+.feature-details {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 2px 0;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.feature-details > div {
+  display: grid;
+  grid-template-columns: 7.5em minmax(0, 1fr);
+  gap: 10px;
+  padding: 7px 0;
+  font-size: 0.8125rem;
+}
+
+.feature-details > div + div {
+  border-top: 1px dashed color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+.feature-details dt {
+  color: var(--muted);
+}
+
+.feature-details dd {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.feature-none {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.feature-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--ink) 6%, var(--surface));
+  border-radius: 6px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  vertical-align: 0.08em;
+}
+
+.feature-tag[data-tone="on"] {
+  color: color-mix(in srgb, var(--ok) 80%, var(--ink));
+  background: color-mix(in srgb, var(--ok) 12%, var(--surface));
+}
+
+.feature-open {
+  align-self: flex-start;
+  min-height: 36px;
+}
+
+/* The change, open in the card. */
+.feature-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.feature-editor > .field-label:first-child,
+.feature-editor > .feature-hint:first-child {
+  margin-top: 0;
+}
+
+.feature-picks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* A choice among services: a row with a radio mark, its name, and what connecting it takes. */
+.feature-pick {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px 10px 36px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.feature-pick::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--soft-muted);
+  border-radius: 50%;
+}
+
+.feature-pick:hover {
+  background: var(--row-hover);
+}
+
+.feature-pick:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.feature-pick[aria-checked="true"] {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent-strong) 55%, var(--hairline));
+}
+
+.feature-pick[aria-checked="true"]::before {
+  border: 4.5px solid var(--accent-strong);
+}
+
+.feature-pick-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.feature-pick-hint {
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.feature-connect-step,
+.feature-key {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.feature-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
+.feature-key {
+  padding-top: 8px;
+  border-top: 1px solid var(--hairline);
 }
 
-.feature-table thead th {
-  padding: 0 6px 6px 0;
-  color: var(--soft-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-align: left;
-  border-bottom: 1px solid var(--hairline);
+.feature-key label {
+  margin-top: 0;
 }
 
-.feature + .feature {
-  border-top: 1px solid color-mix(in srgb, var(--ink) 6%, transparent);
-}
-
-.feature th,
-.feature td {
-  padding: 8px 6px 8px 0;
-  text-align: left;
-  vertical-align: middle;
-}
-
-.feature-name,
-.feature-service {
-  white-space: nowrap;
-}
-
-.feature-name {
-  font-weight: 700;
-}
-
-.feature-state {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  white-space: nowrap;
-  font-weight: 600;
-}
-
-/* A dot with the word: green 사용 가능, hollow 사용 불가. */
-.feature-state::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  flex: none;
-  border-radius: 50%;
-}
-
-.feature-state[data-state="on"] {
-  color: color-mix(in srgb, var(--ok) 75%, var(--ink));
-}
-
-.feature-state[data-state="on"]::before {
-  background: var(--ok);
-}
-
-.feature-state[data-state="off"] {
-  color: var(--muted);
-}
-
-.feature-state[data-state="off"]::before {
-  box-shadow: inset 0 0 0 1.5px var(--soft-muted);
-}
-
-.feature-none {
-  color: var(--soft-muted);
-}
-
-.feature .feature-action {
-  padding-right: 0;
-  text-align: right;
-  white-space: nowrap;
-}
-
-.feature-connect {
-  min-height: 32px;
-  padding: 0 12px;
-  font-size: 0.8125rem;
-}
-
-/* Choices under a feature: a small label, then the control. */
-.feature .feature-option td {
-  padding-top: 0;
-}
-
-.feature-option-label {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--soft-muted);
-  font-size: 0.75rem;
-}
-
-.feature-choices {
+.feature-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
 }
 
-.feature-choices .secondary-button {
-  min-height: 32px;
-  padding: 0 12px;
+.feature .provider-status {
   font-size: 0.8125rem;
-}
-
-.feature-option[hidden] {
-  display: none;
-}
-
-.feature-note {
-  margin: 0;
-  color: var(--soft-muted);
-  font-size: 0.75rem;
 }
 
 /* Settings → 내 플랜. */

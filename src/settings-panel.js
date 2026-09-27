@@ -553,6 +553,8 @@ export function createSettingsPanel({
         host,
         getConnected: () => new Set(providers.map((provider) => provider.id)),
         onUpdate: () => updateSummaries(),
+        // A key saved in a card connects a Provider: the list is read again.
+        onConnected: onProvidersChanged,
         onChange(plan) {
           updateSummaries();
           onMediaChange(plan);
