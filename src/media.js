@@ -90,7 +90,7 @@ function escapeHtml(value) {
 /**
  * Settings "서비스 연동": the services the AI models alone cannot stand in for, one card per feature
  * (이미지 생성, 동영상 생성, 웹 검색). Each card says whether the feature can be used now, the details of
- * that state (the service in use, its model on OpenRouter, the services connected), and one button that
+ * that state (the service in use and its model on OpenRouter; the other connected services are in the change), and one button that
  * opens, in place, what changing it takes: the service to use (a connected one, or one to connect), the
  * model, and 적용; or, for a service not connected yet, the AI setup guide or its API key typed in.
  * getConnected() → Set of connected channel ids; onChange(plan) applies a new choice; onGuide(id) starts
@@ -171,7 +171,6 @@ export function createMediaSection({ host, getConnected, onChange, onGuide = () 
         ? [
           ["사용 중인 서비스", `${escapeHtml(route.label)}${auto && available.length > 1 ? ' <span class="feature-tag">자동 선택</span>' : ""}`],
           ...(route.provider === "openrouter" ? [["모델", escapeHtml(modelName(kind, model))]] : []),
-          ["연결된 서비스", available.map((item) => escapeHtml(item.label)).join(", ")],
         ]
         : [["사용 중인 서비스", '<span class="feature-none">없음</span>']];
       const button = route
