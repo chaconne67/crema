@@ -3030,35 +3030,16 @@ svg.zap {
   width: min(100%, 420px);
 }
 
-/* Settings → 서비스 연동: one card per feature. Its name and state on top; what it does; the details of
-   that state; one button that opens, in the card, what changing it takes. */
+/* Settings → 서비스 연동: one folding group per feature, as 모양's 시스템 and 본문 (.settings-group), its
+   state on the fold line; open, the details, one button, and in place what changing it takes. */
 .media-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 
-.feature {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  border-radius: 12px;
-}
-
-.feature-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.settings-section .feature-name {
-  margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 800;
+.feature > summary .feature-state {
+  margin-left: auto;
+  margin-right: 12px;
 }
 
 /* The state as a pill: green 사용 가능, gray 사용 불가. */

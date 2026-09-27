@@ -81,6 +81,23 @@ function saveMediaChoices(choices, storage = window.localStorage) {
 }
 
 const SHOWN = ["image", "video"];
+const OPENED_KEY = "agent-client:media-open:v1";
+
+function loadOpened(storage = window.localStorage) {
+  try {
+    return JSON.parse(storage.getItem(OPENED_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveOpened(keys, storage = window.localStorage) {
+  try {
+    storage.setItem(OPENED_KEY, JSON.stringify(keys));
+  } catch {
+    // Without storage the groups start folded next time.
+  }
+}
 const BRAVE = "BRAVE_SEARCH_API_KEY";
 
 function escapeHtml(value) {
@@ -88,8 +105,8 @@ function escapeHtml(value) {
 }
 
 /**
- * Settings "서비스 연동": the services the AI models alone cannot stand in for, one card per feature
- * (이미지 생성, 동영상 생성, 웹 검색). Each card says whether the feature can be used now, the details of
+ * Settings "서비스 연동": the services the AI models alone cannot stand in for, one folding group per
+ * feature (이미지 생성, 동영상 생성, 웹 검색), as 모양 groups 시스템 and 본문. Its fold line says whether the feature can be used now, the details of
  * that state (the service in use and its model on OpenRouter; the other connected services are in the change), and one button that
  * opens, in place, what changing it takes: the service to use (a connected one, or one to connect), the
  * model, and 적용; or, for a service not connected yet, the AI setup guide or its API key typed in.
@@ -111,6 +128,8 @@ export function createMediaSection({ host, getConnected, onChange, onGuide = () 
   let draft = {};
   // A line under a card after something was done in it: { key, text, tone }.
   let notice = null;
+  // The groups left open, kept for the next start as 모양's are.
+  const opened = new Set(loadOpened());
 
   const option = (value, label, chosen) => `<option value="${escapeHtml(value)}"${value === chosen ? " selected" : ""}>${escapeHtml(label)}</option>`;
 
@@ -152,15 +171,18 @@ export function createMediaSection({ host, getConnected, onChange, onGuide = () 
 
   const statusLine = (key) => (notice?.key === key ? `<p class="provider-status" data-tone="${notice.tone || ""}" role="status">${escapeHtml(notice.text)}</p>` : "");
 
+  // Like 모양's 시스템 and 본문: a group that folds, its name and state on the fold line.
   const card = ({ key, label, on, body }) => `
-    <article class="feature" data-media="${key}" data-on="${on}" aria-labelledby="feature-${key}">
-      <header class="feature-head">
-        <h4 class="feature-name" id="feature-${key}">${label}</h4>
+    <details class="settings-group feature" data-media="${key}" data-on="${on}"${opened.has(key) || editing === key ? " open" : ""}>
+      <summary>
+        <span class="feature-name">${label}</span>
         <span class="feature-state" data-state="${on ? "on" : "off"}">${on ? "사용 가능" : "사용 불가"}</span>
-      </header>
-      ${body}
-      ${statusLine(key)}
-    </article>`;
+      </summary>
+      <div class="settings-group-body">
+        ${body}
+        ${statusLine(key)}
+      </div>
+    </details>`;
 
   function mediaCard({ kind, available, route, model }) {
     const connectable = kind.guides.filter((id) => !available.some((item) => item.channel === id));
@@ -336,6 +358,14 @@ export function createMediaSection({ host, getConnected, onChange, onGuide = () 
     draft = { ...draft, model: select.value };
     render();
   });
+
+  element.addEventListener("toggle", (event) => {
+    const group = event.target.closest?.("[data-media]");
+    if (!group || group !== event.target) return;
+    if (group.open) opened.add(group.dataset.media);
+    else opened.delete(group.dataset.media);
+    saveOpened([...opened]);
+  }, true);
 
   element.addEventListener("input", (event) => {
     if (event.target.matches("[data-key]")) draft = { ...draft, key: event.target.value };
