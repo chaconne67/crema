@@ -98,11 +98,19 @@ describe("composer", () => {
     expect(text.text).toContain("It is saved at: C:\\hermes\\cache\\documents\\1_보고서.pdf");
     expect(text.text.endsWith("확인해줘")).toBe(true);
     expect(image.type).toBe("image_url");
-    expect([...document.querySelectorAll(".message-attachments .attachment-chip")].map((chip) => chip.textContent)).toEqual([
-      "shot.png",
-      "보고서.pdf",
-    ]);
+    // Above the request: the image as itself, the document by name.
+    const stack = document.querySelector(".turn-user .user-message-stack");
+    expect([...stack.children].map((node) => node.className)).toEqual(["message-attachments", "user-message markdown", "message-meta"]);
+    expect(stack.querySelector(".message-image img").src).toMatch(/^data:image\/png;base64,/);
+    expect([...stack.querySelectorAll(".attachment-chip")].map((chip) => chip.textContent)).toEqual(["보고서.pdf"]);
     expect(document.querySelector("[data-attachments]").hidden).toBe(true);
+
+    // Clicking the image shows it large; a click closes it.
+    stack.querySelector(".message-image").click();
+    const viewer = document.querySelector(".image-viewer");
+    expect(viewer.querySelector("img").src).toMatch(/^data:image\/png;base64,/);
+    viewer.click();
+    expect(document.querySelector(".image-viewer")).toBeNull();
   });
 
   it("offers finding a project file only in a project, and starts the @ search when chosen", async () => {

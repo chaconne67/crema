@@ -1,4 +1,4 @@
-import { blobToDataUrl, fileName, imageTypeOf, requestContent } from "./attachments.js";
+import { blobToDataUrl, fileName, imageTypeOf, previewOf, requestContent } from "./attachments.js";
 import { renderMarkdown } from "./markdown.js";
 import { ZAP_ICON } from "./model-picker.js";
 import { BACK_ICON, CHECK_ICON, COMMAND_GROUPS, MENU_ICON, filterCommands, parseCommand } from "./commands.js";
@@ -195,18 +195,50 @@ export function createChatApp({
     time.textContent = formatTime(message.createdAt);
     meta.append(time, createCopyButton(message.id, "질문 복사"));
 
-    stack.append(bubble);
+    // What was attached comes first, then the request: an image as itself (click to view it large),
+    // anything else by name.
     if (message.attachments?.length) {
       const files = document.createElement("div");
       files.className = "message-attachments";
-      files.innerHTML = message.attachments
-        .map((item) => `<span class="attachment-chip">${FILE_ICON}<span>${escapeHtml(item.name)}</span></span>`)
-        .join("");
+      for (const item of message.attachments) {
+        const src = item.dataUrl || item.preview;
+        if (item.kind === "image" && src) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "message-image";
+          button.setAttribute("aria-label", `${item.name} 크게 보기`);
+          button.innerHTML = `<img src="${src}" alt="${escapeHtml(item.name)}" />`;
+          button.addEventListener("click", () => showImage(src, item.name));
+          files.append(button);
+        } else {
+          files.insertAdjacentHTML("beforeend", `<span class="attachment-chip">${FILE_ICON}<span>${escapeHtml(item.name)}</span></span>`);
+        }
+      }
       stack.append(files);
     }
-    stack.append(meta);
+    stack.append(bubble, meta);
     turn.append(stack);
     return turn;
+  }
+
+  /** An image over the app, as large as fits; a click anywhere or Esc closes it. */
+  function showImage(src, name) {
+    const viewer = document.createElement("div");
+    viewer.className = "image-viewer";
+    viewer.setAttribute("role", "dialog");
+    viewer.setAttribute("aria-label", name);
+    viewer.innerHTML = `<img src="${src}" alt="${escapeHtml(name)}" /><button class="icon-button image-viewer-close" type="button" aria-label="닫기">${X_ICON}</button>`;
+    const close = () => {
+      viewer.remove();
+      document.removeEventListener("keydown", onKey);
+    };
+    const onKey = (event) => {
+      if (event.key === "Escape") close();
+    };
+    viewer.addEventListener("click", close);
+    document.addEventListener("keydown", onKey);
+    document.body.append(viewer);
+    viewer.querySelector("button").focus();
   }
 
   // Images Hermes produced (`MEDIA:<path>` in a reply), read once per path: a streaming reply re-renders often.
@@ -830,7 +862,10 @@ export function createChatApp({
       id: createId(),
       role: "user",
       content: text,
-      ...(files.length ? { attachments: files.map(({ kind, name }) => ({ kind, name })) } : {}),
+      // An image keeps a small copy for the history (preview) and, until the app closes, itself (dataUrl).
+      ...(files.length
+        ? { attachments: await Promise.all(files.map(async ({ kind, name, dataUrl }) => (kind === "image" ? { kind, name, dataUrl, preview: await previewOf(dataUrl) } : { kind, name }))) }
+        : {}),
       createdAt: Date.now(),
       status: "complete",
     };

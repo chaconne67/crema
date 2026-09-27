@@ -57,14 +57,14 @@ export function loadMessages(chatId) {
 export function saveMessages(chatId, messages) {
   writeJson(
     chatKey(chatId),
-    // Attachments are kept by name and kind only; their data is never stored.
+    // Attachments are kept by name and kind; an image also by its small copy (preview), never the original.
     messages.map(({ id, role, content, createdAt, status, attachments, note }) => ({
       id,
       role,
       content,
       createdAt,
       status,
-      ...(attachments?.length ? { attachments: attachments.map(({ kind, name }) => ({ kind, name })) } : {}),
+      ...(attachments?.length ? { attachments: attachments.map(({ kind, name, preview }) => ({ kind, name, ...(preview ? { preview } : {}) })) } : {}),
       ...(note ? { note } : {}),
     })),
   );

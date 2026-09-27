@@ -2394,10 +2394,12 @@ html[data-pointer] :focus-visible {
 }
 
 /* Sent attachments under a request bubble. */
+/* Above the request: what was attached, images as themselves. */
 .message-attachments {
-  margin-top: 8px;
+  margin-bottom: 8px;
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
   justify-content: flex-end;
   gap: 6px;
 }
@@ -2419,6 +2421,59 @@ html[data-pointer] :focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.message-image {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  background: var(--bubble);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  cursor: zoom-in;
+}
+
+.message-image img {
+  display: block;
+  max-width: min(320px, 100%);
+  max-height: 240px;
+  object-fit: contain;
+}
+
+.message-image:hover {
+  border-color: color-mix(in srgb, var(--accent-strong) 45%, var(--hairline));
+}
+
+.message-image:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* A sent image viewed large, over everything; a click anywhere closes it. */
+.image-viewer {
+  position: fixed;
+  z-index: 200;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: rgb(0 0 0 / 78%);
+  cursor: zoom-out;
+}
+
+.image-viewer img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 45%);
+}
+
+.image-viewer-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  color: #ffffff;
 }
 
 .user-message[hidden] {

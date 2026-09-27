@@ -71,7 +71,7 @@ describe("workspace storage", () => {
     expect(chatSessions({ id: "older-chat" })).toEqual(["older-chat"]);
   });
 
-  it("keeps a request's attachments by name and kind, never their data", () => {
+  it("keeps a request's attachments by name and kind, an image's small copy too, never the original", () => {
     saveMessages("chat-1", [
       {
         id: "m1",
@@ -80,13 +80,13 @@ describe("workspace storage", () => {
         createdAt: 1,
         status: "complete",
         attachments: [
-          { kind: "image", name: "shot.png", dataUrl: "data:image/png;base64,AAAA" },
+          { kind: "image", name: "shot.png", dataUrl: "data:image/png;base64,AAAA", preview: "data:image/jpeg;base64,BBBB" },
           { kind: "file", name: "보고서.pdf", path: "C:\work\보고서.pdf" },
         ],
       },
     ]);
     expect(loadMessages("chat-1")[0].attachments).toEqual([
-      { kind: "image", name: "shot.png" },
+      { kind: "image", name: "shot.png", preview: "data:image/jpeg;base64,BBBB" },
       { kind: "file", name: "보고서.pdf" },
     ]);
   });

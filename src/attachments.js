@@ -22,6 +22,28 @@ export function blobToDataUrl(blob) {
 }
 
 /**
+ * A sent image as kept in the chat history: a JPEG at most `max` px on its longer side (on white, so a
+ * transparent PNG stays readable). "" where the image cannot be drawn; the chat then shows its name.
+ */
+export async function previewOf(dataUrl, max = 640) {
+  if (typeof createImageBitmap !== "function") return "";
+  try {
+    const image = await createImageBitmap(await (await fetch(dataUrl)).blob());
+    const scale = Math.min(1, max / Math.max(image.width, image.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.82);
+  } catch {
+    return "";
+  }
+}
+
+/**
  * The note Hermes' own chat channels put before a turn with a document (gateway/run.py
  * `_build_document_context_note`, uncached-content form): the agent reads the saved file itself.
  */
