@@ -3028,23 +3028,43 @@ svg.zap {
   width: min(100%, 420px);
 }
 
-/* Settings → 서비스 연동: one row per service — what it is connected through (and choices under it), or 연결하기. */
+/* Settings → 서비스 연동: a table, one row per feature — whether it can be used, through what service,
+   and what can be done about it; its choices (service, model) in rows under it. */
 .media-section {
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
-.feature-row {
-  display: grid;
-  grid-template-columns: 6.5em minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 6px 10px;
-  min-height: 48px;
-  padding: 4px 0;
+.feature-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
 }
 
-.feature-row + .feature-row {
+.feature-table thead th {
+  padding: 0 6px 6px 0;
+  color: var(--soft-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: left;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.feature + .feature {
   border-top: 1px solid color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.feature th,
+.feature td {
+  padding: 8px 6px 8px 0;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.feature-name,
+.feature-service {
+  white-space: nowrap;
 }
 
 .feature-name {
@@ -3052,63 +3072,86 @@ svg.zap {
 }
 
 .feature-state {
-  min-width: 0;
-  color: var(--muted);
-  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  font-weight: 600;
 }
 
-.feature-row[data-on="true"] .feature-state {
-  color: var(--ink);
-}
-
-/* A dot says the state at a glance: green connected, hollow not connected, gray on the default. */
+/* A dot with the word: green 사용 가능, hollow 사용 불가. */
 .feature-state::before {
   content: "";
-  display: inline-block;
   width: 7px;
   height: 7px;
-  margin-right: 6px;
-  vertical-align: 0.1em;
+  flex: none;
   border-radius: 50%;
-  background: var(--soft-muted);
+}
+
+.feature-state[data-state="on"] {
+  color: color-mix(in srgb, var(--ok) 75%, var(--ink));
 }
 
 .feature-state[data-state="on"]::before {
   background: var(--ok);
 }
 
+.feature-state[data-state="off"] {
+  color: var(--muted);
+}
+
 .feature-state[data-state="off"]::before {
-  background: transparent;
   box-shadow: inset 0 0 0 1.5px var(--soft-muted);
 }
 
-/* Choices (service, model) sit under the state, as wide as the row allows. */
-.feature-row .dropdown,
-.feature-row select {
-  grid-column: 2 / -1;
+.feature-none {
+  color: var(--soft-muted);
+}
+
+.feature .feature-action {
+  padding-right: 0;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .feature-connect {
-  min-height: 36px;
-  color: var(--accent-strong);
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--hairline));
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 0.8125rem;
+}
+
+/* Choices under a feature: a small label, then the control. */
+.feature .feature-option td {
+  padding-top: 0;
+}
+
+.feature-option-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--soft-muted);
+  font-size: 0.75rem;
 }
 
 .feature-choices {
   display: flex;
   flex-wrap: wrap;
-  grid-column: 1 / -1;
   gap: 6px;
-  padding-bottom: 4px;
 }
 
-.feature-choices .text-button {
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--hairline));
-  border-radius: 999px;
+.feature-choices .secondary-button {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 0.8125rem;
 }
 
-.feature-choices[hidden] {
+.feature-option[hidden] {
   display: none;
+}
+
+.feature-note {
+  margin: 0;
+  color: var(--soft-muted);
+  font-size: 0.75rem;
 }
 
 /* Settings → 내 플랜. */

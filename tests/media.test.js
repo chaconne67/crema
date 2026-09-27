@@ -84,9 +84,10 @@ describe("Settings → 서비스 연동", () => {
     section.render();
     await flush();
     expect([...document.querySelectorAll(".feature-name")].map((item) => item.textContent)).toEqual(["이미지 생성", "동영상 생성", "웹 검색"]);
-    expect(row("image").querySelector(".feature-state").textContent).toBe("연결됨 · ChatGPT 구독");
-    expect(row("video").querySelector(".feature-state").textContent).toBe("연결됨 · OpenRouter");
-    expect(row("web").querySelector(".feature-state").textContent).toBe("기본 검색 사용 중");
+    const cells = (key) => [".feature-state", ".feature-service"].map((cell) => row(key).querySelector(cell).textContent);
+    expect(cells("image")).toEqual(["사용 가능", "ChatGPT 구독"]);
+    expect(cells("video")).toEqual(["사용 가능", "OpenRouter"]);
+    expect(cells("web")).toEqual(["사용 가능", "기본 검색"]);
     expect(document.querySelector(".field-note")).toBeNull();
 
     // Video runs on OpenRouter: its models to choose from, the default first.
@@ -108,7 +109,7 @@ describe("Settings → 서비스 연동", () => {
     // The choices are kept for the next start.
     const again = createMediaSection({ host, getConnected: () => new Set(["openai-codex", "openrouter"]), onChange });
     expect(again.plan().find((item) => item.kind.key === "video").model).toBe("google/veo-3.1");
-    expect(again.summary()).toBe("연결됨: 이미지 생성 · 동영상 생성");
+    expect(again.summary()).toBe("3개 중 3개 사용 가능");
   });
 
   it("starts the guide from 연결하기, asking which service when there is more than one, and connects Brave for web search", async () => {
@@ -118,7 +119,9 @@ describe("Settings → 서비스 연동", () => {
     section.render();
     await flush();
     expect(row("image").dataset.on).toBe("false");
-    expect(row("image").querySelector(".feature-state").textContent).toBe("연결 안 됨");
+    expect(row("image").querySelector(".feature-state").textContent).toBe("사용 불가");
+    expect(row("image").querySelector(".feature-service").textContent).toBe("없음");
+    expect(section.summary()).toBe("3개 중 1개 사용 가능");
 
     row("video").querySelector("[data-connect]").click();
     expect(onGuide).toHaveBeenLastCalledWith("openrouter");
@@ -132,7 +135,8 @@ describe("Settings → 서비스 연동", () => {
     env = { BRAVE_SEARCH_API_KEY: { is_set: true } };
     section.render();
     await flush();
-    expect(row("web").querySelector(".feature-state").textContent).toBe("연결됨 · Brave 검색");
-    expect(section.summary()).toBe("연결됨: Brave 검색");
+    expect(row("web").querySelector(".feature-service").textContent).toBe("Brave 검색");
+    expect(row("web").querySelector("[data-guide]")).toBeNull();
+    expect(section.summary()).toBe("3개 중 1개 사용 가능");
   });
 });
