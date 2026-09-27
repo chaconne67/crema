@@ -86,7 +86,7 @@ describe("Settings → 서비스 연동", () => {
     expect([...document.querySelectorAll(".feature-name")].map((item) => item.textContent)).toEqual(["이미지 생성", "동영상 생성", "웹 검색"]);
     expect(row("image").querySelector(".feature-state").textContent).toBe("연결됨 · ChatGPT 구독");
     expect(row("video").querySelector(".feature-state").textContent).toBe("연결됨 · OpenRouter");
-    expect(row("web").querySelector(".feature-state").textContent).toBe("기본 검색");
+    expect(row("web").querySelector(".feature-state").textContent).toBe("기본 검색 사용 중");
     expect(document.querySelector(".field-note")).toBeNull();
 
     // Video runs on OpenRouter: its models to choose from, the default first.
@@ -108,10 +108,10 @@ describe("Settings → 서비스 연동", () => {
     // The choices are kept for the next start.
     const again = createMediaSection({ host, getConnected: () => new Set(["openai-codex", "openrouter"]), onChange });
     expect(again.plan().find((item) => item.kind.key === "video").model).toBe("google/veo-3.1");
-    expect(again.summary()).toBe("이미지 생성 · 동영상 생성");
+    expect(again.summary()).toBe("연결됨: 이미지 생성 · 동영상 생성");
   });
 
-  it("starts the guide from 연결, asking which service when there is more than one, and connects Brave for web search", async () => {
+  it("starts the guide from 연결하기, asking which service when there is more than one, and connects Brave for web search", async () => {
     const onGuide = vi.fn();
     const section = createMediaSection({ host, getConnected: () => new Set(), onChange: vi.fn(), onGuide });
     document.body.append(section.element);
@@ -133,6 +133,6 @@ describe("Settings → 서비스 연동", () => {
     section.render();
     await flush();
     expect(row("web").querySelector(".feature-state").textContent).toBe("연결됨 · Brave 검색");
-    expect(section.summary()).toBe("Brave 검색");
+    expect(section.summary()).toBe("연결됨: Brave 검색");
   });
 });

@@ -86,7 +86,7 @@ const BRAVE = "BRAVE_SEARCH_API_KEY";
  * Settings "서비스 연동": the services the AI models alone cannot stand in for. Image and video generation
  * show what they are connected through (a choice when more than one connected service can, and the model
  * on OpenRouter, from the engine's live catalog); web search runs on the engine's free search unless Brave
- * is connected. Off, 연결 starts the AI setup guide (asking which service first when there is more than
+ * is connected. Off, 연결하기 starts the AI setup guide (asking which service first when there is more than
  * one). getConnected() → Set of connected channel ids; onChange(plan) applies a new choice; onGuide(id)
  * starts the guide; host reads the engine (model catalogs, whether the Brave key is set); onUpdate() runs
  * when what was read from the engine changes the summary.
@@ -126,9 +126,9 @@ export function createMediaSection({ host, getConnected, onChange, onGuide = () 
       <div class="feature-row" data-media="${kind.key}" data-on="${Boolean(route)}">
         <span class="feature-name">${kind.label}</span>
         ${route
-          ? `<span class="feature-state">연결됨 · ${route.label}</span>${services}${route.provider === "openrouter" ? modelSelect(kind, model) : ""}`
-          : `<span class="feature-state">연결 안 됨</span>
-            <button class="secondary-button feature-connect" type="button" data-connect>연결</button>
+          ? `<span class="feature-state" data-state="on">연결됨 · ${route.label}</span>${services}${route.provider === "openrouter" ? modelSelect(kind, model) : ""}`
+          : `<span class="feature-state" data-state="off">연결 안 됨</span>
+            <button class="secondary-button feature-connect" type="button" data-connect>연결하기</button>
             <div class="feature-choices" data-choices hidden>${kind.guides.map((id) => `<button class="text-button" type="button" data-guide="${id}">${GUIDES[id].name}</button>`).join("")}</div>`}
       </div>`;
   }
@@ -137,8 +137,8 @@ export function createMediaSection({ host, getConnected, onChange, onGuide = () 
     <div class="feature-row" data-media="web" data-on="${Boolean(brave)}">
       <span class="feature-name">웹 검색</span>
       ${brave
-        ? '<span class="feature-state">연결됨 · Brave 검색</span>'
-        : '<span class="feature-state">기본 검색</span><button class="secondary-button feature-connect" type="button" data-guide="brave">Brave 연결</button>'}
+        ? '<span class="feature-state" data-state="on">연결됨 · Brave 검색</span>'
+        : '<span class="feature-state" data-state="default">기본 검색 사용 중</span><button class="secondary-button feature-connect" type="button" data-guide="brave">Brave 연결하기</button>'}
     </div>`;
 
   /**
@@ -220,10 +220,13 @@ export function createMediaSection({ host, getConnected, onChange, onGuide = () 
     /** The plan for the Providers connected now, with the saved choices. */
     plan: () => mediaPlan(getConnected(), choices),
     /** What is connected, for the section's folded line. */
-    summary: () => [
-      ...mediaPlan(getConnected(), choices).filter(({ kind, route }) => SHOWN.includes(kind.key) && route).map(({ kind }) => kind.label),
-      brave && "Brave 검색",
-    ].filter(Boolean).join(" · "),
+    summary: () => {
+      const on = [
+        ...mediaPlan(getConnected(), choices).filter(({ kind, route }) => SHOWN.includes(kind.key) && route).map(({ kind }) => kind.label),
+        brave && "Brave 검색",
+      ].filter(Boolean);
+      return on.length ? `연결됨: ${on.join(" · ")}` : "";
+    },
     refreshDropdowns: () => dropdowns.forEach((dropdown) => dropdown.refresh()),
   };
 }
