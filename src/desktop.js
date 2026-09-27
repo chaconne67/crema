@@ -160,6 +160,8 @@ export function createDesktopHost() {
     judge: (text) => call("site_post", { path: "/api/route", body: { text } }).catch(() => null),
     /** The sign-up guide's next step for a page (crema-agent.site with Jev). */
     guideStep: (body) => call("site_post", { path: "/api/onboarding/step", body }),
+    /** "막혔어요": what stops the user on a page ({ cause }), from crema-agent.site with Jev. */
+    guideHelp: (body) => call("site_post", { path: "/api/onboarding/help", body }),
 
     /** The sign-up guide's webview: an https page laid over `rect` ({x, y, width, height}) of the window. */
     guideOpen: (url, rect) => call("guide_open", { url, ...rect }),

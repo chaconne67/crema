@@ -98,20 +98,26 @@ def json_body(request):
     return body
 
 
+def guide_page(request):
+    """The AI setup guide's page as the app sends it (labels already masked): goal, elements, and page."""
+    body = json_body(request)
+    goal = str(body["goal"])[:600]
+    elements = {str(key)[:8]: str(label)[:120] for key, label in list(dict(body["elements"]).items())[:200]}
+    page = {"url": str(body.get("url") or "")[:300], "title": str(body.get("title") or "")[:200]}
+    return body, goal, elements, page
+
+
 @csrf_exempt
 @require_POST
 def api_onboarding_step(request):
-    """The sign-up guide's next step: which of the page's elements the user acts on next, and whether
+    """The AI setup guide's next step: which of the page's elements the user acts on next, and whether
     the page asks for consent or something only the user can do. Labels are judged, never stored."""
     if not bearer_token(request):
         return JsonResponse({"error": "signed_out"}, status=401)
     if not settings.TYPESAFE_API_KEY:
         return JsonResponse({"error": "unavailable"}, status=503)
     try:
-        body = json_body(request)
-        goal = str(body["goal"])[:600]
-        elements = {str(key)[:8]: str(label)[:120] for key, label in list(dict(body["elements"]).items())[:200]}
-        page = {"url": str(body.get("url") or "")[:300], "title": str(body.get("title") or "")[:200]}
+        _, goal, elements, page = guide_page(request)
     except (ValueError, KeyError, TypeError):
         return HttpResponseBadRequest()
     questions = {
@@ -136,6 +142,51 @@ def api_onboarding_step(request):
             "consent": answers["consent"]["noul"],
             "blocked": answers["blocked"]["noul"],
         })
+    except (OSError, ValueError, KeyError, TypeError):
+        return JsonResponse({"error": "judge_failed"}, status=502)
+
+
+# "막혔어요": what can stop someone on a setup page. The app says each one plainly (src/guide.js HELP).
+HELP_CAUSES = {
+    "sign_in": "The user must sign in, or was signed out",
+    "verification": "The page waits for a verification code sent to a phone or e-mail",
+    "captcha": "The page shows a CAPTCHA or asks to prove the user is human",
+    "terms": "Terms, a privacy notice or cookies still wait to be accepted",
+    "account_type": "The account type is refused (e.g. a work or school account, or an age limit)",
+    "region": "The service is not available in the user's country or for this account",
+    "payment": "The page asks for payment, a paid plan, or billing details",
+    "limit": "A limit is reached: too many keys, a quota, or rate limiting",
+    "site_error": "The site itself shows an error or failed to load",
+    "wrong_page": "The page is unrelated to the goal (the user wandered off)",
+    "loading": "The page is still loading or changing",
+    "other": "None of these",
+}
+
+
+@csrf_exempt
+@require_POST
+def api_onboarding_help(request):
+    """Why the user is stuck on a setup page, as one of HELP_CAUSES. The page is judged, never stored."""
+    if not bearer_token(request):
+        return JsonResponse({"error": "signed_out"}, status=401)
+    if not settings.TYPESAFE_API_KEY:
+        return JsonResponse({"error": "unavailable"}, status=503)
+    try:
+        body, goal, elements, page = guide_page(request)
+        step = str(body.get("step") or "")[:120]
+        errors = [str(text)[:200] for text in list(body.get("errors") or [])[:5]]
+    except (ValueError, KeyError, TypeError):
+        return HttpResponseBadRequest()
+    questions = {
+        "cause": {
+            "type": "choice",
+            "instructions": "The user pressed 'I am stuck' while working toward `goal` on this page. What most likely stops them?",
+            "criteria": HELP_CAUSES,
+        },
+    }
+    try:
+        answers = ask_jev({"goal": goal, "step": step, "page": page, "elements": list(elements.values()), "errors": errors}, questions)
+        return JsonResponse({"cause": answers["cause"]["choice"], "confidence": answers["cause"]["confidence"]})
     except (OSError, ValueError, KeyError, TypeError):
         return JsonResponse({"error": "judge_failed"}, status=502)
 

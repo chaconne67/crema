@@ -158,3 +158,18 @@ class RouteTests(TestCase):
         self.assertIsNone(response.json()["target"])
         self.assertEqual(self.client.post("/api/onboarding/step", json.dumps(body), content_type="application/json").status_code, 401)
         self.assertEqual(self.client.post("/api/onboarding/step", json.dumps({"goal": "x"}), content_type="application/json", **self.auth).status_code, 400)
+
+    def test_says_why_the_user_is_stuck_with_jev(self):
+        answers = {"cause": {"type": "choice", "choice": "verification", "confidence": 0.8}}
+        body = {
+            "goal": "Get a Gemini API key", "step": "구글 계정으로 로그인하세요", "url": "https://accounts.google.com/v3/signin",
+            "elements": {"e0": "input: Enter code"}, "errors": ["Wrong code. Try again."],
+        }
+        with mock.patch("web.views.urllib.request.urlopen", return_value=JevReply(answers)) as urlopen:
+            response = self.client.post("/api/onboarding/help", json.dumps(body), content_type="application/json", **self.auth)
+        self.assertEqual(response.json(), {"cause": "verification", "confidence": 0.8})
+        sent = json.loads(urlopen.call_args.args[0].data)
+        self.assertIn("other", sent["questions"]["cause"]["criteria"])
+        self.assertEqual(sent["state"]["errors"], ["Wrong code. Try again."])
+        self.assertEqual(self.client.post("/api/onboarding/help", json.dumps(body), content_type="application/json").status_code, 401)
+        self.assertEqual(self.client.post("/api/onboarding/help", json.dumps({"goal": "x"}), content_type="application/json", **self.auth).status_code, 400)

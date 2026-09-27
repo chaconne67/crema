@@ -1,5 +1,6 @@
 import { enhanceSelect } from "./dropdown.js";
-import { METHOD_LABELS, addCategories, addableProviders, freeProviders } from "./providers.js";
+import { GUIDES } from "./guide.js";
+import { METHOD_LABELS, addCategories, addableProviders, saveProviderKey } from "./providers.js";
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
@@ -146,22 +147,21 @@ export function createProviderSection({ host, getStatus, onChanged, onGuide = ()
       step.innerHTML = "";
       return;
     }
+    const guided = GUIDES[method.id]
+      ? '<button class="primary-button" type="button" data-guide-signup>Crema가 안내하며 연결</button>'
+      : "";
     if (method.kind === "api_key") {
-      const guided = freeProviders().some((item) => item.id === method.id && item.signup);
       step.innerHTML = `
-        ${guided ? '<button class="primary-button" type="button" data-guide-signup>Crema에서 안내받으며 가입</button><p class="field-note">가입 화면을 대화창에 열고 다음에 누를 곳을 알려 드려요. 키가 이미 있으면 아래에 붙여넣으세요.</p>' : ""}
+        ${guided}
         <label for="provider-key">${methodLabel(method)}</label>
         <input id="provider-key" type="password" autocomplete="off" spellcheck="false" placeholder="붙여넣으세요" />
         <p class="field-note">이 PC의 Crema 엔진에만 저장됩니다.${method.url ? ' <button class="link-button" type="button" data-key-page>키 발급 페이지</button>' : ""}</p>
         <button class="primary-button" type="button" data-save-key>확인하고 저장</button>`;
       step.querySelector("[data-key-page]")?.addEventListener("click", () => host.openLink(method.url));
-      step.querySelector("[data-guide-signup]")?.addEventListener("click", () => {
-        closeForm();
-        onGuide(method.id);
-      });
       step.querySelector("[data-save-key]").addEventListener("click", () => saveKey(method));
     } else if (method.flow === "pkce") {
       step.innerHTML = `
+        ${guided}
         <button class="primary-button" type="button" data-start-login>로그인 시작</button>
         <div class="device-login" data-paste hidden>
           <p class="field-note">열린 페이지에서 승인하면 코드가 나옵니다. 그 코드를 그대로 붙여넣으세요.</p>
@@ -172,6 +172,7 @@ export function createProviderSection({ host, getStatus, onChanged, onGuide = ()
       step.querySelector("[data-start-login]").addEventListener("click", (event) => pasteLogin(method, event.currentTarget));
     } else {
       step.innerHTML = `
+        ${guided}
         <button class="primary-button" type="button" data-start-login>로그인 시작</button>
         <div class="device-login" data-device hidden>
           <p class="field-note">로그인 페이지에 아래 코드를 입력하세요.</p>
@@ -180,6 +181,11 @@ export function createProviderSection({ host, getStatus, onChanged, onGuide = ()
         </div>`;
       step.querySelector("[data-start-login]").addEventListener("click", (event) => deviceLogin(method, event.currentTarget));
     }
+    // The guide takes over the chat: the form closes and settings step aside.
+    step.querySelector("[data-guide-signup]")?.addEventListener("click", () => {
+      closeForm();
+      onGuide(method.id);
+    });
     step.insertAdjacentHTML("beforeend", '<p class="provider-status" data-step-status role="status"></p>');
   }
 
@@ -192,32 +198,12 @@ export function createProviderSection({ host, getStatus, onChanged, onGuide = ()
     }
     setStatus("키를 확인하고 있습니다…");
     try {
-      if (method.endpoint) {
-        await saveEndpoint(method.id, method.endpoint, value);
-        input.value = "";
-        await finish();
-        return;
-      }
-      const check = await host.hermesAdmin("POST", "/api/providers/validate", { key: method.envVar, value });
-      if (!check.ok && check.reachable) {
-        setStatus("Provider가 이 키를 받아들이지 않았습니다. 키를 다시 확인해 주세요.", "error");
-        return;
-      }
-      await host.hermesAdmin("PUT", "/api/env", { key: method.envVar, value });
+      await saveProviderKey(host, method, value, !getStatus().length);
       input.value = "";
       await finish();
     } catch (error) {
-      setStatus(error.userMessage, "error");
+      setStatus(error.reason === "refused" ? "Provider가 이 키를 받아들이지 않았습니다. 키를 다시 확인해 주세요." : error.userMessage, "error");
     }
-  }
-
-  /** A Provider the engine does not carry (Groq, Mistral): its key, then its OpenAI-compatible endpoint. */
-  async function saveEndpoint(id, { name, base_url, key_env, model }, value) {
-    await host.hermesAdmin("PUT", "/api/env", { key: key_env, value });
-    const config = { providers: { [id]: { name, base_url, key_env, api_mode: "chat_completions", model } } };
-    // The engine resolves a named endpoint only once some Provider is set up: the first one becomes its default.
-    if (!getStatus().length) config.model = { provider: id, default: model };
-    await host.hermesAdmin("PUT", "/api/config", { config });
   }
 
   async function deviceLogin(method, button) {

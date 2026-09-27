@@ -43,7 +43,7 @@ const SECTIONS_KEY = "agent-client:settings-sections:v1";
 // 모양's 시스템/본문 groups left open (closed at first: the section has many settings).
 const GROUPS_KEY = "agent-client:settings-groups:v1";
 
-const DEFAULT_OPEN_SECTIONS = ["model"];
+const DEFAULT_OPEN_SECTIONS = ["plan", "media"];
 const CHEVRON_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>`;
 
 // Lucide (ISC) marks for the panel title and each section.
@@ -51,7 +51,7 @@ const icon = (body) => `<svg viewBox="0 0 24 24" aria-hidden="true">${body}</svg
 const SETTINGS_ICON = icon('<path d="M14 17H5"/><path d="M19 7h-9"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>');
 const SECTION_ICONS = {
   // Lucide (ISC) "circle-user".
-  account: icon('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/>'),
+  plan: icon('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/>'),
   providers: icon('<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>'),
   connection: icon('<path d="M12 22v-5"/><path d="M15 8V2"/><path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z"/><path d="M9 8V2"/>'),
   model: icon('<path d="M12 20v2"/><path d="M12 2v2"/><path d="M17 20v2"/><path d="M17 2v2"/><path d="M2 12h2"/><path d="M2 17h2"/><path d="M2 7h2"/><path d="M20 12h2"/><path d="M20 17h2"/><path d="M20 7h2"/><path d="M7 20v2"/><path d="M7 2v2"/><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/>'),
@@ -238,10 +238,10 @@ export function createSettingsPanel({
   function updateSummaries() {
     const reasoning = REASONING_LEVELS.find((level) => level.value === (connection.reasoning || ""));
     const summaries = {
-      account: account?.email || "",
+      plan: ["무료", account?.email].filter(Boolean).join(" · "),
       connection: CONNECTION_STATES[connectionState] || "",
       providers: catalog.length ? `${catalog.length}개 연결됨` : "",
-      media: (mediaSection?.plan() || []).filter((item) => item.route).map((item) => item.kind.label.split(" ")[0]).join(" · "),
+      media: [catalog.length && "대화", ...(mediaSection?.plan() || []).filter((item) => item.route).map((item) => item.kind.label)].filter(Boolean).join(" · "),
       model: [connection.auto ? AUTO_LABEL : connection.model, connection.fast && "빠른 속도", connection.reasoning && reasoning?.label].filter(Boolean).join(" · "),
       appearance: `시스템 ${current.systemSize}px · 본문 ${current.size}px`,
       theme: THEMES.find(([value]) => value === current.theme)?.[1] || "",
@@ -427,36 +427,17 @@ export function createSettingsPanel({
           <button class="icon-button" type="button" data-close-settings aria-label="설정 닫기">${CLOSE_ICON}</button>
         </div>
         <div class="settings-body">
-          <section class="settings-section" aria-labelledby="account-title">
-            <h3 id="account-title">계정</h3>
-            <p class="connection-line" data-account-line></p>
-            <button class="secondary-button" type="button" data-sign-out>로그아웃</button>
-          </section>
-          <section class="settings-section" aria-labelledby="connection-title">
-            <h3 id="connection-title">연결</h3>
-            <p class="connection-line" data-connection-line role="status"></p>
-            <button class="secondary-button" type="button" data-check>연결 다시 확인</button>
-          </section>
-
-          <section class="settings-section" aria-labelledby="providers-title">
-            <h3 id="providers-title">Provider</h3>
-            <div data-provider-section></div>
-          </section>
-
-          <section class="settings-section" aria-labelledby="model-title">
-            <h3 id="model-title">AI</h3>
-            <label for="model-picker-button">모델</label>
-            <div data-model-picker></div>
-            <label for="reasoning-select">추론 강도</label>
-            <select id="reasoning-select">
-              ${REASONING_LEVELS.map((level) => `<option value="${level.value}">${level.label}</option>`).join("")}
-            </select>
-            <p class="field-note" data-model-note></p>
+          <section class="settings-section" aria-labelledby="plan-title">
+            <h3 id="plan-title">내 플랜</h3>
+            <div class="plan-card">
+              <span class="plan-name">무료</span>
+              <span class="plan-account" data-account-line></span>
+            </div>
+            <button class="text-button" type="button" data-sign-out>로그아웃</button>
           </section>
 
           <section class="settings-section" aria-labelledby="media-title">
-            <h3 id="media-title">미디어</h3>
-            <p class="field-note">이미지·영상·소리를 만들고 듣는 기능이에요. 연결한 Provider로 할 수 있는 건 자동으로 켜져요.</p>
+            <h3 id="media-title">기능</h3>
             <div data-media-section></div>
           </section>
 
@@ -511,6 +492,30 @@ export function createSettingsPanel({
             <label class="check-row"><input id="suggest-toggle" type="checkbox" /> 다음 입력 예상</label>
             <p class="field-note" data-suggest-note></p>
           </section>
+
+          <p class="settings-divider">고급</p>
+
+          <section class="settings-section" aria-labelledby="model-title">
+            <h3 id="model-title">AI</h3>
+            <label for="model-picker-button">모델</label>
+            <div data-model-picker></div>
+            <label for="reasoning-select">추론 강도</label>
+            <select id="reasoning-select">
+              ${REASONING_LEVELS.map((level) => `<option value="${level.value}">${level.label}</option>`).join("")}
+            </select>
+            <p class="field-note" data-model-note></p>
+          </section>
+
+          <section class="settings-section" aria-labelledby="providers-title">
+            <h3 id="providers-title">Provider</h3>
+            <div data-provider-section></div>
+          </section>
+
+          <section class="settings-section" aria-labelledby="connection-title">
+            <h3 id="connection-title">연결</h3>
+            <p class="connection-line" data-connection-line role="status"></p>
+            <button class="secondary-button" type="button" data-check>연결 다시 확인</button>
+          </section>
         </div>`;
       shell.append(panel);
       dropdowns = [...panel.querySelectorAll("select")].map(enhanceSelect);
@@ -546,9 +551,16 @@ export function createSettingsPanel({
       panel.querySelector("[data-provider-section]").replaceWith(providerSection.element);
       mediaSection = createMediaSection({
         getConnected: () => new Set(providers.map((provider) => provider.id)),
+        // The same list as 고급 > AI: a channel that is not a Provider or needs a new sign-in has no models there.
+        hasChat: () => catalog.length > 0,
         onChange(plan) {
           updateSummaries();
           onMediaChange(plan);
+        },
+        // The AI setup guide takes over the chat, so settings step aside.
+        onGuide(id) {
+          close();
+          onGuide(id);
         },
       });
       panel.querySelector("[data-media-section]").replaceWith(mediaSection.element);

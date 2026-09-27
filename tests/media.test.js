@@ -36,33 +36,54 @@ describe("media backends from the connected Providers", () => {
   });
 });
 
-describe("Settings → 미디어", () => {
+describe("Settings → 기능", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
     window.localStorage.clear();
   });
 
-  it("shows what each kind runs on, which Provider would turn it on, and a choice only when there is one", () => {
+  it("marks what is on, offers a choice only when there is one, and never leaves a hint line", () => {
     let connected = new Set(["openai-codex", "openrouter"]);
     const onChange = vi.fn();
     const section = createMediaSection({ getConnected: () => connected, onChange });
     document.body.append(section.element);
     section.render();
     const row = (key) => document.querySelector(`[data-media="${key}"]`);
-    expect(row("image").querySelector(".media-status").textContent).toBe("ChatGPT 구독로 연결됨");
-    expect(row("video").querySelector(".media-status").textContent).toBe("OpenRouter로 연결됨");
-    expect(row("speech").querySelector(".field-note").textContent).toContain("OpenAI나 Gemini");
+    expect([...document.querySelectorAll(".feature-name")].map((item) => item.textContent)).toEqual(["대화", "그림", "영상", "말하기", "받아쓰기"]);
+    expect(["chat", "image", "video", "speech", "listen"].map((key) => row(key).dataset.on)).toEqual(["true", "true", "true", "false", "false"]);
     expect(row("video").querySelector("select")).toBeNull();
+    expect(document.querySelector(".field-note")).toBeNull();
 
     const select = row("image").querySelector("select");
     select.value = "openrouter";
     select.dispatchEvent(new Event("change"));
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(pick(onChange.mock.calls[0][0]).image).toBe("openrouter");
-    expect(document.querySelector('[data-media="image"] .media-status').textContent).toBe("OpenRouter로 연결됨");
 
     // The choice is kept for the next start.
     connected = new Set(["openai-codex", "openrouter"]);
     expect(pick(createMediaSection({ getConnected: () => connected, onChange }).plan()).image).toBe("openrouter");
+  });
+
+  it("starts the AI setup guide from 연결하기, asking which connection when there is more than one", () => {
+    const onGuide = vi.fn();
+    const section = createMediaSection({ getConnected: () => new Set(), onChange: vi.fn(), onGuide });
+    document.body.append(section.element);
+    section.render();
+    const row = (key) => document.querySelector(`[data-media="${key}"]`);
+    expect(row("chat").dataset.on).toBe("false");
+
+    // One connection turns speech on: it starts at once.
+    row("speech").querySelector("[data-connect]").click();
+    expect(onGuide).toHaveBeenLastCalledWith("gemini");
+
+    // Images: ChatGPT's subscription or OpenRouter.
+    row("image").querySelector("[data-connect]").click();
+    expect(onGuide).toHaveBeenCalledTimes(1);
+    const choices = row("image").querySelector("[data-choices]");
+    expect(choices.hidden).toBe(false);
+    expect([...choices.querySelectorAll("button")].map((item) => item.textContent)).toEqual(["ChatGPT 구독", "OpenRouter · 무료"]);
+    choices.querySelector('[data-guide="openai-codex"]').click();
+    expect(onGuide).toHaveBeenLastCalledWith("openai-codex");
   });
 });

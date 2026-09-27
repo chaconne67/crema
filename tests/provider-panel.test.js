@@ -110,6 +110,23 @@ describe("Provider section", () => {
     expect(rows()).toContain("OpenRouterON API 키");
   });
 
+  it("offers the AI setup guide for a connection it leads, and hands over to it", async () => {
+    const onGuide = vi.fn();
+    document.body.innerHTML = "";
+    section = createProviderSection({ host, getStatus: () => [], onChanged, onGuide });
+    document.body.append(section.element);
+    section.render();
+    $("[data-provider-add]").click();
+    await flush();
+    choose("DeepSeek");
+    expect($("[data-guide-signup]")).toBeNull();
+    $("[data-provider-repick]").click();
+    choose("ChatGPT");
+    $("[data-guide-signup]").click();
+    expect(onGuide).toHaveBeenCalledWith("openai-codex");
+    expect($("[data-provider-form]").hidden).toBe(true);
+  });
+
   it("signs in to Claude's subscription: opens its page, then sends the pasted code to the engine", async () => {
     const authUrl = "https://claude.ai/oauth/authorize?state=s";
     host.hermesAdmin.mockImplementation(async (method, path) => {

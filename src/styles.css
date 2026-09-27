@@ -782,27 +782,78 @@ button {
   line-height: 1.45;
 }
 
-.guide-save {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 12px;
-  margin-top: 8px;
+/* The step in large type; the line under it names the control on the page. */
+.guide-task {
+  margin: 4px 0 0;
+  color: color-mix(in srgb, var(--accent-strong) 80%, var(--ink));
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.4;
 }
 
-.guide-save[hidden] {
+.guide-block .guide-say {
+  margin-top: 2px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.guide-help {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--surface);
+  border-radius: 8px;
+}
+
+.guide-help[hidden],
+.guide-code[hidden],
+.guide-put[hidden] {
   display: none;
 }
 
-.guide-save-note {
-  font-size: 12px;
+/* ChatGPT's sign-in: the code Crema shows, to enter on the page. */
+.guide-code {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
 }
 
-.guide-save .primary-button {
-  min-height: 44px;
-  background: var(--ok);
-  border-color: var(--ok);
+.guide-code-value {
+  font-family: var(--font-code);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+/* The key or code for Crema: found and filled in, or pasted. */
+.guide-put {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-top: 8px;
+}
+
+.guide-put input {
+  min-width: 0;
+  flex: 1 1 220px;
+  min-height: 40px;
+  padding: 0 10px;
+  color: var(--ink);
+  font: inherit;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+}
+
+.guide-save-note {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .guide-block.found {
@@ -815,9 +866,34 @@ button {
 }
 
 .guide-block.found .guide-top,
-.guide-block.found .guide-say,
-.guide-block.found .guide-save-note {
+.guide-block.found .guide-task {
   color: color-mix(in srgb, var(--ok) 75%, var(--ink));
+}
+
+.guide-block.found .guide-put .primary-button {
+  background: var(--ok);
+}
+
+/* A Crema control the guide points at: the rest of the window dims, clicks still reach it. */
+.spotlight {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  border-radius: 12px;
+  box-shadow: 0 0 0 3px var(--accent), 0 0 0 100vmax rgb(0 0 0 / 42%);
+}
+
+.spotlight-note {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  padding: 6px 10px;
+  color: var(--on-accent);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--accent-strong);
+  border-radius: 8px;
 }
 
 .guide-frame {
@@ -2952,27 +3028,95 @@ svg.zap {
   width: min(100%, 420px);
 }
 
-/* Settings → 미디어: one row per kind, what it runs on now. */
+/* Settings → 기능: one row per feature — on (✓, and a choice when there is one) or one 연결하기. */
 .media-section {
   display: flex;
   flex-direction: column;
-  gap: 14px;
 }
 
-.media-row {
+.feature-row {
+  display: grid;
+  grid-template-columns: 5.5em minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 10px;
+  min-height: 48px;
+  padding: 4px 0;
+}
+
+.feature-row + .feature-row {
+  border-top: 1px solid color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.feature-name {
+  font-weight: 700;
+}
+
+.feature-on {
+  color: var(--ok);
+  font-weight: 700;
+}
+
+/* A choice sits under the ✓. */
+.feature-row .dropdown,
+.feature-row select {
+  grid-column: 2;
+}
+
+.feature-connect {
+  justify-self: start;
+  min-height: 36px;
+  color: var(--accent-strong);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--hairline));
+}
+
+.feature-choices {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: 6px;
+  padding-bottom: 4px;
+}
+
+.feature-choices .text-button {
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--hairline));
+  border-radius: 999px;
+}
+
+.feature-choices[hidden] {
+  display: none;
+}
+
+/* Settings → 내 플랜. */
+.plan-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--hairline));
+  border-radius: 12px;
 }
 
-.media-status {
-  margin: 0;
+.plan-name {
+  color: var(--accent-strong);
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.plan-account {
   color: var(--muted);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
 }
 
-.media-status[data-on="true"] {
-  color: var(--ink);
+.plan-card + .text-button {
+  align-self: flex-start;
+}
+
+/* 고급: what most people never need to open. */
+.settings-divider {
+  margin: 14px 4px 0;
+  color: var(--soft-muted);
+  font-size: 0.75rem;
   font-weight: 700;
 }
 

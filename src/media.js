@@ -1,31 +1,29 @@
 import { enhanceSelect } from "./dropdown.js";
+import { GUIDES } from "./guide.js";
 
 const CHOICES_KEY = "agent-client:media:v1";
 
 /**
  * What each kind of media can be made with, best first: [connected engine channel, the engine's backend
  * for it, how it is shown]. A backend reached only through a subscription that the provider refuses for
- * that use is left out (xAI's SuperGrok sign-in for speech and dictation).
+ * that use is left out (xAI's SuperGrok sign-in for speech and dictation). `guides`: the connections the
+ * AI setup guide leads that turn the kind on, the one to offer first first.
  */
 export const MEDIA_KINDS = [
   {
-    key: "image", label: "이미지 생성", config: "image_gen", toolset: "image_gen",
-    hint: "ChatGPT·Grok 구독이나 OpenAI·OpenRouter를 연결하면 자동으로 켜져요.",
+    key: "image", label: "그림", config: "image_gen", toolset: "image_gen", guides: ["openai-codex", "openrouter"],
     routes: [["openai-codex", "openai-codex", "ChatGPT 구독"], ["xai-oauth", "xai", "Grok 구독"], ["openai-api", "openai", "OpenAI API 키"], ["xai", "xai", "xAI API 키"], ["openrouter", "openrouter", "OpenRouter"]],
   },
   {
-    key: "video", label: "영상 생성", config: "video_gen", toolset: "video_gen",
-    hint: "Grok 구독이나 xAI·OpenRouter를 연결하면 자동으로 켜져요.",
+    key: "video", label: "영상", config: "video_gen", toolset: "video_gen", guides: ["openrouter"],
     routes: [["xai-oauth", "xai", "Grok 구독"], ["xai", "xai", "xAI API 키"], ["openrouter", "openrouter", "OpenRouter"]],
   },
   {
-    key: "speech", label: "말하기 (소리로 읽어 주기)", config: "tts", toolset: "tts",
-    hint: "OpenAI나 Gemini API 키를 연결하면 자동으로 켜져요.",
+    key: "speech", label: "말하기", config: "tts", toolset: "tts", guides: ["gemini"],
     routes: [["openai-api", "openai", "OpenAI API 키"], ["gemini", "gemini", "Gemini API 키"], ["xai", "xai", "xAI API 키"]],
   },
   {
-    key: "listen", label: "받아쓰기 (음성 입력)", config: "stt",
-    hint: "OpenAI·Groq API 키를 연결하면 자동으로 켜져요.",
+    key: "listen", label: "받아쓰기", config: "stt", guides: ["groq"],
     routes: [["openai-api", "openai", "OpenAI API 키"], ["groq", "groq", "Groq"], ["xai", "xai", "xAI API 키"]],
   },
 ].map((kind) => ({ ...kind, routes: kind.routes.map(([channel, provider, label]) => ({ channel, provider, label })) }));
@@ -72,34 +70,41 @@ function saveMediaChoices(choices, storage = window.localStorage) {
   }
 }
 
+// Chat is on once any Provider has models to choose from (hasChat); which one answers is chosen under 고급 > AI.
+const CHAT = { key: "chat", label: "대화", guides: ["gemini", "openai-codex", "anthropic", "groq", "openrouter"] };
+
+const guideLabel = (id) => `${GUIDES[id].name}${GUIDES[id].free ? " · 무료" : ""}`;
+
 /**
- * Settings "미디어": for each kind, what it runs on now (or which Provider would turn it on) and, when
- * more than one connected Provider can do it, a choice between 자동 and each of them.
- * getConnected() → Set of connected channel ids; onChange(plan) applies a new choice.
+ * Settings "기능": one row per feature. On: ✓, and a choice only when more than one connected Provider
+ * can do it. Off: one 연결하기, which starts the AI setup guide (asking which connection first when
+ * there is more than one). getConnected() → Set of connected channel ids; onChange(plan) applies a new
+ * choice; onGuide(id) starts the guide for a connection; hasChat() says whether chat is on.
  */
-export function createMediaSection({ getConnected, onChange }) {
+export function createMediaSection({ getConnected, onChange, onGuide = () => {}, hasChat = () => getConnected().size > 0 }) {
   const element = document.createElement("div");
   element.className = "media-section";
   let choices = loadMediaChoices();
   let dropdowns = [];
 
+  function row(kind, on, available = []) {
+    const options = [["auto", `자동${available[0] ? ` (${available[0].label})` : ""}`], ...available.map((item) => [item.channel, item.label])];
+    const chosen = available.some((item) => item.channel === choices[kind.key]) ? choices[kind.key] : "auto";
+    return `
+      <div class="feature-row" data-media="${kind.key}" data-on="${on}">
+        <span class="feature-name">${kind.label}</span>
+        ${on
+          ? `<span class="feature-on" aria-label="켜짐">✓</span>${available.length > 1
+            ? `<select aria-label="${kind.label}에 쓸 AI">${options.map(([value, label]) => `<option value="${value}"${value === chosen ? " selected" : ""}>${label}</option>`).join("")}</select>`
+            : ""}`
+          : `<button class="secondary-button feature-connect" type="button" data-connect>연결하기</button>
+            <div class="feature-choices" data-choices hidden>${kind.guides.map((id) => `<button class="text-button" type="button" data-guide="${id}">${guideLabel(id)}</button>`).join("")}</div>`}
+      </div>`;
+  }
+
   function render() {
-    const plan = mediaPlan(getConnected(), choices);
-    element.innerHTML = plan
-      .map(({ kind, available, route }) => {
-        const options = [["auto", `자동${available[0] ? ` (${available[0].label})` : ""}`], ...available.map((item) => [item.channel, item.label])];
-        const chosen = available.some((item) => item.channel === choices[kind.key]) ? choices[kind.key] : "auto";
-        return `
-          <div class="media-row" data-media="${kind.key}">
-            <span class="field-label">${kind.label}</span>
-            <p class="media-status" data-on="${Boolean(route)}">${route ? `${route.label}로 연결됨` : "연결된 Provider가 없어요"}</p>
-            ${available.length > 1
-              ? `<select aria-label="${kind.label}에 쓸 Provider">${options.map(([value, label]) => `<option value="${value}"${value === chosen ? " selected" : ""}>${label}</option>`).join("")}</select>`
-              : ""}
-            ${route ? "" : `<p class="field-note">${kind.hint}</p>`}
-          </div>`;
-      })
-      .join("");
+    const connected = getConnected();
+    element.innerHTML = row(CHAT, hasChat()) + mediaPlan(connected, choices).map(({ kind, available, route }) => row(kind, Boolean(route), available)).join("");
     dropdowns = [...element.querySelectorAll("select")].map(enhanceSelect);
     for (const select of element.querySelectorAll("select")) {
       select.addEventListener("change", () => {
@@ -111,6 +116,19 @@ export function createMediaSection({ getConnected, onChange }) {
       });
     }
   }
+
+  element.addEventListener("click", (event) => {
+    const guide = event.target.closest("[data-guide]")?.dataset.guide;
+    if (guide) return onGuide(guide);
+    const connect = event.target.closest("[data-connect]");
+    if (!connect) return;
+    const key = connect.closest("[data-media]").dataset.media;
+    const { guides } = key === CHAT.key ? CHAT : MEDIA_KINDS.find((kind) => kind.key === key);
+    if (guides.length === 1) return onGuide(guides[0]);
+    const list = connect.nextElementSibling;
+    list.hidden = !list.hidden;
+    connect.setAttribute("aria-expanded", String(!list.hidden));
+  });
 
   return {
     element,

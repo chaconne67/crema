@@ -294,8 +294,8 @@ async fn sign_out() -> Result<(), String> {
 }
 
 // What the signed-in app asks crema-agent.site to judge with Jev: how hard an automatic free-AI request
-// is, and the sign-up guide's next step.
-const SITE_POSTS: [&str; 2] = ["/api/route", "/api/onboarding/step"];
+// is, and the AI setup guide's next step and what stops the user.
+const SITE_POSTS: [&str; 3] = ["/api/route", "/api/onboarding/step", "/api/onboarding/help"];
 
 /// Posts to one of SITE_POSTS on crema-agent.site with this app's sign-in.
 #[tauri::command]

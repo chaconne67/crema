@@ -885,6 +885,10 @@ const guide = createGuide({
   hasConversation: () => app.hasMessages(),
   showCard: (card) => app.showCard(card),
   onConnected: () => refreshModels(),
+  isConnected: (id) => providers.some((provider) => provider.id === id),
+  // As in 고급 > Provider: a channel that is not a Provider does not count.
+  hasProviders: () => panel.getCatalog().length > 0,
+  featuresOf: (id) => ["대화", ...panel.mediaPlan().filter((item) => item.route?.channel === id).map((item) => item.kind.label)],
   onUseAuto() {
     Object.assign(connection, { auto: true, provider: "", model: "", fast: false });
     saveModelChoice();

@@ -116,16 +116,12 @@ let freeCatalog = bundledCatalog;
 
 /**
  * Replaces the catalog with one fetched from the site; one of another shape is ignored. Where a
- * Provider's key is sent (`endpoint`) and which site the sign-up guide opens (`signup`) stay as shipped
- * with the app: the site only updates models.
+ * Provider's key is sent (`endpoint`) stays as shipped with the app: the site only updates models.
  */
 export function setFreeCatalog(next) {
   if (!Array.isArray(next?.providers) || !next.providers.every((item) => item.id && Array.isArray(item.models))) return;
-  const shipped = (id) => {
-    const { endpoint, signup } = bundledCatalog.providers.find((item) => item.id === id) || {};
-    return { ...(endpoint ? { endpoint } : {}), ...(signup ? { signup } : {}) };
-  };
-  freeCatalog = { ...next, providers: next.providers.map(({ endpoint, signup, ...item }) => ({ ...item, ...shipped(item.id) })) };
+  const shipped = (id) => bundledCatalog.providers.find((item) => item.id === id)?.endpoint;
+  freeCatalog = { ...next, providers: next.providers.map(({ endpoint, ...item }) => (shipped(item.id) ? { ...item, endpoint: shipped(item.id) } : item)) };
 }
 
 export const freeProviders = () => freeCatalog.providers;
@@ -200,6 +196,31 @@ export function turnRoute(chosen, chain, cooling = {}, now = Date.now()) {
 }
 
 /**
+ * Saves an API key into Crema's engine: checked with the Provider first, or for one the engine does not
+ * carry (Groq, Mistral: `method.endpoint`) set up as a named OpenAI-compatible endpoint. `first`: no
+ * Provider is connected yet (the engine resolves a named endpoint only once one is its default).
+ * Throws { reason: "refused" } when the Provider turns the key down.
+ */
+export async function saveProviderKey(host, method, value, first) {
+  if (method.endpoint) {
+    const { name, base_url, key_env, model } = method.endpoint;
+    await host.hermesAdmin("PUT", "/api/env", { key: key_env, value });
+    const config = { providers: { [method.id]: { name, base_url, key_env, api_mode: "chat_completions", model } } };
+    if (first) config.model = { provider: method.id, default: model };
+    await host.hermesAdmin("PUT", "/api/config", { config });
+    return;
+  }
+  const check = await host.hermesAdmin("POST", "/api/providers/validate", { key: method.envVar, value });
+  if (!check.ok && check.reachable) throw Object.assign(new Error("refused"), { reason: "refused" });
+  await host.hermesAdmin("PUT", "/api/env", { key: method.envVar, value });
+}
+
+/** The add-list method for a free Provider the engine does not carry, keyed through its endpoint. */
+export function endpointMethod({ id, name, models, endpoint }) {
+  return { kind: "api_key", id, envVar: endpoint.key_env, url: endpoint.url, endpoint: { ...endpoint, name, model: models[0].id } };
+}
+
+/**
  * Providers that can still be added, with their sign-in methods, from Hermes' settings backend:
  * account sign-ins (`/api/providers/oauth`) and API-key variables (`/api/env`). Providers already
  * in the model list are left out; aliases of one method (e.g. GOOGLE_/GEMINI_API_KEY) count once.
@@ -225,8 +246,8 @@ export function addableProviders(accountRows, envRows, connectedKeys) {
     if (meta.category !== "provider" || !meta.provider || !/_(KEY|TOKEN)$/.test(envVar)) continue;
     add(meta.provider, meta.provider_label, { kind: "api_key", id: meta.provider, envVar, url: meta.url || "" });
   }
-  for (const { id, name, models, endpoint } of freeProviders()) {
-    if (endpoint) add(id, name, { kind: "api_key", id, envVar: endpoint.key_env, url: endpoint.url, endpoint: { ...endpoint, name, model: models[0].id } });
+  for (const item of freeProviders()) {
+    if (item.endpoint) add(item.id, item.name, endpointMethod(item));
   }
   return [...groups.values()];
 }

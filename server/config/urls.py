@@ -18,5 +18,6 @@ urlpatterns = [
     path("api/free-catalog", views.free_catalog, name="free_catalog"),
     path("api/route", views.api_route, name="api_route"),
     path("api/onboarding/step", views.api_onboarding_step, name="api_onboarding_step"),
+    path("api/onboarding/help", views.api_onboarding_help, name="api_onboarding_help"),
     path("accounts/", include("allauth.urls")),
 ]
