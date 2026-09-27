@@ -114,6 +114,15 @@ describe("sidebar", () => {
     archive.querySelector('[data-delete-chat="c2"]').click();
     expect(handlers.onRestoreChat).toHaveBeenCalledWith("c2");
     expect(handlers.onDeleteChat).toHaveBeenCalledWith("c2");
+    // The row's own restore button, beside delete, as well as a click on its name.
+    archive.querySelector('.row-actions [data-restore-chat="c2"]').click();
+    expect(handlers.onRestoreChat).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows the archive even when nothing is in it", () => {
+    const archive = document.querySelector(".sidebar-archive");
+    expect(archive.querySelector("summary").textContent.trim()).toBe("보관함");
+    expect(archive.querySelector(".sidebar-empty").textContent).toBe("보관한 대화가 없습니다.");
   });
 
   it("keeps the archive open across renders once opened", () => {

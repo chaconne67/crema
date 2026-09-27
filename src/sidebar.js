@@ -1,6 +1,6 @@
 import { FOLDER_ICON } from "./app.js";
 
-// Lucide (ISC): square-pen, plus, x, trash-2, pin, pin-off, archive.
+// Lucide (ISC): square-pen, plus, x, trash-2, pin, pin-off, archive, archive-restore.
 const NEW_CHAT_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"></path></svg>`;
 const PLUS_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>`;
 const X_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>`;
@@ -8,6 +8,7 @@ const TRASH_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 11v
 const PIN_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17v5"></path><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"></path></svg>`;
 const PIN_OFF_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17v5"></path><path d="M15 9.34V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H7.89"></path><path d="m2 2 20 20"></path><path d="M9 9v1.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h11"></path></svg>`;
 const ARCHIVE_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="5" x="2" y="3" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"></path><path d="M10 12h4"></path></svg>`;
+const RESTORE_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="5" x="2" y="3" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h2"></path><path d="M20 8v11a2 2 0 0 1-2 2h-2"></path><path d="m9 15 3-3 3 3"></path><path d="M12 12v9"></path></svg>`;
 
 // Folder colors a project can take (the popup under its folder icon); "" is the default ink.
 export const FOLDER_COLORS = [
@@ -59,7 +60,7 @@ function archivedRow(chat, running) {
       <button type="button" class="row-main" data-restore-chat="${chat.id}" title="꺼내서 열기">
         <span class="row-label">${title}</span>${chatStatus(chat, running)}
       </button>
-      <span class="row-actions"><button type="button" class="row-action" data-delete-chat="${chat.id}" aria-label="${title} 영구 삭제" title="영구 삭제">${TRASH_ICON}</button></span>
+      <span class="row-actions"><button type="button" class="row-action" data-restore-chat="${chat.id}" aria-label="${title} 꺼내기" title="꺼내기">${RESTORE_ICON}</button><button type="button" class="row-action" data-delete-chat="${chat.id}" aria-label="${title} 영구 삭제" title="영구 삭제">${TRASH_ICON}</button></span>
     </li>`;
 }
 
@@ -260,14 +261,14 @@ export function createSidebar({
           ${projects ? `<ul class="sidebar-list">${projects}</ul>` : `<p class="sidebar-empty">+를 눌러 작업할 폴더를 추가하세요.</p>`}
           <div class="sidebar-heading"><span>대화</span></div>
           ${looseChats.length ? `<ul class="sidebar-list">${looseChats.map((chat) => chatRow(chat, workspace.activeChatId, false, running)).join("")}</ul>` : ""}
-          ${
-            archived.length
-              ? `<details class="sidebar-archive"${archiveOpen ? " open" : ""}>
-            <summary class="sidebar-heading"><span>보관함 ${archived.length}</span></summary>
-            <ul class="sidebar-list">${archived.map((chat) => archivedRow(chat, running)).join("")}</ul>
-          </details>`
-              : ""
-          }
+          <details class="sidebar-archive"${archiveOpen ? " open" : ""}>
+            <summary class="sidebar-heading"><span>보관함${archived.length ? ` ${archived.length}` : ""}</span></summary>
+            ${
+              archived.length
+                ? `<ul class="sidebar-list">${archived.map((chat) => archivedRow(chat, running)).join("")}</ul>`
+                : `<p class="sidebar-empty">보관한 대화가 없습니다.</p>`
+            }
+          </details>
         </nav>`;
     },
   };

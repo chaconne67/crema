@@ -278,9 +278,10 @@ const sidebar = createSidebar({
   onAddProject: addProject,
   async onRemoveProject(projectId) {
     const project = workspace.projects.find((item) => item.id === projectId);
-    const message = `'${project?.name}'을 목록에서 뺄까요?\n폴더와 파일은 그대로 두고, 이 프로젝트의 대화 기록과 Crema 엔진 세션을 지웁니다.`;
-    if (!project || !(await host.confirm(message, "목록에서 빼기"))) return;
     const removed = workspace.chats.filter((chat) => chat.projectId === projectId);
+    const archived = removed.filter((chat) => chat.archived).length;
+    const message = `'${project?.name}'을 목록에서 뺄까요?\n폴더와 파일은 그대로 두고, 이 프로젝트의 대화 기록${archived ? `(보관함의 ${archived}개 포함)` : ""}과 Crema 엔진 세션을 지웁니다.`;
+    if (!project || !(await host.confirm(message, "목록에서 빼기"))) return;
     workspace.projects = workspace.projects.filter((item) => item.id !== projectId);
     workspace.chats = workspace.chats.filter((chat) => chat.projectId !== projectId);
     for (const chat of removed) {

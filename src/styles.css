@@ -3339,7 +3339,7 @@ svg.zap {
   pointer-events: none;
 }
 
-/* Chat rows: name and status mark at the two ends; pin and archive (delete in the archive) take the mark's place on hover. */
+/* Chat rows: name and status mark at the two ends; pin and archive (restore and delete in the archive) take the mark's place on hover. */
 .chat-row {
   position: relative;
 }
@@ -3361,12 +3361,7 @@ svg.zap {
   padding-right: 62px;
 }
 
-.archived-row:hover .row-main,
-.archived-row:focus-within .row-main {
-  padding-right: 34px;
-}
-
-/* Archive: a closed fold at the bottom of the sidebar, its chevron beside the label. */
+/* Archive: a closed fold at the bottom of the sidebar, its chevron beside the label; there even when empty. */
 .sidebar-archive > summary {
   justify-content: flex-start;
   gap: 8px;
