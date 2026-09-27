@@ -138,7 +138,7 @@ export function createMediaSection({ host, getConnected, onChange, onGuide = () 
       <span class="feature-name">웹 검색</span>
       ${brave
         ? '<span class="feature-state">연결됨 · Brave 검색</span>'
-        : '<span class="feature-state">기본 검색 (무료)</span><button class="secondary-button feature-connect" type="button" data-guide="brave">Brave 연결</button>'}
+        : '<span class="feature-state">기본 검색</span><button class="secondary-button feature-connect" type="button" data-guide="brave">Brave 연결</button>'}
     </div>`;
 
   /**

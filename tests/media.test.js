@@ -86,7 +86,7 @@ describe("Settings → 서비스 연동", () => {
     expect([...document.querySelectorAll(".feature-name")].map((item) => item.textContent)).toEqual(["이미지 생성", "동영상 생성", "웹 검색"]);
     expect(row("image").querySelector(".feature-state").textContent).toBe("연결됨 · ChatGPT 구독");
     expect(row("video").querySelector(".feature-state").textContent).toBe("연결됨 · OpenRouter");
-    expect(row("web").querySelector(".feature-state").textContent).toBe("기본 검색 (무료)");
+    expect(row("web").querySelector(".feature-state").textContent).toBe("기본 검색");
     expect(document.querySelector(".field-note")).toBeNull();
 
     // Video runs on OpenRouter: its models to choose from, the default first.
