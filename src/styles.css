@@ -1304,7 +1304,9 @@ html[data-pointer] :focus-visible {
   padding: 14px 14px 28px;
 }
 
-/* Each section is its own card; spacing between cards replaces divider lines. */
+/* Each section is its own card; spacing between cards replaces divider lines. Inside a card a line only
+   separates the rows of a list read one by one (Providers, categories) or the card's heading from its body;
+   parts of one item (a state, its details, its buttons) are set apart by spacing and weight, never a line. */
 .settings-section {
   background: color-mix(in srgb, var(--ink) 3%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--ink) 6%, transparent);
@@ -3097,26 +3099,19 @@ svg.zap {
   line-height: 1.5;
 }
 
-/* Details: term on the left, value on the right, one per line. */
+/* Details: term on the left, value on the right, one per line; muted term and bold value tell them apart. */
 .feature-details {
   display: flex;
   flex-direction: column;
+  gap: 4px;
   margin: 0;
-  padding: 2px 0;
-  border-top: 1px solid var(--hairline);
-  border-bottom: 1px solid var(--hairline);
 }
 
 .feature-details > div {
   display: grid;
   grid-template-columns: 7.5em minmax(0, 1fr);
   gap: 10px;
-  padding: 7px 0;
   font-size: 0.8125rem;
-}
-
-.feature-details > div + div {
-  border-top: 1px dashed color-mix(in srgb, var(--ink) 8%, transparent);
 }
 
 .feature-details dt {
@@ -3239,8 +3234,7 @@ svg.zap {
 }
 
 .feature-key {
-  padding-top: 8px;
-  border-top: 1px solid var(--hairline);
+  padding-top: 4px;
 }
 
 .feature-key label {
