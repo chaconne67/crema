@@ -87,20 +87,6 @@ function escapeHtml(value) {
   return String(value).replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
 }
 
-// What each feature does, said once under its name.
-const ABOUT = {
-  image: "대화에서 이미지를 만들어 달라고 하면 이 서비스로 만듭니다.",
-  video: "대화에서 동영상을 만들어 달라고 하면 이 서비스로 만듭니다.",
-  web: "최신 정보가 필요할 때 에이전트가 웹을 검색합니다.",
-};
-
-// How each service the guide leads is connected, for choosing one.
-const HOW = {
-  "openai-codex": "ChatGPT 계정으로 로그인해 연결합니다.",
-  openrouter: "무료로 가입하고 API 키를 받아 연결합니다. 여러 모델 중에서 고를 수 있습니다.",
-  brave: "무료 요금제로 가입하고 API 키를 받아 연결합니다. 기본 검색보다 결과가 정확하고 빠릅니다.",
-};
-
 /**
  * Settings "서비스 연동": the services the AI models alone cannot stand in for, one card per feature
  * (이미지 생성, 동영상 생성, 웹 검색). Each card says whether the feature can be used now, the details of
@@ -152,7 +138,7 @@ export function createMediaSection({ host, getConnected, onChange, onGuide = () 
     const guide = GUIDES[id];
     const typed = guide.kind === "key"
       ? `<div class="feature-key">
-          <label for="feature-key-${id}">API 키가 이미 있다면 붙여넣으세요</label>
+          <label for="feature-key-${id}">API 키</label>
           <input id="feature-key-${id}" type="password" data-key="${id}" autocomplete="off" spellcheck="false" placeholder="${escapeHtml(guide.sample)}" value="${escapeHtml(draft.key || "")}" />
           <button class="secondary-button" type="button" data-save-key="${id}">확인하고 저장</button>
         </div>`
@@ -172,14 +158,12 @@ export function createMediaSection({ host, getConnected, onChange, onGuide = () 
         <h4 class="feature-name" id="feature-${key}">${label}</h4>
         <span class="feature-state" data-state="${on ? "on" : "off"}">${on ? "사용 가능" : "사용 불가"}</span>
       </header>
-      <p class="feature-about">${ABOUT[key]}</p>
       ${body}
       ${statusLine(key)}
     </article>`;
 
   function mediaCard({ kind, available, route, model }) {
     const connectable = kind.guides.filter((id) => !available.some((item) => item.channel === id));
-    const others = kind.routes.filter((item) => !kind.guides.includes(item.channel) && !available.includes(item)).map((item) => item.label);
     const auto = !available.some((item) => item.channel === choices[kind.key]);
 
     if (editing !== kind.key) {
@@ -198,9 +182,9 @@ export function createMediaSection({ host, getConnected, onChange, onGuide = () 
 
     // The change, open: the service to use, then what it needs (a model, or connecting it).
     const picks = [
-      ...(available.length > 1 ? [{ value: "auto", name: "자동", hint: `연결된 서비스 중 가장 알맞은 것을 씁니다. 지금은 ${available[0].label}입니다.` }] : []),
-      ...available.map((item) => ({ value: item.channel, name: item.label, hint: "연결됨", on: true })),
-      ...connectable.map((id) => ({ value: id, name: GUIDES[id].name, hint: `연결 필요 · ${HOW[id]}` })),
+      ...(available.length > 1 ? [{ value: "auto", name: `자동 (${available[0].label})` }] : []),
+      ...available.map((item) => ({ value: item.channel, name: item.label, on: true })),
+      ...connectable.map((id) => ({ value: id, name: GUIDES[id].name, on: false })),
     ];
     const picked = picks.some((item) => item.value === draft.service) ? draft.service : picks[0].value;
     const pickedRoute = picked === "auto" ? available[0] : available.find((item) => item.channel === picked);
@@ -213,15 +197,13 @@ export function createMediaSection({ host, getConnected, onChange, onGuide = () 
         <div class="feature-picks" role="radiogroup" aria-labelledby="pick-${kind.key}">
           ${picks.map((item) => `
             <button class="feature-pick" type="button" role="radio" aria-checked="${item.value === picked}" data-pick="${item.value}">
-              <span class="feature-pick-name">${escapeHtml(item.name)}${item.on ? '<span class="feature-tag" data-tone="on">연결됨</span>' : ""}</span>
-              ${item.on ? "" : `<span class="feature-pick-hint">${escapeHtml(item.hint.replace(/^연결 필요 · /, ""))}</span>`}
+              <span class="feature-pick-name">${escapeHtml(item.name)}${item.on === undefined ? "" : item.on ? '<span class="feature-tag" data-tone="on">연결됨</span>' : '<span class="feature-tag">연결 필요</span>'}</span>
             </button>`).join("")}
         </div>
-        ${others.length ? `<p class="feature-hint">${escapeHtml(others.join(", "))}로도 쓸 수 있습니다. 설정 › Provider 추가에서 연결하면 여기에 나타납니다.</p>` : ""}
         ${pickedRoute?.provider !== "openrouter" ? ""
           // The engine lists OpenRouter's models only once it is this feature's service.
           : pickedRoute === route ? `<label>모델</label>${modelSelect(kind, draft.model ?? model)}`
-          : '<p class="feature-hint">모델은 적용한 뒤 서비스 변경에서 고를 수 있습니다.</p>'}
+          : ""}
         ${pickedRoute ? "" : connectStep(picked)}
         <div class="feature-actions">
           ${pickedRoute ? `<button class="primary-button" type="button" data-apply${changed ? "" : " disabled"}>적용</button>` : ""}
@@ -233,11 +215,10 @@ export function createMediaSection({ host, getConnected, onChange, onGuide = () 
 
   // Web search always works: on the engine's free search, or on Brave once its key is set.
   function webCard() {
-    const rows = [["사용 중인 검색", brave ? "Brave 검색" : '기본 검색 <span class="feature-none">(무료, 설정 필요 없음)</span>']];
+    const rows = [["사용 중인 검색", brave ? "Brave 검색" : "기본 검색 (무료)"]];
     const body = editing === "web"
       ? `
         <div class="feature-editor" data-editor>
-          <p class="feature-hint">${brave ? "새 Brave 검색 API 키를 넣으면 바뀝니다." : HOW.brave}</p>
           ${brave
             ? `<div class="feature-key">
                 <label for="feature-key-brave">새 API 키</label>

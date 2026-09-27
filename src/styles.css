@@ -3090,16 +3090,11 @@ svg.zap {
   background: color-mix(in srgb, var(--ink) 7%, var(--surface));
 }
 
-.feature-about,
 .feature-hint {
   margin: 0;
   color: var(--muted);
   font-size: 0.8125rem;
   line-height: 1.5;
-}
-
-.feature-about {
-  margin-top: -4px;
 }
 
 /* Details: term on the left, value on the right, one per line. */
@@ -3180,7 +3175,7 @@ svg.zap {
   gap: 6px;
 }
 
-/* A choice among services: a row with a radio mark, its name, and what connecting it takes. */
+/* A choice among services: a row with a radio mark, its name, and whether it is connected. */
 .feature-pick {
   position: relative;
   display: flex;

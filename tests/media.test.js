@@ -97,7 +97,7 @@ describe("Settings → 서비스 연동", () => {
     expect([state("image"), state("video"), state("web")]).toEqual(["사용 가능", "사용 가능", "사용 가능"]);
     expect(detail("image")).toEqual({ "사용 중인 서비스": "ChatGPT 구독 자동 선택", "연결된 서비스": "ChatGPT 구독, OpenRouter" });
     expect(detail("video")).toEqual({ "사용 중인 서비스": "OpenRouter", "모델": "기본 (MiniMax: Hailuo 3 Max)", "연결된 서비스": "OpenRouter" });
-    expect(detail("web")["사용 중인 검색"]).toBe("기본 검색 (무료, 설정 필요 없음)");
+    expect(detail("web")["사용 중인 검색"]).toBe("기본 검색 (무료)");
     expect(section.summary()).toBe("3개 중 3개 사용 가능");
   });
 
