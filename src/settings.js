@@ -159,7 +159,7 @@ export function applyAppearance(appearance, root = document.documentElement) {
   root.style.setProperty("--font-body", FONTS[appearance.font].stack);
   root.style.setProperty("--body-size", `${appearance.size}px`);
   root.style.setProperty("--body-weight", String(shownWeight(appearance.font, appearance.weight)));
-  root.style.setProperty("--strong-weight", String(strongWeight(appearance.font, appearance.weight)));
+  root.style.setProperty("--strong-weight", String(strongWeight(appearance.systemFont, appearance.weight)));
   root.style.setProperty("--body-leading", String(appearance.leading));
   root.style.setProperty("--body-tracking", `${appearance.tracking}em`);
   root.style.setProperty("--content-width", `${appearance.width}px`);

@@ -57,6 +57,9 @@ describe("appearance settings", () => {
     expect(root.style.getPropertyValue("--system-size")).toBe("20px");
     expect(root.style.getPropertyValue("--font-body")).toContain("Nanum Gothic");
     expect(root.style.getPropertyValue("--body-size")).toBe("15px");
+    // Bold is set in the system font, so its weight is one the system font has.
+    applyAppearance({ ...appearance, weight: 500 }, root);
+    expect(root.style.getPropertyValue("--strong-weight")).toBe("800");
   });
 
   it("keeps colour out of presets and keeps an old custom setup as the reading mode's type", () => {

@@ -446,12 +446,14 @@ button {
   font-size: 1.08em;
 }
 
-/* The chosen body weight (모양 → 본문 → 굵기) for conversation text; bold is a weight the font really has above it. */
+/* The chosen body weight (모양 → 본문 → 굵기) for conversation text; bold is set in the system font,
+   at a weight that font really has above it. */
 .markdown {
   font-weight: var(--body-weight, 400);
 }
 
 .markdown strong {
+  font-family: var(--font-ui);
   font-weight: var(--strong-weight, 700);
 }
 
