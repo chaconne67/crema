@@ -16,6 +16,16 @@ const GRAPH = {
 
 const ON = { memory: { memory_enabled: true, user_profile_enabled: true } };
 
+const KNOWLEDGE = {
+  pages: [
+    { slug: "incident/세금계산서-오류", type: "incident", title: "세금계산서 발행 오류", status: "active", confirmed: "2026-09-28", tags: [] },
+    { slug: "reference/옛-주소", type: "reference", title: "옛 사이트 주소", status: "needs_review", confirmed: "2026-06-01", tags: [] },
+  ],
+  last_daily: { at: 1790000000, needs_review: 1, distilled: 2 },
+};
+const PAGE = { slug: "incident/세금계산서-오류", title: "세금계산서 발행 오류", body: "사업자번호 누락이 원인.",
+  timeline: [{ date: "2026-10-02", summary: "다시 발생, 같은 방법으로 해결" }] };
+
 function setup(config = ON) {
   const calls = [];
   const host = {
@@ -31,6 +41,8 @@ function setup(config = ON) {
         ] };
       }
       if (path === "/api/crema/backup") return { ok: true, path: body.output };
+      if (path === "/api/crema/knowledge") return KNOWLEDGE;
+      if (path.startsWith("/api/crema/knowledge/page?")) return PAGE;
       return { ok: true };
     }),
     confirm: vi.fn(async () => true),
@@ -53,7 +65,7 @@ describe("Settings → 기억", () => {
     expect(el.querySelector('[data-group="memory"]').textContent).toContain("세무 일은 매달 20일에 확인");
     expect(el.querySelector('[data-group="skill"]').textContent).toContain("tax-filing");
     expect(el.querySelector('[data-group="skill"]').textContent).toContain("3번 씀");
-    expect(section.summary()).toBe("기억 2개 · 배운 방법 1개");
+    expect(section.summary()).toBe("기억 2개 · 지식 2쪽 · 배운 방법 1개");
     expect(onUpdate).toHaveBeenCalled();
   });
 
@@ -120,5 +132,51 @@ describe("Settings → 기억", () => {
       config: { memory: { memory_enabled: false, user_profile_enabled: false }, skills: { creation_nudge_interval: 0 } },
     }]);
     expect(section.summary()).toBe("꺼짐");
+  });
+
+  it("shows the knowledge notebook by kind, with pages to review marked", async () => {
+    const { section, el } = setup();
+    await section.load();
+    const group = el.querySelector('[data-group="knowledge"]');
+    expect(group.textContent).toContain("겪은 문제와 해결");
+    expect(group.textContent).toContain("세금계산서 발행 오류");
+    expect(group.querySelector('[data-slug="reference/옛-주소"] .memory-badge').textContent).toBe("확인 필요");
+    expect(group.textContent).toContain("정리한 대화 2");
+  });
+
+  it("opens a page, corrects it as the user's word, and deletes it with an undo", async () => {
+    const { section, el, calls } = setup();
+    await section.load();
+    el.querySelector('[data-slug="incident/세금계산서-오류"] [data-page-open]').click();
+    await flush();
+    expect(el.textContent).toContain("다시 발생, 같은 방법으로 해결");
+    el.querySelector("[data-page-edit]").click();
+    el.querySelector(".memory-edit").value = "사업자번호 누락이 원인. 거래처 정보 수정으로 해결.";
+    el.querySelector("[data-page-save]").click();
+    await flush();
+    await flush();
+    expect(calls).toContainEqual(["PUT", "/api/crema/knowledge/page", { slug: "incident/세금계산서-오류", body: "사업자번호 누락이 원인. 거래처 정보 수정으로 해결." }]);
+    el.querySelector("[data-page-delete]").click();
+    await flush();
+    await flush();
+    expect(calls).toContainEqual(["DELETE", "/api/crema/knowledge/page", { slug: "incident/세금계산서-오류" }]);
+    el.querySelector("[data-page-undo]").click();
+    await flush();
+    expect(calls).toContainEqual(["POST", "/api/crema/knowledge/undo", { slug: "incident/세금계산서-오류" }]);
+  });
+
+  it("sets how the notebook is searched and the daily tidy-up in the engine config", async () => {
+    const { section, el, calls } = setup();
+    await section.load();
+    const select = el.querySelector("[data-mode]");
+    select.value = "light";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await flush();
+    const box = el.querySelector("[data-daily]");
+    box.checked = false;
+    box.dispatchEvent(new Event("change", { bubbles: true }));
+    await flush();
+    expect(calls).toContainEqual(["PUT", "/api/config", { config: { knowledge: { search_mode: "light" } } }]);
+    expect(calls).toContainEqual(["PUT", "/api/config", { config: { knowledge: { nightly: false } } }]);
   });
 });

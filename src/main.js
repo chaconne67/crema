@@ -236,8 +236,50 @@ function discardEmptyActiveChat() {
   }
 }
 
+// When a chat goes quiet — no new reply for a while, or the user moves to another chat — the engine
+// keeps what it taught in the knowledge notebook, if anything (crema_engine.py distill). What it kept
+// shows as one line with an undo.
+const QUIET_MS = 10 * 60 * 1000;
+const quietTimers = new Map();
+
+function distillLater(chatId) {
+  clearTimeout(quietTimers.get(chatId));
+  quietTimers.set(chatId, setTimeout(() => distill(chatId), QUIET_MS));
+}
+
+async function distill(chatId) {
+  if (!quietTimers.has(chatId)) return;
+  clearTimeout(quietTimers.get(chatId));
+  quietTimers.delete(chatId);
+  const chat = workspace.chats.find((item) => item.id === chatId);
+  if (!chat || runningChats.has(chatId)) return;
+  const route = connection.auto ? {} : { model: connection.model || "", provider: connection.provider || "" };
+  const result = await host
+    .hermesAdmin("POST", "/api/crema/distill", { session_id: hermesSessionId(chatSessions(chat).at(-1)), ...route })
+    .catch(() => null);
+  if (result?.written?.length) app.showCard(rememberedCard(chat, result.written));
+}
+
+function rememberedCard(chat, written) {
+  const card = document.createElement("section");
+  card.className = "notice-card remembered";
+  card.setAttribute("role", "status");
+  const line = document.createElement("span");
+  line.textContent = `‘${chat.title}’ 대화에서 기억함: ${written.map((page) => page.title).join(", ")}`;
+  const undo = Object.assign(document.createElement("button"), { className: "text-button", type: "button", textContent: "되돌리기" });
+  undo.addEventListener("click", async () => {
+    undo.disabled = true;
+    for (const page of written) await host.hermesAdmin("POST", "/api/crema/knowledge/undo", { slug: page.slug }).catch(() => null);
+    line.textContent = "되돌렸습니다.";
+    undo.remove();
+  });
+  card.append(line, undo);
+  return card;
+}
+
 function openChat(chatId) {
   if (chatId === workspace.activeChatId) return;
+  if (workspace.activeChatId) distill(workspace.activeChatId);
   discardEmptyActiveChat();
   workspace.activeChatId = chatId;
   const chat = activeChat();
@@ -395,8 +437,9 @@ const panel = createSettingsPanel({
   onMediaChange: (plan) => applyMedia(plan).catch(() => {}),
   onGuide: (providerId) => guide.start(providerId),
   onOpenChange: (open) => guide.setCovered(open),
-  onOpenChat: (chatId) => {
-    if (workspace.chats.some((chat) => chat.id === chatId)) openChat(chatId);
+  onOpenChat: (sessionId) => {
+    const chat = workspace.chats.find((item) => item.id === sessionId || chatSessions(item).includes(sessionId));
+    if (chat) openChat(chat.id);
   },
   async onSignOut() {
     const message = "Crema에서 로그아웃할까요?\n다시 쓰려면 구글 계정으로 다시 로그인해야 합니다. 대화 기록은 이 PC에 그대로 남습니다.";
@@ -864,6 +907,7 @@ const app = createChatApp({
     if (status === "streaming") runningChats.add(chatId);
     // A reply finished while its chat was not open waits as unread (blue dot) until the chat is opened.
     else if (runningChats.delete(chatId) && status === "complete" && chatId !== workspace.activeChatId) chat.unread = true;
+    if (status === "complete") distillLater(chatId);
     // Hermes may switch branches while it works.
     if (chatId === workspace.activeChatId && messages.at(-1)?.status !== "streaming") refreshBranch();
     if (chat.title === NEW_CHAT_TITLE) {

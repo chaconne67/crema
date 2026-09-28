@@ -661,7 +661,9 @@ async fn hermes_admin(
     "DELETE" => client.delete(url),
     _ => return Err("server".into()),
   };
-  let request = request.header(SETTINGS_TOKEN_HEADER, token).timeout(Duration::from_secs(60));
+  // Distilling a quiet chat is a model review of the whole chat: minutes, not seconds.
+  let limit = if path.starts_with("/api/crema/distill") { 600 } else { 60 };
+  let request = request.header(SETTINGS_TOKEN_HEADER, token).timeout(Duration::from_secs(limit));
   let request = match body {
     Some(body) => request.json(&body),
     None => request,

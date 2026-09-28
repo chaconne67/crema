@@ -3323,6 +3323,51 @@ svg.zap {
   color: inherit;
 }
 
+/* Settings → 기억 → 일하며 배운 지식: a page title opens its body, timeline and actions in place. */
+.memory-page-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.memory-badge {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 8%, var(--surface));
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.memory-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+}
+
+/* In the chat: what a quiet chat left in the notebook, with an undo. */
+.notice-card.remembered {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 /* Settings → 내 플랜. */
 .plan-card {
   display: flex;
