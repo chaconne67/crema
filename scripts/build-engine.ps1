@@ -4,7 +4,7 @@
 # beforeBuildCommand); it does nothing when the pinned engine is already there. Needs git, uv and the
 # Visual Studio C++ build tools.
 $ErrorActionPreference = "Stop"
-$engineCommit = "619d188205c62e55d11b5280837d374eb79697e6"
+$engineCommit = "eeeff9573f2f1c4c15a62797ba805f532d441dd1"
 $pythonVersion = "3.12.13"
 # Built by scripts/embedding-model/build.py and kept as assets of this release, checked by SHA-256.
 $modelRelease = "models-koen-e5-tiny-int8"
