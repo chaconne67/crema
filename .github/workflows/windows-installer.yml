@@ -51,10 +51,23 @@ jobs:
           $app = "$env:LOCALAPPDATA\Crema\app.exe"
           if (-not (Test-Path $app)) { throw "Crema not installed at $app" }
           $engine = "$env:LOCALAPPDATA\Crema\engine"
-          foreach ($file in "python\python.exe", "src\crema_engine.py", "engine.commit") {
+          foreach ($file in "python\python.exe", "src\crema_engine.py", "engine.commit", "lib\fts5_cjk.dll") {
             if (-not (Test-Path "$engine\$file")) { throw "engine file missing: $file" }
           }
           "engine: $(Get-Content "$engine\engine.commit")"
+          # The bundled Python loads the Korean/CJK tokenizer and finds a two-letter word with it.
+          @'
+          import sqlite3, sys
+          c = sqlite3.connect(":memory:")
+          c.enable_load_extension(True)
+          c.load_extension(sys.argv[1])
+          c.execute("CREATE VIRTUAL TABLE t USING fts5(x, tokenize='cjk_unicode61')")
+          c.execute("INSERT INTO t VALUES ('이번 달 세금 신고 일정')")
+          assert c.execute("SELECT count(*) FROM t WHERE t MATCH '세금'").fetchone()[0] == 1
+          print("two-letter Korean search: ok")
+          '@ | Set-Content cjk-check.py -Encoding utf8
+          & "$engine\python\python.exe" cjk-check.py "$engine\lib\fts5_cjk.dll"
+          if ($LASTEXITCODE) { throw "the bundled Python could not search Korean with fts5_cjk.dll" }
           "APP=$app" >> $env:GITHUB_ENV
 
       - name: WebDriver for the installed app
@@ -98,6 +111,14 @@ jobs:
           $data = "$env:LOCALAPPDATA\local.agentclient.prototype\engine"
           if (-not (Test-Path "$data\state.db")) { throw "no engine data at $data" }
           "engine data: $data"
+          # The engine made the Korean/CJK index of the chats.
+          @'
+          import sqlite3, sys
+          c = sqlite3.connect(sys.argv[1])
+          sys.exit(0 if c.execute("SELECT 1 FROM sqlite_master WHERE name = 'messages_fts_cjk'").fetchone() else 1)
+          '@ | Set-Content cjk-index.py -Encoding utf8
+          & "$env:LOCALAPPDATA\Crema\engine\python\python.exe" cjk-index.py "$data\state.db"
+          if ($LASTEXITCODE) { throw "state.db has no Korean/CJK search index" }
 
       - uses: actions/upload-artifact@v4
         with:

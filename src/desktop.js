@@ -241,8 +241,8 @@ export function createDesktopHost() {
       );
     },
 
-    async pickFolder() {
-      const path = await openDialog({ directory: true, multiple: false, title: "프로젝트 폴더 선택" });
+    async pickFolder(title = "프로젝트 폴더 선택") {
+      const path = await openDialog({ directory: true, multiple: false, title });
       return typeof path === "string" ? path : null;
     },
 

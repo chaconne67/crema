@@ -3233,6 +3233,96 @@ svg.zap {
   font-size: 0.8125rem;
 }
 
+/* Settings → 기억: each remembered thing as plain text with 고치기·지우기; found chats as buttons. */
+.memory-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-group > summary .feature-hint {
+  margin-left: auto;
+  margin-right: 12px;
+  font-weight: 400;
+}
+
+.memory-list,
+.memory-hits {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.memory-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.memory-text {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.memory-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.memory-search {
+  display: flex;
+  gap: 8px;
+}
+
+.memory-search input {
+  flex: 1;
+  min-width: 0;
+}
+
+.memory-hit {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.memory-hit:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 5%, var(--surface));
+}
+
+.memory-hit:disabled {
+  cursor: default;
+}
+
+.memory-hit-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.memory-hit-snippet {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+.memory-hit mark {
+  background: color-mix(in srgb, var(--accent-strong) 22%, transparent);
+  color: inherit;
+}
+
 /* Settings → 내 플랜. */
 .plan-card {
   display: flex;

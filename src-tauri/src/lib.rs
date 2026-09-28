@@ -90,6 +90,8 @@ async fn engine(app: &AppHandle) -> Result<(String, String, String), String> {
     .arg(bundle.join("src").join("crema_engine.py"))
     .env("HERMES_HOME", &home)
     .env("HERMES_DASHBOARD_SESSION_TOKEN", &token)
+    // The Korean/CJK two-letter search tokenizer bundled with the engine (scripts/build-engine.ps1).
+    .env("HERMES_FTS5_CJK_SO", bundle.join("lib").join("fts5_cjk.dll"))
     .env("PYTHONUTF8", "1")
     .env_remove("PYTHONHOME")
     .env_remove("PYTHONPATH")
@@ -637,7 +639,8 @@ fn write_soul(app: AppHandle, content: String) -> Result<(), String> {
   std::fs::rename(&staged, home.join("SOUL.md")).map_err(|_| "file_write".to_string())
 }
 
-/// One request to the engine's settings API (`/api/...`): provider sign-ins, API keys, voice input.
+/// One request to the engine's settings API (`/api/...`): provider sign-ins, API keys, voice input,
+/// what the agent remembers.
 #[tauri::command]
 async fn hermes_admin(
   app: AppHandle,
@@ -655,6 +658,7 @@ async fn hermes_admin(
     "GET" => client.get(url),
     "POST" => client.post(url),
     "PUT" => client.put(url),
+    "DELETE" => client.delete(url),
     _ => return Err("server".into()),
   };
   let request = request.header(SETTINGS_TOKEN_HEADER, token).timeout(Duration::from_secs(60));

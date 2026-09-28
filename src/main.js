@@ -395,6 +395,9 @@ const panel = createSettingsPanel({
   onMediaChange: (plan) => applyMedia(plan).catch(() => {}),
   onGuide: (providerId) => guide.start(providerId),
   onOpenChange: (open) => guide.setCovered(open),
+  onOpenChat: (chatId) => {
+    if (workspace.chats.some((chat) => chat.id === chatId)) openChat(chatId);
+  },
   async onSignOut() {
     const message = "Crema에서 로그아웃할까요?\n다시 쓰려면 구글 계정으로 다시 로그인해야 합니다. 대화 기록은 이 PC에 그대로 남습니다.";
     if (!(await host.confirm(message, "로그아웃"))) return;

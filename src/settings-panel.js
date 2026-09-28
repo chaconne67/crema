@@ -3,6 +3,7 @@ import { closeColorPicker, openColorPicker } from "./color-picker.js";
 import { enhanceSelect } from "./dropdown.js";
 import { AUTO_LABEL, AUTO_NOTE, createModelPicker } from "./model-picker.js";
 import { createMediaSection } from "./media.js";
+import { createMemorySection } from "./memory.js";
 import { createProviderSection } from "./provider-panel.js";
 import { buildCatalog, freeChain, locate, pickRoute, providerStatus } from "./providers.js";
 import {
@@ -57,6 +58,8 @@ const SECTION_ICONS = {
   model: icon('<path d="M12 20v2"/><path d="M12 2v2"/><path d="M17 20v2"/><path d="M17 2v2"/><path d="M2 12h2"/><path d="M2 17h2"/><path d="M2 7h2"/><path d="M20 12h2"/><path d="M20 17h2"/><path d="M20 7h2"/><path d="M7 20v2"/><path d="M7 2v2"/><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/>'),
   // Lucide (ISC) "image".
   media: icon('<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>'),
+  // Lucide (ISC) "brain".
+  memory: icon('<path d="M12 18V5"/><path d="M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4"/><path d="M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"/><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"/><path d="M18 18a4 4 0 0 0 2-7.464"/><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"/><path d="M6 18a4 4 0 0 1-2-7.464"/><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"/>'),
   // Lucide (ISC) "smile".
   persona: icon('<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/>'),
   appearance: icon('<path d="M12 4v16"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 20h6"/>'),
@@ -124,6 +127,8 @@ export function createSettingsPanel({
   onGuide = () => {},
   // (open) → the panel opened or closed; the sign-up guide's page must not cover it.
   onOpenChange = () => {},
+  // (chatId) → open a chat found in 기억's past-chat search.
+  onOpenChat = () => {},
 }) {
   let current = appearance;
   let account = null;
@@ -136,6 +141,7 @@ export function createSettingsPanel({
   let modelPicker = null;
   let providerSection = null;
   let mediaSection = null;
+  let memorySection = null;
   let authKinds = {};
   let catalog = [];
 
@@ -242,6 +248,7 @@ export function createSettingsPanel({
       connection: CONNECTION_STATES[connectionState] || "",
       providers: catalog.length ? `${catalog.length}개 연결됨` : "",
       media: mediaSection?.summary() || "",
+      memory: memorySection?.summary() || "",
       model: [connection.auto ? AUTO_LABEL : connection.model, connection.fast && "빠른 속도", connection.reasoning && reasoning?.label].filter(Boolean).join(" · "),
       appearance: `시스템 ${current.systemSize}px · 본문 ${current.size}px`,
       theme: THEMES.find(([value]) => value === current.theme)?.[1] || "",
@@ -371,6 +378,7 @@ export function createSettingsPanel({
       shell.classList.add("settings-open");
       onOpenChange(true);
       loadPersona();
+      memorySection?.load();
       panel.querySelector("[data-close-settings]").focus();
     },
 
@@ -439,6 +447,11 @@ export function createSettingsPanel({
           <section class="settings-section" aria-labelledby="media-title">
             <h3 id="media-title">서비스 연동</h3>
             <div data-media-section></div>
+          </section>
+
+          <section class="settings-section" aria-labelledby="memory-title">
+            <h3 id="memory-title">기억</h3>
+            <div data-memory-section></div>
           </section>
 
           <section class="settings-section" aria-labelledby="persona-title">
@@ -566,6 +579,16 @@ export function createSettingsPanel({
         },
       });
       panel.querySelector("[data-media-section]").replaceWith(mediaSection.element);
+      memorySection = createMemorySection({
+        host,
+        onUpdate: () => updateSummaries(),
+        // A found chat opens in the chat area, so settings step aside.
+        onOpenChat(chatId) {
+          close();
+          onOpenChat(chatId);
+        },
+      });
+      panel.querySelector("[data-memory-section]").replaceWith(memorySection.element);
       makeSectionsCollapsible();
       updateSummaries();
 
