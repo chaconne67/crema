@@ -64,7 +64,9 @@ try { Run cmd /c "$build\build.cmd" } finally { Pop-Location; Remove-Item $build
 New-Item -ItemType Directory "$out\model" | Out-Null
 foreach ($name in $modelFiles.Keys) {
   Invoke-WebRequest "https://github.com/chaconne67/crema/releases/download/$modelRelease/$name" -OutFile "$out\model\$name"
-  $hash = (Get-FileHash "$out\model\$name" -Algorithm SHA256).Hash.ToLower()
+  # .NET directly: Get-FileHash is not found when this Windows PowerShell runs under the CI's pwsh.
+  $bytes = [System.Security.Cryptography.SHA256]::Create().ComputeHash([System.IO.File]::ReadAllBytes("$out\model\$name"))
+  $hash = -join ($bytes | ForEach-Object { $_.ToString("x2") })
   if ($hash -ne $modelFiles[$name]) { throw "model file $name has SHA-256 $hash, not $($modelFiles[$name])" }
 }
 
