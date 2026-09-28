@@ -3,7 +3,7 @@
 # lib\fts5_cjk.dll. Every installer build runs it (Tauri's beforeBuildCommand); it does nothing when the
 # pinned engine is already there. Needs git, uv and the Visual Studio C++ build tools.
 $ErrorActionPreference = "Stop"
-$engineCommit = "67296f4b9cbb6b19455f1a8c18b670169c6546d3"
+$engineCommit = "0346f71edbfb121f784eac9e74983e5b7a6c528d"
 $pythonVersion = "3.12.13"
 
 $root = Split-Path $PSScriptRoot
