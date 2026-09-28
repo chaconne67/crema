@@ -1,15 +1,23 @@
 # Builds the engine Crema bundles into src-tauri/engine: the pinned crema-engine source (without its
-# tests), a private Python with the engine's packages, and the engine's Korean/CJK search tokenizer as
-# lib\fts5_cjk.dll. Every installer build runs it (Tauri's beforeBuildCommand); it does nothing when the
-# pinned engine is already there. Needs git, uv and the Visual Studio C++ build tools.
+# tests), a private Python with the engine's packages, the engine's Korean/CJK search tokenizer as
+# lib\fts5_cjk.dll and its meaning search model in model\. Every installer build runs it (Tauri's
+# beforeBuildCommand); it does nothing when the pinned engine is already there. Needs git, uv and the
+# Visual Studio C++ build tools.
 $ErrorActionPreference = "Stop"
-$engineCommit = "0346f71edbfb121f784eac9e74983e5b7a6c528d"
+$engineCommit = "619d188205c62e55d11b5280837d374eb79697e6"
 $pythonVersion = "3.12.13"
+# Built by scripts/embedding-model/build.py and kept as assets of this release, checked by SHA-256.
+$modelRelease = "models-koen-e5-tiny-int8"
+$modelFiles = @{
+  "model.onnx" = "984bebe2ffd3ad4b8ac331742000ef425dd0093cb42da23ed33522f2f8329901"
+  "tokenizer.json" = "a6dd38d692ac1caa6d5dbc195d92f1f978b5c74ec60e02ed15fdf04404742fe3"
+  "NOTICE.txt" = "28063ad388cf2f0a578f9c9a3485f71d00646fe9898fa2a9df5b6efdb4ab56ae"
+}
 
 $root = Split-Path $PSScriptRoot
 $out = Join-Path $root "src-tauri\engine"
 $stamp = Join-Path $out "engine.commit"
-$pinned = "$engineCommit python-$pythonVersion"
+$pinned = "$engineCommit python-$pythonVersion $modelRelease"
 if ((Test-Path $stamp) -and ((Get-Content $stamp -Raw).Trim() -eq $pinned)) { return }
 
 function Run {
@@ -50,5 +58,14 @@ Set-Content "$build\build.cmd" -Encoding ascii @(
 )
 Push-Location $build
 try { Run cmd /c "$build\build.cmd" } finally { Pop-Location; Remove-Item $build -Recurse -Force }
+
+# The engine loads it from CREMA_EMBED_MODEL (src-tauri/src/lib.rs); without it the knowledge notebook
+# finds pages by words only.
+New-Item -ItemType Directory "$out\model" | Out-Null
+foreach ($name in $modelFiles.Keys) {
+  Invoke-WebRequest "https://github.com/chaconne67/crema/releases/download/$modelRelease/$name" -OutFile "$out\model\$name"
+  $hash = (Get-FileHash "$out\model\$name" -Algorithm SHA256).Hash.ToLower()
+  if ($hash -ne $modelFiles[$name]) { throw "model file $name has SHA-256 $hash, not $($modelFiles[$name])" }
+}
 
 Set-Content $stamp $pinned

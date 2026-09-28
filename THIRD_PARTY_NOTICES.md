@@ -113,3 +113,11 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## KoEn-E5-Tiny (the knowledge notebook's meaning search model)
+
+The engine bundles an int8 build of [exp-models/dragonkue-KoEn-E5-Tiny](https://huggingface.co/exp-models/dragonkue-KoEn-E5-Tiny)
+(revision `292c09c`) under `engine/model`, made by `scripts/embedding-model/build.py`: its ONNX weights quantized to int8,
+the tokenizer unchanged. It is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) and is
+fine-tuned from [intfloat/multilingual-e5-small](https://huggingface.co/intfloat/multilingual-e5-small) (MIT) by way of
+dragonkue/multilingual-e5-small-ko. `engine/model/NOTICE.txt` states the source and the change.

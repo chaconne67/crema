@@ -92,6 +92,8 @@ async fn engine(app: &AppHandle) -> Result<(String, String, String), String> {
     .env("HERMES_DASHBOARD_SESSION_TOKEN", &token)
     // The Korean/CJK two-letter search tokenizer bundled with the engine (scripts/build-engine.ps1).
     .env("HERMES_FTS5_CJK_SO", bundle.join("lib").join("fts5_cjk.dll"))
+    // The knowledge notebook's meaning search model, bundled the same way.
+    .env("CREMA_EMBED_MODEL", bundle.join("model"))
     .env("PYTHONUTF8", "1")
     .env_remove("PYTHONHOME")
     .env_remove("PYTHONPATH")

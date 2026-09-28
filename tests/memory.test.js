@@ -22,6 +22,7 @@ const KNOWLEDGE = {
     { slug: "reference/옛-주소", type: "reference", title: "옛 사이트 주소", status: "needs_review", confirmed: "2026-06-01", tags: [] },
   ],
   last_daily: { at: 1790000000, needs_review: 1, distilled: 2 },
+  meaning: { on: true, chunks: 4, vectors: 1 },
 };
 const PAGE = { slug: "incident/세금계산서-오류", title: "세금계산서 발행 오류", body: "사업자번호 누락이 원인.",
   timeline: [{ date: "2026-10-02", summary: "다시 발생, 같은 방법으로 해결" }] };
@@ -142,6 +143,20 @@ describe("Settings → 기억", () => {
     expect(group.textContent).toContain("세금계산서 발행 오류");
     expect(group.querySelector('[data-slug="reference/옛-주소"] .memory-badge').textContent).toBe("확인 필요");
     expect(group.textContent).toContain("정리한 대화 2");
+    expect(group.querySelector("[data-meaning]").textContent).toBe("다른 말로 물어도 찾도록 준비하는 중 (25%)");
+  });
+
+  it("says whether a question in other words is found", async () => {
+    for (const [state, text] of [
+      [{ on: true, chunks: 4, vectors: 4 }, "다른 말로 물어도 뜻이 같으면 찾습니다."],
+      [{ on: false, chunks: 4, vectors: 0 }, "지금은 같은 낱말이 있어야 찾습니다."],
+    ]) {
+      KNOWLEDGE.meaning = state;
+      const { section, el } = setup();
+      await section.load();
+      expect(el.querySelector("[data-meaning]").textContent).toBe(text);
+    }
+    KNOWLEDGE.meaning = { on: true, chunks: 4, vectors: 1 };
   });
 
   it("opens a page, corrects it as the user's word, and deletes it with an undo", async () => {

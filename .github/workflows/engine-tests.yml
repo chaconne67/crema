@@ -48,6 +48,17 @@ jobs:
           uv venv --python 3.12.13 .venv
           uv pip install --python .venv -r pruned/pyproject.toml --extra crema "pytest==9.1.1" "pytest-asyncio==1.3.0"
 
+      # The knowledge notebook's meaning search model (scripts/build-engine.ps1 bundles the same files),
+      # for tests/agent/test_knowledge_meaning_quality.py.
+      - name: The meaning search model
+        run: |
+          mkdir model
+          for f in model.onnx tokenizer.json; do
+            curl -fsSL -o "model/$f" "https://github.com/chaconne67/crema/releases/download/models-koen-e5-tiny-int8/$f"
+          done
+          echo "984bebe2ffd3ad4b8ac331742000ef425dd0093cb42da23ed33522f2f8329901  model/model.onnx
+          a6dd38d692ac1caa6d5dbc195d92f1f978b5c74ec60e02ed15fdf04404742fe3  model/tokenizer.json" | sed 's/^ *//' | sha256sum -c
+
       # Upstream's per-file runner (each test file in its own process); this shard's share of the files
       # it discovers, and one result line per test from crema_report.
       - name: This shard's tests
@@ -56,6 +67,7 @@ jobs:
           CREMA_REPORT_DIR: ${{ github.workspace }}/report
           PYTHONPATH: ${{ github.workspace }}/tree:${{ github.workspace }}/crema/scripts/engine-tests
           HERMES_TEST_WORKERS: "4"
+          CREMA_TEST_EMBED_MODEL: ${{ github.workspace }}/model
         run: |
           mkdir -p "$CREMA_REPORT_DIR"
           paths=$(../.venv/bin/python -c "

@@ -51,7 +51,7 @@ jobs:
           $app = "$env:LOCALAPPDATA\Crema\app.exe"
           if (-not (Test-Path $app)) { throw "Crema not installed at $app" }
           $engine = "$env:LOCALAPPDATA\Crema\engine"
-          foreach ($file in "python\python.exe", "src\crema_engine.py", "engine.commit", "lib\fts5_cjk.dll") {
+          foreach ($file in "python\python.exe", "src\crema_engine.py", "engine.commit", "lib\fts5_cjk.dll", "model\model.onnx", "model\tokenizer.json") {
             if (-not (Test-Path "$engine\$file")) { throw "engine file missing: $file" }
           }
           "engine: $(Get-Content "$engine\engine.commit")"
@@ -68,6 +68,21 @@ jobs:
           '@ | Set-Content cjk-check.py -Encoding utf8
           & "$engine\python\python.exe" cjk-check.py "$engine\lib\fts5_cjk.dll"
           if ($LASTEXITCODE) { throw "the bundled Python could not search Korean with fts5_cjk.dll" }
+          # The bundled model puts a question in other words next to the page that answers it.
+          @'
+          import sys, time
+          from pathlib import Path
+          sys.path.insert(0, sys.argv[1])
+          from agent.knowledge_embed import Embedder
+          t = time.time()
+          e = Embedder(Path(sys.argv[2]))
+          pages = e.encode(["사무실 프린터 인쇄 안 됨: 스풀러를 다시 시작해 해결", "노트북 와이파이 끊김: 어댑터 절전을 꺼서 해결"])
+          sims = pages @ e.encode(["출력이 안 나와요"], "query")[0]
+          print(f"meaning: printer {sims[0]:.3f}, wifi {sims[1]:.3f}, {time.time() - t:.1f}s")
+          assert sims[0] > sims[1]
+          '@ | Set-Content meaning-check.py -Encoding utf8
+          & "$engine\python\python.exe" meaning-check.py "$engine\src" "$engine\model"
+          if ($LASTEXITCODE) { throw "the bundled meaning search model did not work" }
           "APP=$app" >> $env:GITHUB_ENV
 
       - name: WebDriver for the installed app

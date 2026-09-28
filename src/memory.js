@@ -52,6 +52,7 @@ export function createMemorySection({ host, onOpenChat = () => {}, onUpdate = ()
   let mode = "balanced";
   let daily = true;
   let lastDaily = null;
+  let meaning = null; // { on, chunks, vectors }: meaning search, from the engine's knowledge list
 
   async function load() {
     try {
@@ -66,6 +67,7 @@ export function createMemorySection({ host, onOpenChat = () => {}, onUpdate = ()
       daily = config?.knowledge?.nightly !== false;
       pages = knowledge?.pages || [];
       lastDaily = knowledge?.last_daily || null;
+      meaning = knowledge?.meaning || null;
       if (opened && !pages.some((page) => page.slug === opened.slug)) opened = null;
       // A memory node memory:<source>:<i> is graph.memory[i].
       items = (graph?.nodes || []).map((node) =>
@@ -118,6 +120,10 @@ export function createMemorySection({ host, onOpenChat = () => {}, onUpdate = ()
     const last = lastDaily?.at
       ? `마지막 정리 ${day(lastDaily.at)} · 확인 필요로 바꾼 것 ${lastDaily.needs_review || 0} · 정리한 대화 ${lastDaily.distilled || 0}`
       : "아직 정리하지 않았습니다.";
+    const found = !meaning ? ""
+      : !meaning.on ? "지금은 같은 낱말이 있어야 찾습니다."
+      : meaning.vectors < meaning.chunks ? `다른 말로 물어도 찾도록 준비하는 중 (${Math.floor((meaning.vectors / meaning.chunks) * 100)}%)`
+      : "다른 말로 물어도 뜻이 같으면 찾습니다.";
     return `
       <details class="settings-group" data-group="knowledge"${pages.length ? " open" : ""}>
         <summary>일하며 배운 지식<span class="feature-hint">${pages.length}</span></summary>
@@ -125,6 +131,7 @@ export function createMemorySection({ host, onOpenChat = () => {}, onUpdate = ()
           ${kinds || '<p class="feature-hint">아직 없습니다. 함께 일한 대화가 조용해지면 배운 것을 여기에 남깁니다.</p>'}
           <label for="knowledge-mode">찾는 방식</label>
           <select id="knowledge-mode" data-mode>${MODES.map(([value, label]) => `<option value="${value}"${value === mode ? " selected" : ""}>${label}</option>`).join("")}</select>
+          ${found ? `<p class="feature-hint" data-meaning>${found}</p>` : ""}
           <label class="check-row"><input type="checkbox" data-daily${daily ? " checked" : ""} /> 하루 한 번 정리하기</label>
           <p class="feature-hint">${escapeHtml(last)}</p>
         </div>
