@@ -400,6 +400,9 @@ def ai_chat(request):
         return ai_error(f"Crema가 제공하지 않는 모델입니다: {model}", "model_not_offered", 400)
     if not settings.CREMA_OPENROUTER_API_KEY:
         return ai_error("Crema AI가 잠시 준비 중입니다.", "unavailable", 503)
+    # Only the model asked for: OpenRouter would otherwise fall back to any model listed in "models".
+    for key in ("models", "route"):
+        body.pop(key, None)
     body["usage"] = {"include": True}
     upstream_request = urllib.request.Request(
         f"{OPENROUTER}/chat/completions", data=json.dumps(body).encode(), method="POST",

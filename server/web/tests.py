@@ -271,6 +271,7 @@ class AdminTests(TestCase):
 
     def test_admin_signs_in_with_google_and_only_staff_get_in(self):
         self.assertEqual(self.client.get("/admin/login/?next=/admin/")["Location"], "/accounts/google/login/?next=/admin/")
+        self.assertEqual(self.client.get("/admin/login/?next=https://evil.example/")["Location"], "/accounts/google/login/?next=/admin/")
         self.client.force_login(self.member)
         self.assertEqual(self.client.get("/admin/").status_code, 302)
         self.client.force_login(self.admin)
@@ -374,6 +375,14 @@ class AiWindowTests(TestCase):
         self.assertEqual(response["Content-Type"], "text/event-stream")
         self.assertIn(b'"content":"A"', streamed)
         self.assertEqual(ModelUsage.objects.get().cost_krw, 14)
+
+    def test_a_fallback_list_cannot_reach_other_models(self):
+        reply = {"choices": [], "usage": {"cost": 0}}
+        with mock.patch("urllib.request.urlopen", return_value=Upstream(json.dumps(reply).encode())) as urlopen:
+            self.chat(models=["anthropic/claude-opus-5.5"], route="fallback")
+        sent = json.loads(urlopen.call_args[0][0].data)
+        self.assertNotIn("models", sent)
+        self.assertNotIn("route", sent)
 
     def test_other_models_and_a_spent_budget_are_refused(self):
         self.assertEqual(self.chat(model="anthropic/claude-opus-5.5").json()["error"]["type"], "model_not_offered")

@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.shortcuts import redirect
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from .models import AppToken, Invite, Membership, ModelUsage, Subscription
 
@@ -11,6 +12,8 @@ admin.site.index_title = "회원·등급"
 def google_login(request, extra_context=None):
     """The admin signs in with Google like everyone else (the site has no passwords); only staff get in."""
     target = request.GET.get("next") or "/admin/"
+    if not url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        target = "/admin/"  # this site only
     if request.user.is_authenticated and request.user.is_staff:
         return redirect(target)
     return redirect(f"/accounts/google/login/?next={target}")
