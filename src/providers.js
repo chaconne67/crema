@@ -289,3 +289,27 @@ export function addCategories(addable) {
   categories.at(-1).items.push(...unlisted);
   return categories.filter((category) => category.items.length);
 }
+
+/** Crema's AI window (crema-agent.site/ai/v1), for grades with models provided; the key is the app token
+ * the app hands the engine as CREMA_AI_KEY. */
+export const CREMA_AI = {
+  id: "crema",
+  endpoint: { name: "Crema", base_url: "https://crema-agent.site/ai/v1", key_env: "CREMA_AI_KEY", api_mode: "chat_completions", model: "openai/gpt-6-luna" },
+};
+
+/**
+ * What the engine's config needs for the account's grade: add Crema's AI when models are provided (and make
+ * it the default when nothing else is connected, so a new member can talk at once), remove it when they
+ * are not. Returns { put } (a config to PUT), { remove: "crema" }, or {} when nothing changes.
+ */
+export function cremaAiChange(provided, config, hasOtherProviders) {
+  const present = Boolean(config?.providers?.[CREMA_AI.id]);
+  if (provided && !present) {
+    const put = { providers: { [CREMA_AI.id]: { ...CREMA_AI.endpoint } } };
+    if (!hasOtherProviders) put.model = { provider: CREMA_AI.id, default: CREMA_AI.endpoint.model };
+    return { put };
+  }
+  if (!provided && present) return { remove: CREMA_AI.id };
+  return {};
+}
+

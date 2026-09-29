@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.shortcuts import redirect
 from django.utils import timezone
 
-from .models import AppToken, Invite, Membership, Subscription
+from .models import AppToken, Invite, Membership, ModelUsage, Subscription
 
 admin.site.site_header = admin.site.site_title = "Crema 관리"
 admin.site.index_title = "회원·등급"
@@ -81,4 +81,12 @@ class InviteAdmin(admin.ModelAdmin):
     @admin.display(description="쓴 사람")
     def used_by(self, obj):
         return ", ".join(use.user.email for use in obj.uses.select_related("user")) or "—"
+
+
+@admin.register(ModelUsage)
+class ModelUsageAdmin(admin.ModelAdmin):
+    list_display = ("at", "user", "model", "prompt_tokens", "completion_tokens", "cost_krw")
+    list_filter = ("model",)
+    search_fields = ("user__email",)
+    date_hierarchy = "at"
 

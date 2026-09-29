@@ -214,3 +214,17 @@ describe("Provider add list", () => {
     ]);
   });
 });
+
+describe("Crema's AI", () => {
+  it("is added for grades with models provided, as the default when nothing else is connected, and removed after", async () => {
+    const { cremaAiChange, CREMA_AI } = await import("../src/providers.js");
+    expect(cremaAiChange(true, { providers: {} }, false)).toEqual({
+      put: { providers: { crema: CREMA_AI.endpoint }, model: { provider: "crema", default: "openai/gpt-6-luna" } },
+    });
+    expect(cremaAiChange(true, {}, true)).toEqual({ put: { providers: { crema: CREMA_AI.endpoint } } });
+    expect(cremaAiChange(true, { providers: { crema: {} } }, false)).toEqual({});
+    expect(cremaAiChange(false, { providers: { crema: {} } }, true)).toEqual({ remove: "crema" });
+    expect(cremaAiChange(false, { providers: {} }, true)).toEqual({});
+  });
+});
+

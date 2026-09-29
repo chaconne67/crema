@@ -4,19 +4,20 @@ import hmac
 import json
 import re
 import secrets
+import urllib.error
 import urllib.request
 from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, JsonResponse
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, JsonResponse, StreamingHttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from .models import AppToken, Invite, LoginCode, Membership, Subscription, digest
+from .models import AppToken, Invite, LoginCode, Membership, ModelUsage, Subscription, digest
 
 PENDING = "crema_app_login"
 STATE = re.compile(r"[A-Za-z0-9_-]{16,128}")
@@ -341,3 +342,97 @@ def api_logout(request):
     if token:
         token.delete()
     return HttpResponse(status=204)
+
+
+# ── Crema's AI window (/ai/v1): OpenAI-compatible, for grades with models provided ─────────────────
+OPENROUTER = "https://openrouter.ai/api/v1"
+
+
+def ai_error(message: str, kind: str, status: int) -> JsonResponse:
+    return JsonResponse({"error": {"message": message, "type": kind}}, status=status)
+
+
+def ai_member(request, budget: bool = True):
+    """The member behind an app token who may use Crema's models (and, with ``budget``, has some of
+    this month's budget left); otherwise the error to answer with."""
+    token = bearer_token(request)
+    if not token:
+        return None, ai_error("Crema에 로그인해 주세요.", "signed_out", 401)
+    now = timezone.now()
+    member = Membership.of(token.user).summary(now)
+    if not member["models"]:
+        return None, ai_error("이 계정에는 Crema가 제공하는 AI가 없습니다.", "not_provided", 403)
+    if budget and ModelUsage.spent_this_month(token.user, now) >= member["budget"]:
+        return None, ai_error("이번 달 Crema가 제공하는 AI 사용량을 다 썼어요. 다음 달 1일에 다시 채워집니다.", "budget", 429)
+    return token.user, None
+
+
+def record_usage(user, model: str, usage) -> None:
+    usage = usage or {}
+    cost = float(usage.get("cost") or 0)
+    ModelUsage.objects.create(user=user, model=model[:80], prompt_tokens=int(usage.get("prompt_tokens") or 0),
+                              completion_tokens=int(usage.get("completion_tokens") or 0), cost_usd=cost,
+                              cost_krw=round(cost * settings.CREMA_USD_KRW))
+
+
+def ai_models(request):
+    user, error = ai_member(request, budget=False)
+    if error:
+        return error
+    return JsonResponse({"object": "list", "data": [{"id": model, "object": "model", "owned_by": "crema"}
+                                                     for model in settings.CREMA_AI_MODELS]})
+
+
+@csrf_exempt
+@require_POST
+def ai_chat(request):
+    """A chat completion through Crema's OpenRouter account: only the offered models, the cost counted
+    against the member's monthly budget; streamed replies are passed through as they come."""
+    user, error = ai_member(request)
+    if error:
+        return error
+    try:
+        body = json.loads(request.body or b"{}")
+    except ValueError:
+        return ai_error("요청을 읽지 못했습니다.", "bad_request", 400)
+    model = str(body.get("model") or "")
+    if model not in settings.CREMA_AI_MODELS:
+        return ai_error(f"Crema가 제공하지 않는 모델입니다: {model}", "model_not_offered", 400)
+    if not settings.CREMA_OPENROUTER_API_KEY:
+        return ai_error("Crema AI가 잠시 준비 중입니다.", "unavailable", 503)
+    body["usage"] = {"include": True}
+    upstream_request = urllib.request.Request(
+        f"{OPENROUTER}/chat/completions", data=json.dumps(body).encode(), method="POST",
+        headers={"Authorization": f"Bearer {settings.CREMA_OPENROUTER_API_KEY}", "Content-Type": "application/json",
+                 "HTTP-Referer": "https://crema-agent.site", "X-Title": "Crema"})
+    try:
+        upstream = urllib.request.urlopen(upstream_request, timeout=300)
+    except urllib.error.HTTPError as failed:
+        return HttpResponse(failed.read(), status=failed.code, content_type="application/json")
+    except OSError:
+        return ai_error("AI 서버에 닿지 못했습니다. 잠시 뒤 다시 시도해 주세요.", "upstream_unreachable", 502)
+    if not body.get("stream"):
+        with upstream:
+            data = json.loads(upstream.read())
+        record_usage(user, model, data.get("usage"))
+        return JsonResponse(data)
+
+    def relay():
+        usage = None
+        try:
+            with upstream:
+                for line in upstream:
+                    if line.startswith(b"data: {") and b'"usage"' in line:
+                        try:
+                            usage = json.loads(line[6:]).get("usage") or usage
+                        except ValueError:
+                            pass
+                    yield line
+        finally:
+            record_usage(user, model, usage)  # also when the app stops reading mid-reply
+
+    response = StreamingHttpResponse(relay(), content_type="text/event-stream")
+    response["Cache-Control"] = "no-cache"
+    response["X-Accel-Buffering"] = "no"
+    return response
+

@@ -4,6 +4,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 def digest(value: str) -> str:
@@ -179,4 +180,25 @@ class InviteUse(models.Model):
 # Which grade is better, for invites that only raise a grade.
 GRADE_RANK = {Membership.FREE: 0, Membership.PAID: 1, Membership.BETA: 2, Membership.GIFT: 3,
               Membership.STAFF: 4, Membership.ADMIN: 5}
+
+
+class ModelUsage(models.Model):
+    """One request through Crema's AI window: what it cost, for the member's monthly budget."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="model_usage")
+    at = models.DateTimeField(auto_now_add=True, db_index=True)
+    model = models.CharField(max_length=80)
+    prompt_tokens = models.PositiveIntegerField(default=0)
+    completion_tokens = models.PositiveIntegerField(default=0)
+    cost_usd = models.DecimalField(max_digits=12, decimal_places=6, default=0)
+    cost_krw = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = verbose_name_plural = "모델 사용량"
+
+    @classmethod
+    def spent_this_month(cls, user, now) -> int:
+        """Won used since the first of this month (Korea time)."""
+        start = timezone.localtime(now).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        return cls.objects.filter(user=user, at__gte=start).aggregate(total=models.Sum("cost_krw"))["total"] or 0
 

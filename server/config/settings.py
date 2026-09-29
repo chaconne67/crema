@@ -129,3 +129,10 @@ CREMA_DOWNLOAD_URL = "https://github.com/chaconne67/crema/releases/latest/downlo
 # The one Crema subscription (VAT included) and its trial, 2026-09-29 decision.
 CREMA_PRICE_KRW = 4900
 CREMA_TRIAL_DAYS = 30
+# Crema's AI window for grades with models provided (Crema-회원등급-계획-2026-09-29.md 4-4): one OpenRouter
+# account behind /ai/v1, the models offered, and the won per dollar used to count each member's monthly budget.
+CREMA_OPENROUTER_API_KEY = os.environ.get("CREMA_OPENROUTER_API_KEY", "")
+CREMA_AI_MODELS = ["openai/gpt-6-luna", "openai/gpt-6-sol", "anthropic/claude-sonnet-5.5",
+                   "google/gemini-3.8-flash", "deepseek/deepseek-v4.1-flash"]
+CREMA_AI_DEFAULT_MODEL = CREMA_AI_MODELS[0]
+CREMA_USD_KRW = int(os.environ.get("CREMA_USD_KRW", "1450"))

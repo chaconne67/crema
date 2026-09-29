@@ -25,6 +25,7 @@ import {
   COOL_MS,
   autoRoute,
   buildCatalog,
+  cremaAiChange,
   freeChain,
   isFree,
   locate,
@@ -541,8 +542,16 @@ const planFree = () => loadAccount()?.member?.full === false;
 async function syncPlan() {
   const free = planFree();
   const config = await host.hermesAdmin("GET", "/api/config").catch(() => null);
-  if (!config || (config.crema?.free === true) === free) return;
-  await host.hermesAdmin("PUT", "/api/config", { config: { crema: { free } } }).catch(() => {});
+  if (!config) return;
+  if ((config.crema?.free === true) !== free) {
+    await host.hermesAdmin("PUT", "/api/config", { config: { crema: { free } } }).catch(() => {});
+  }
+  // Crema's AI for grades with models provided (crema-agent.site /api/me member.models).
+  const others = providers.some((item) => item.id !== "crema");
+  const change = cremaAiChange(loadAccount()?.member?.models === true, config, others);
+  if (change.put) await host.hermesAdmin("PUT", "/api/config", { config: change.put }).catch(() => {});
+  if (change.remove) await host.hermesAdmin("DELETE", `/api/providers/custom-endpoints/${change.remove}`).catch(() => {});
+  if (change.put || change.remove) await refreshModels().catch(() => {});
 }
 
 async function connect() {
@@ -552,9 +561,8 @@ async function connect() {
     await host.connect();
     connected = true;
     app.setStatus("connected", connectedLabel());
-    refreshModels().catch(() => {});
+    refreshModels().catch(() => {}).then(syncPlan);
     refreshAccess();
-    syncPlan();
     fetch(FREE_CATALOG_URL)
       .then((response) => (response.ok ? response.json() : null))
       .then(setFreeCatalog)

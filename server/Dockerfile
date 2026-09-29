@@ -29,4 +29,4 @@ RUN DJANGO_SECRET_KEY=build DATABASE_URL=postgres://build@localhost/build python
 USER crema
 EXPOSE 8000
 
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--worker-class", "gthread", "--threads", "2", "--timeout", "30", "--access-logfile", "-", "--error-logfile", "-"]
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--worker-class", "gthread", "--threads", "8", "--timeout", "30", "--access-logfile", "-", "--error-logfile", "-"]

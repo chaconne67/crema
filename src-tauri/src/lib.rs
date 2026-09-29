@@ -94,6 +94,9 @@ async fn engine(app: &AppHandle) -> Result<(String, String, String), String> {
     .env("HERMES_FTS5_CJK_SO", bundle.join("lib").join("fts5_cjk.dll"))
     // The knowledge notebook's meaning search model, bundled the same way.
     .env("CREMA_EMBED_MODEL", bundle.join("model"))
+    // Crema's AI window (crema-agent.site/ai/v1) for grades with models provided: the account's app token,
+    // read by name through providers.crema.key_env and never written into the engine's files.
+    .env("CREMA_AI_KEY", account_entry().ok().and_then(|entry| entry.get_password().ok()).unwrap_or_default())
     .env("PYTHONUTF8", "1")
     .env_remove("PYTHONHOME")
     .env_remove("PYTHONPATH")

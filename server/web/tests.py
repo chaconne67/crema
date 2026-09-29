@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from .models import AppToken, Invite, LoginCode, Membership, Subscription
+from .models import AppToken, Invite, LoginCode, Membership, ModelUsage, Subscription
 
 VERIFIER = "v" * 64
 CHALLENGE = base64.urlsafe_b64encode(hashlib.sha256(VERIFIER.encode()).digest()).rstrip(b"=").decode()
@@ -327,4 +327,57 @@ class InviteTests(TestCase):
         self.client.force_login(staff)
         self.client.get("/i/beta-1/")
         self.assertEqual(Membership.of(staff).summary(timezone.now())["grade"], "staff")
+
+
+class Upstream(io.BytesIO):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+@override_settings(SECURE_SSL_REDIRECT=False, CREMA_OPENROUTER_API_KEY="or-test", CREMA_USD_KRW=1400)
+class AiWindowTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user("ai", email="ai@example.com")
+        self.auth = {"HTTP_AUTHORIZATION": f"Bearer {AppToken.issue(self.user)}"}
+        membership = Membership.of(self.user)
+        membership.apply_grade("gift")
+        membership.save()
+
+    def chat(self, **body):
+        return self.client.post("/ai/v1/chat/completions", json.dumps({"model": "openai/gpt-6-luna", "messages": [], **body}),
+                                content_type="application/json", **self.auth)
+
+    def test_only_members_with_models_provided_get_in(self):
+        self.assertEqual(self.client.get("/ai/v1/models").status_code, 401)
+        self.assertEqual([m["id"] for m in self.client.get("/ai/v1/models", **self.auth).json()["data"]][0], "openai/gpt-6-luna")
+        Membership.objects.filter(user=self.user).update(grade="free", full_access=False, models_provided=False)
+        self.assertEqual(self.client.get("/ai/v1/models", **self.auth).json()["error"]["type"], "not_provided")
+
+    def test_a_reply_goes_through_crema_account_and_its_cost_is_counted(self):
+        reply = {"choices": [{"message": {"content": "안녕하세요"}}], "usage": {"prompt_tokens": 10, "completion_tokens": 5, "cost": 0.002}}
+        with mock.patch("urllib.request.urlopen", return_value=Upstream(json.dumps(reply).encode())) as urlopen:
+            self.assertEqual(self.chat().json()["choices"][0]["message"]["content"], "안녕하세요")
+        sent = urlopen.call_args[0][0]
+        self.assertEqual(sent.get_header("Authorization"), "Bearer or-test")
+        self.assertEqual(json.loads(sent.data)["usage"], {"include": True})
+        usage = ModelUsage.objects.get()
+        self.assertEqual((usage.prompt_tokens, usage.completion_tokens, usage.cost_krw), (10, 5, 3))
+
+    def test_a_streamed_reply_is_passed_through_and_counted(self):
+        lines = b'data: {"choices":[{"delta":{"content":"A"}}]}\n\ndata: {"choices":[],"usage":{"prompt_tokens":3,"completion_tokens":1,"cost":0.01}}\n\ndata: [DONE]\n\n'
+        with mock.patch("urllib.request.urlopen", return_value=Upstream(lines)):
+            response = self.chat(stream=True)
+            streamed = b"".join(response.streaming_content)
+        self.assertEqual(response["Content-Type"], "text/event-stream")
+        self.assertIn(b'"content":"A"', streamed)
+        self.assertEqual(ModelUsage.objects.get().cost_krw, 14)
+
+    def test_other_models_and_a_spent_budget_are_refused(self):
+        self.assertEqual(self.chat(model="anthropic/claude-opus-5.5").json()["error"]["type"], "model_not_offered")
+        ModelUsage.objects.create(user=self.user, model="openai/gpt-6-luna", cost_krw=10000)
+        response = self.chat()
+        self.assertEqual((response.status_code, response.json()["error"]["type"]), (429, "budget"))
 
