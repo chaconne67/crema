@@ -48,6 +48,7 @@ export function createMemorySection({ host, onOpenChat = () => {}, onUpdate = ()
   let results = null; // past-chat search hits; null before a search
   let query = "";
   let pages = []; // knowledge notebook pages (list rows)
+  let deleted = []; // pages the user deleted that undo still brings back (72 hours)
   let opened = null; // the page shown in full: { slug, page, editing }
   let mode = "balanced";
   let daily = true;
@@ -66,6 +67,7 @@ export function createMemorySection({ host, onOpenChat = () => {}, onUpdate = ()
       mode = config?.knowledge?.search_mode || "balanced";
       daily = config?.knowledge?.nightly !== false;
       pages = knowledge?.pages || [];
+      deleted = knowledge?.deleted || [];
       lastDaily = knowledge?.last_daily || null;
       meaning = knowledge?.meaning || null;
       if (opened && !pages.some((page) => page.slug === opened.slug)) opened = null;
@@ -117,6 +119,14 @@ export function createMemorySection({ host, onOpenChat = () => {}, onUpdate = ()
       const list = pages.filter((page) => page.type === key);
       return list.length ? `<p class="field-label">${label}</p><ul class="memory-list">${list.map(pageHtml).join("")}</ul>` : "";
     }).join("");
+    const gone = deleted.length
+      ? `<p class="field-label">지운 지식</p><ul class="memory-list">${deleted.map((row) => `
+          <li class="memory-item" data-slug="${escapeHtml(row.slug)}">
+            ${escapeHtml(row.title)}
+            <span class="feature-hint">${KINDS.find(([key]) => key === row.type)?.[1] || ""} · ${day(row.restorable_until)}까지 되돌릴 수 있음</span>
+            <div class="memory-actions"><button class="text-button" type="button" data-page-undo data-slug="${escapeHtml(row.slug)}">되돌리기</button></div>
+          </li>`).join("")}</ul>`
+      : "";
     const last = lastDaily?.at
       ? `마지막 정리 ${day(lastDaily.at)} · 확인 필요로 바꾼 것 ${lastDaily.needs_review || 0} · 정리한 대화 ${lastDaily.distilled || 0}`
       : "아직 정리하지 않았습니다.";
@@ -125,10 +135,11 @@ export function createMemorySection({ host, onOpenChat = () => {}, onUpdate = ()
       : meaning.vectors < meaning.chunks ? `다른 말로 물어도 찾도록 준비하는 중 (${Math.floor((meaning.vectors / meaning.chunks) * 100)}%)`
       : "다른 말로 물어도 뜻이 같으면 찾습니다.";
     return `
-      <details class="settings-group" data-group="knowledge"${pages.length ? " open" : ""}>
+      <details class="settings-group" data-group="knowledge"${pages.length || deleted.length ? " open" : ""}>
         <summary>일하며 배운 지식<span class="feature-hint">${pages.length}</span></summary>
         <div class="settings-group-body">
           ${kinds || '<p class="feature-hint">아직 없습니다. 함께 일한 대화가 조용해지면 배운 것을 여기에 남깁니다.</p>'}
+          ${gone}
           <label for="knowledge-mode">찾는 방식</label>
           <select id="knowledge-mode" data-mode>${MODES.map(([value, label]) => `<option value="${value}"${value === mode ? " selected" : ""}>${label}</option>`).join("")}</select>
           ${found ? `<p class="feature-hint" data-meaning>${found}</p>` : ""}
@@ -354,7 +365,11 @@ export function createMemorySection({ host, onOpenChat = () => {}, onUpdate = ()
       render();
     } else if (button.matches("[data-page-save]")) savePage();
     else if (button.matches("[data-page-delete]")) deletePage();
-    else if (button.matches("[data-page-undo]")) undoPage(button.dataset.slug);
+    else if (button.matches("[data-page-undo]")) {
+      // The notice and the deleted list can both offer it: undo on a page already back steps it back once more.
+      for (const undo of element.querySelectorAll("[data-page-undo]")) undo.disabled = true;
+      undoPage(button.dataset.slug);
+    }
   });
 
   render();

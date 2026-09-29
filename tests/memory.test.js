@@ -27,7 +27,7 @@ const KNOWLEDGE = {
 const PAGE = { slug: "incident/세금계산서-오류", title: "세금계산서 발행 오류", body: "사업자번호 누락이 원인.",
   timeline: [{ date: "2026-10-02", summary: "다시 발생, 같은 방법으로 해결" }] };
 
-function setup(config = ON) {
+function setup(config = ON, knowledge = KNOWLEDGE) {
   const calls = [];
   const host = {
     hermesAdmin: vi.fn(async (method, path, body) => {
@@ -42,7 +42,7 @@ function setup(config = ON) {
         ] };
       }
       if (path === "/api/crema/backup") return { ok: true, path: body.output };
-      if (path === "/api/crema/knowledge") return KNOWLEDGE;
+      if (path === "/api/crema/knowledge") return knowledge;
       if (path.startsWith("/api/crema/knowledge/page?")) return PAGE;
       return { ok: true };
     }),
@@ -144,6 +144,7 @@ describe("Settings → 기억", () => {
     expect(group.querySelector('[data-slug="reference/옛-주소"] .memory-badge').textContent).toBe("확인 필요");
     expect(group.textContent).toContain("정리한 대화 2");
     expect(group.querySelector("[data-meaning]").textContent).toBe("다른 말로 물어도 찾도록 준비하는 중 (25%)");
+    expect(group.textContent).not.toContain("지운 지식");
   });
 
   it("says whether a question in other words is found", async () => {
@@ -176,8 +177,29 @@ describe("Settings → 기억", () => {
     await flush();
     expect(calls).toContainEqual(["DELETE", "/api/crema/knowledge/page", { slug: "incident/세금계산서-오류" }]);
     el.querySelector("[data-page-undo]").click();
+    expect([...el.querySelectorAll("[data-page-undo]")].every((undo) => undo.disabled)).toBe(true);
     await flush();
     expect(calls).toContainEqual(["POST", "/api/crema/knowledge/undo", { slug: "incident/세금계산서-오류" }]);
+  });
+
+  it("lists what the user deleted in the last three days and brings one back once", async () => {
+    const until = 1790259200;
+    const { section, el, calls } = setup(ON, { ...KNOWLEDGE, pages: [], deleted: [
+      { slug: "feedback/보고서-말투", type: "feedback", title: "보고서는 존댓말로", restorable_until: until },
+    ] });
+    await section.load();
+    const group = el.querySelector('[data-group="knowledge"]');
+    expect(group.open).toBe(true);
+    expect(group.textContent).toContain("지운 지식");
+    const row = group.querySelector('[data-slug="feedback/보고서-말투"]');
+    expect(row.textContent).toContain("보고서는 존댓말로");
+    expect(row.textContent).toContain(`내가 고쳐 준 점 · ${new Date(until * 1000).toLocaleDateString("ko-KR")}까지 되돌릴 수 있음`);
+    const undo = row.querySelector("[data-page-undo]");
+    undo.click();
+    undo.click();
+    await flush();
+    expect(calls.filter(([, path]) => path === "/api/crema/knowledge/undo"))
+      .toEqual([["POST", "/api/crema/knowledge/undo", { slug: "feedback/보고서-말투" }]]);
   });
 
   it("sets how the notebook is searched and the daily tidy-up in the engine config", async () => {
