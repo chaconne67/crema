@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}설치 파일 받기 · Crema{% endblock %}
+{% block content %}
+  <div class="wrap page">
+    {% if suspended %}
+      <h1>이용이 멈춘 계정입니다</h1>
+      <p class="notice">이 계정은 지금 Crema를 쓸 수 없습니다. {% if contact_email %}<a href="mailto:{{ contact_email }}">문의</a>해 주세요.{% endif %}</p>
+    {% else %}
+      <ol class="progress" aria-label="진행">
+        <li class="done">가입 ✓</li>
+        <li class="now">설치 파일 받기</li>
+        <li>설치</li>
+        <li>AI 연결</li>
+      </ol>
+      <h1>환영합니다{% if user.first_name %}, {{ user.first_name }}님{% endif %}.<br />이제 설치만 하면 됩니다</h1>
+      <div class="download-box">
+        <a class="button" href="{% url 'download' %}" data-download>Windows용 설치 파일 받기</a>
+        <p>받기가 저절로 시작됩니다. 시작되지 않으면 위 단추를 눌러 주세요. · Windows 10·11 64비트 · 약 140MB</p>
+        <p>내 등급: <strong>{{ member.label }}</strong>{% if member.until %} · {{ member.until|slice:":10" }}까지{% endif %}</p>
+      </div>
+      <h2>설치 순서</h2>
+      <ol class="steps" style="margin-top:28px">
+        <li><h3>받은 파일 열기</h3><p>브라우저의 다운로드 목록에서 <strong>Crema-setup-x64.exe</strong>를 누릅니다.</p></li>
+        <li><h3>경고가 뜨면</h3><p>“Windows의 PC 보호” 창이 나오면 <strong>추가 정보 → 실행</strong>을 누릅니다. 나오지 않으면 넘어가세요.</p></li>
+        <li><h3>같은 계정으로 로그인</h3><p>설치가 끝나면 Crema가 열립니다. 이 Google 계정으로 로그인하고, 안내를 따라 AI를 연결하세요.</p></li>
+      </ol>
+      <p class="small-note">이미 설치했다면 Crema를 열기만 하면 됩니다. · <a href="{% url 'account' %}">내 계정</a></p>
+      <script>
+        // Start the download once, a moment after the page shows (the button stays for a retry).
+        if (!sessionStorage.getItem("crema-downloaded")) {
+          sessionStorage.setItem("crema-downloaded", "1");
+          setTimeout(() => { window.location.href = document.querySelector("[data-download]").href; }, 1200);
+        }
+      </script>
+    {% endif %}
+  </div>
+{% endblock %}

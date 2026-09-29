@@ -19,10 +19,31 @@ STATE = "state-1234567890abcdef"
 
 @override_settings(SECURE_SSL_REDIRECT=False)
 class PagesTests(TestCase):
-    def test_home_offers_the_latest_installer_and_sign_in(self):
+    def test_home_asks_to_sign_up_before_the_installer(self):
         page = self.client.get("/").content.decode()
-        self.assertIn("releases/latest/download/Crema-setup-x64.exe", page)
-        self.assertIn("/accounts/google/login/", page)
+        self.assertIn("/accounts/google/login/?next=/start/", page)
+        self.assertNotIn("releases/latest/download/Crema-setup-x64.exe", page)
+        self.assertNotIn("/download/", page)
+
+    def test_installer_and_welcome_need_sign_in_then_give_the_latest_release(self):
+        for path in ("/start/", "/download/"):
+            self.assertTrue(self.client.get(path)["Location"].startswith("/accounts/google/login/"))
+        user = get_user_model().objects.create_user("new", email="new@example.com", first_name="새")
+        self.client.force_login(user)
+        page = self.client.get("/start/").content.decode()
+        self.assertIn("환영합니다, 새님", page)
+        self.assertIn("무료 회원", page)
+        self.assertIn("/download/", page)
+        self.assertEqual(self.client.get("/download/")["Location"],
+                         "https://github.com/chaconne67/crema/releases/latest/download/Crema-setup-x64.exe")
+        self.assertIn("설치 파일 받기", self.client.get("/").content.decode())
+
+    def test_a_suspended_account_gets_no_installer(self):
+        user = get_user_model().objects.create_user("stop", email="stop@example.com")
+        Membership.objects.create(user=user, suspended_at=timezone.now())
+        self.client.force_login(user)
+        self.assertEqual(self.client.get("/download/").status_code, 403)
+        self.assertIn("이용이 멈춘 계정", self.client.get("/start/").content.decode())
 
     def test_policy_pages_and_health(self):
         for path in ("/privacy/", "/terms/"):

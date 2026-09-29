@@ -8,6 +8,8 @@ urlpatterns = [
     path("privacy/", views.privacy, name="privacy"),
     path("terms/", views.terms, name="terms"),
     path("health/", views.health, name="health"),
+    path("start/", views.start, name="start"),
+    path("download/", views.download, name="download"),
     path("account/", views.account, name="account"),
     path("account/delete/", views.delete_account, name="delete_account"),
     # The desktop app's sign-in: browser → Google → back to the app on this PC (RFC 8252).

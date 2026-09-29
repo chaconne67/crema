@@ -105,7 +105,7 @@ AUTHENTICATION_BACKENDS = [
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
 LOGIN_URL = "/accounts/google/login/"
-LOGIN_REDIRECT_URL = "/account/"
+LOGIN_REDIRECT_URL = "/start/"
 ACCOUNT_LOGOUT_REDIRECT_URL = "/"
 SOCIALACCOUNT_ONLY = True
 ACCOUNT_EMAIL_VERIFICATION = "none"

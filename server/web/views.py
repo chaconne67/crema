@@ -217,9 +217,29 @@ def api_route(request):
         return JsonResponse({"error": "judge_failed"}, status=502)
 
 
+def member_context(user) -> dict:
+    """The signed-in account's grade for the site's pages; a suspended account gets no installer."""
+    membership = Membership.of(user)
+    return {"member": membership.summary(timezone.now()), "suspended": membership.suspended_at is not None}
+
+
+@login_required
+def start(request):
+    """After Google sign-in: welcome, the installer (downloading by itself) and how to install."""
+    return render(request, "start.html", member_context(request.user))
+
+
+@login_required
+def download(request):
+    """The installer, for members only (the site shows it after sign-up; the app itself needs sign-in)."""
+    if Membership.objects.filter(user=request.user, suspended_at__isnull=False).exists():
+        return HttpResponse("이용이 멈춘 계정입니다.", status=403)
+    return HttpResponseRedirect(settings.CREMA_DOWNLOAD_URL)
+
+
 @login_required
 def account(request):
-    return render(request, "account.html", {"apps": request.user.app_tokens.count()})
+    return render(request, "account.html", {"apps": request.user.app_tokens.count(), **member_context(request.user)})
 
 
 @login_required
