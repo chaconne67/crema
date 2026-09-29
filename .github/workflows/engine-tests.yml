@@ -68,6 +68,10 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/tree:${{ github.workspace }}/crema/scripts/engine-tests
           HERMES_TEST_WORKERS: "4"
           CREMA_TEST_EMBED_MODEL: ${{ github.workspace }}/model
+          # The report plugin by name, not "-p crema_report" on the command line: tests/hermes_cli's conftest
+          # imports hermes_cli.main, which reads "-p" from sys.argv as a Hermes profile and exits when there
+          # is no such profile — every test there failed at setup on both trees.
+          PYTEST_PLUGINS: crema_report
         run: |
           mkdir -p "$CREMA_REPORT_DIR"
           paths=$(../.venv/bin/python -c "
@@ -75,7 +79,7 @@ jobs:
           import run_tests_parallel as runner
           files = sorted(runner._discover_files([Path('tests')]))
           print(':'.join(str(f) for f in files[${{ matrix.shard }}::8]))")
-          HERMES_TEST_PATHS="$paths" ../.venv/bin/python scripts/run_tests_parallel.py -q -p crema_report || true
+          HERMES_TEST_PATHS="$paths" ../.venv/bin/python scripts/run_tests_parallel.py -q || true
           echo "$(cat "$CREMA_REPORT_DIR"/*.jsonl | wc -l) results"
 
       - uses: actions/upload-artifact@v4

@@ -1,6 +1,7 @@
 """pytest plugin for the engine test comparison: one JSON line per test outcome (and per failed
 collection) into $CREMA_REPORT_DIR, one file per process, so every per-file run of upstream's
-runner adds to the same record. Load it with `-p crema_report` (its folder on PYTHONPATH)."""
+runner adds to the same record. Load it with PYTEST_PLUGINS=crema_report (its folder on PYTHONPATH), not `-p`:
+hermes_cli.main reads `-p` in sys.argv as a Hermes profile."""
 import json
 import os
 
