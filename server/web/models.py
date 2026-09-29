@@ -62,3 +62,53 @@ class Subscription(models.Model):
         return {"status": self.status, "days_left": days_left, "price": settings.CREMA_PRICE_KRW,
                 "card": self.card_label, "paid_until": self.paid_until.isoformat() if self.paid_until else None}
 
+
+class Membership(models.Model):
+    """The account's grade and what it may use (docs: Crema-회원등급-계획-2026-09-29.md): whether the app
+    is used in full or on the narrow free plan, whether Crema provides the AI models (with a monthly budget),
+    until when; admins manage everyone here. An expired grade counts as a free member; a suspended account
+    cannot use the app at all."""
+
+    FREE, PAID, BETA, STAFF, GIFT, ADMIN = "free", "paid", "beta", "staff", "gift", "admin"
+    GRADES = [(FREE, "무료 회원"), (PAID, "유료 회원"), (BETA, "베타 테스터"), (STAFF, "직원"),
+              (GIFT, "한 세트"), (ADMIN, "관리자")]
+    # grade -> (full use, models provided, monthly model budget in won); approved 2026-09-30.
+    DEFAULTS = {FREE: (False, False, 0), PAID: (True, False, 0), BETA: (True, False, 0),
+                STAFF: (True, True, 10000), GIFT: (True, True, 10000), ADMIN: (True, True, 10000)}
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="membership")
+    grade = models.CharField("등급", max_length=8, choices=GRADES, default=FREE)
+    full_access = models.BooleanField("전체 기능", default=False)
+    models_provided = models.BooleanField("Crema 모델 제공", default=False)
+    model_budget_krw = models.PositiveIntegerField("월 모델 한도(원)", default=0)
+    expires_at = models.DateTimeField("끝나는 때", null=True, blank=True, help_text="비우면 계속. 지나면 무료 회원으로 씁니다.")
+    suspended_at = models.DateTimeField("정지한 때", null=True, blank=True, help_text="정지하면 앱 로그인이 모두 끊깁니다.")
+    note = models.CharField("메모", max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = verbose_name_plural = "회원 등급"
+
+    def __str__(self):
+        return f"{self.user.email} · {self.get_grade_display()}"
+
+    @classmethod
+    def of(cls, user) -> "Membership":
+        return cls.objects.get_or_create(user=user)[0]
+
+    def apply_grade(self, grade: str) -> None:
+        """Set a grade with its default use, models and budget."""
+        self.grade = grade
+        self.full_access, self.models_provided, self.model_budget_krw = self.DEFAULTS[grade]
+
+    def summary(self, now) -> dict:
+        """What the app follows: an expired grade is a free member (the app keeps working, narrowly)."""
+        expired = self.expires_at is not None and self.expires_at <= now
+        grade = self.FREE if expired else self.grade
+        if expired:
+            full, provided, budget = self.DEFAULTS[self.FREE]
+        else:
+            full, provided, budget = self.full_access, self.models_provided, self.model_budget_krw
+        return {"grade": grade, "label": dict(self.GRADES)[grade], "full": full, "models": provided,
+                "budget": budget if provided else 0,
+                "until": None if expired or not self.expires_at else self.expires_at.isoformat()}

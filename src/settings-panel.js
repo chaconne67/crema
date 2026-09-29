@@ -113,9 +113,13 @@ function segmented(name, label, options) {
     </div>`;
 }
 
-/** The plan card's line for the account's plan from /api/me ({ status, days_left, price }); "무료" until the
- * trial starts or after it ends without the user's consent. */
-export function planLabel(plan) {
+/** The plan card's line: the account's grade from /api/me ({ label, until }) with its end date, or, before
+ * grades, the subscription ({ status, days_left, price }); "무료" otherwise. */
+export function planLabel(plan, member) {
+  if (member?.label) {
+    const until = member.until ? new Date(member.until) : null;
+    return until ? `${member.label} · ${until.getMonth() + 1}월 ${until.getDate()}일까지` : member.label;
+  }
   if (plan?.status === "trial") return `체험 중 · ${plan.days_left}일 남음`;
   if (plan?.status === "paid") return `구독 중 · 월 ${Number(plan.price).toLocaleString("ko-KR")}원`;
   return "무료";
@@ -252,7 +256,7 @@ export function createSettingsPanel({
   function updateSummaries() {
     const reasoning = REASONING_LEVELS.find((level) => level.value === (connection.reasoning || ""));
     const summaries = {
-      plan: [planLabel(account?.plan), account?.email].filter(Boolean).join(" · "),
+      plan: [planLabel(account?.plan, account?.member), account?.email].filter(Boolean).join(" · "),
       connection: CONNECTION_STATES[connectionState] || "",
       providers: catalog.length ? `${catalog.length}개 연결됨` : "",
       media: mediaSection?.summary() || "",
@@ -397,7 +401,7 @@ export function createSettingsPanel({
     /** The signed-in Crema account ({ email, name }). */
     setAccount(next) {
       account = next;
-      panel.querySelector(".plan-name").textContent = planLabel(account?.plan);
+      panel.querySelector(".plan-name").textContent = planLabel(account?.plan, account?.member);
       panel.querySelector("[data-account-line]").textContent = account
         ? [account.email, account.name].filter(Boolean).join(" · ")
         : "로그인하지 않았습니다.";

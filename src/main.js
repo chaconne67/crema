@@ -534,8 +534,8 @@ const sidebar = createSidebar({
   },
 });
 
-/** The account's plan is free (crema-agent.site, C1). */
-const planFree = () => loadAccount()?.plan?.status === "free";
+/** The account uses the narrow free plan: its grade is not full use (crema-agent.site /api/me member). */
+const planFree = () => loadAccount()?.member?.full === false;
 
 /** The free plan tells the engine to learn nothing new and to search by words (crema.free). */
 async function syncPlan() {

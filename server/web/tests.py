@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from .models import AppToken, LoginCode, Subscription
+from .models import AppToken, LoginCode, Membership, Subscription
 
 VERIFIER = "v" * 64
 CHALLENGE = base64.urlsafe_b64encode(hashlib.sha256(VERIFIER.encode()).digest()).rstrip(b"=").decode()
@@ -74,7 +74,8 @@ class AppSignInTests(TestCase):
         body = self.exchange(self.signed_in_code()).json()
         self.assertEqual(body["email"], "me@example.com")
         me = self.client.get("/api/me", HTTP_AUTHORIZATION=f"Bearer {body['token']}")
-        self.assertEqual(me.json(), {"email": "me@example.com", "name": "주인", "plan": {
+        self.assertEqual(me.json(), {"email": "me@example.com", "name": "주인", "member": {
+            "grade": "free", "label": "무료 회원", "full": False, "models": False, "budget": 0, "until": None}, "plan": {
             "status": "none", "days_left": None, "price": 4900, "card": "", "paid_until": None}})
         self.assertNotEqual(AppToken.objects.get().token_hash, body["token"])
 
@@ -203,4 +204,66 @@ class PlanTests(TestCase):
         self.assertEqual((plan["status"], plan["card"], plan["price"], plan["paid_until"]), ("paid", "신한 1234", 4900, until.isoformat()))
         self.user.delete()
         self.assertFalse(Subscription.objects.exists())
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class MembershipTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user("u3", email="grade@example.com")
+        self.auth = {"HTTP_AUTHORIZATION": f"Bearer {AppToken.issue(self.user)}"}
+
+    def member(self):
+        return self.client.get("/api/me", **self.auth).json()["member"]
+
+    def test_a_new_account_is_a_free_member(self):
+        self.assertEqual(self.member(), {"grade": "free", "label": "무료 회원", "full": False, "models": False, "budget": 0, "until": None})
+
+    def test_grades_bring_their_use_and_models(self):
+        membership = Membership.of(self.user)
+        for grade, full, models, budget in (("paid", True, False, 0), ("beta", True, False, 0), ("staff", True, True, 10000),
+                                            ("gift", True, True, 10000), ("admin", True, True, 10000)):
+            membership.apply_grade(grade)
+            membership.save()
+            got = self.member()
+            self.assertEqual((got["grade"], got["full"], got["models"], got["budget"]), (grade, full, models, budget))
+
+    def test_an_expired_grade_is_a_free_member(self):
+        membership = Membership.of(self.user)
+        membership.apply_grade("gift")
+        membership.expires_at = timezone.now() + timedelta(days=90)
+        membership.save()
+        self.assertEqual((self.member()["grade"], self.member()["full"]), ("gift", True))
+        Membership.objects.filter(user=self.user).update(expires_at=timezone.now() - timedelta(minutes=1))
+        self.assertEqual(self.member(), {"grade": "free", "label": "무료 회원", "full": False, "models": False, "budget": 0, "until": None})
+
+    def test_a_suspended_account_is_signed_out_of_the_app(self):
+        Membership.objects.create(user=self.user, suspended_at=timezone.now())
+        self.assertEqual(self.client.get("/api/me", **self.auth).status_code, 401)
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class AdminTests(TestCase):
+    def setUp(self):
+        self.admin = get_user_model().objects.create_user("boss", email="boss@example.com", is_staff=True, is_superuser=True)
+        self.member = get_user_model().objects.create_user("m", email="m@example.com")
+        self.token = AppToken.issue(self.member)
+
+    def test_admin_signs_in_with_google_and_only_staff_get_in(self):
+        self.assertEqual(self.client.get("/admin/login/?next=/admin/")["Location"], "/accounts/google/login/?next=/admin/")
+        self.client.force_login(self.member)
+        self.assertEqual(self.client.get("/admin/").status_code, 302)
+        self.client.force_login(self.admin)
+        self.assertEqual(self.client.get("/admin/").status_code, 200)
+
+    def test_changing_the_grade_brings_its_defaults_and_suspending_ends_app_sign_in(self):
+        self.client.force_login(self.admin)
+        membership = Membership.of(self.member)
+        url = f"/admin/web/membership/{membership.pk}/change/"
+        form = {"grade": "staff", "model_budget_krw": 0, "note": ""}
+        self.assertEqual(self.client.post(url, form).status_code, 302)
+        membership.refresh_from_db()
+        self.assertEqual((membership.full_access, membership.models_provided, membership.model_budget_krw), (True, True, 10000))
+        self.client.post("/admin/web/membership/", {"action": "suspend", "_selected_action": [membership.pk]})
+        self.assertFalse(AppToken.objects.filter(user=self.member).exists())
+        self.assertEqual(self.client.get("/api/me", HTTP_AUTHORIZATION=f"Bearer {self.token}").status_code, 401)
 

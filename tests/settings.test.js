@@ -129,4 +129,11 @@ describe("plan card", () => {
     expect(planLabel({ status: "none" })).toBe("무료");
     expect(planLabel(undefined)).toBe("무료");
   });
+
+  it("says the grade, with its end date when it has one", async () => {
+    const { planLabel } = await import("../src/settings-panel.js");
+    expect(planLabel({ status: "none" }, { grade: "staff", label: "직원", until: null })).toBe("직원");
+    expect(planLabel({ status: "none" }, { grade: "gift", label: "한 세트", until: "2026-12-29T03:00:00Z" })).toBe("한 세트 · 12월 29일까지");
+    expect(planLabel({ status: "none" }, { grade: "free", label: "무료 회원", until: null })).toBe("무료 회원");
+  });
 });

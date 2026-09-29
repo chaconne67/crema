@@ -20,6 +20,7 @@ ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "crema-agent.site,www.crema-age
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "https://crema-agent.site,https://www.crema-agent.site")
 
 INSTALLED_APPS = [
+    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",

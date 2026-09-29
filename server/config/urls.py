@@ -1,3 +1,4 @@
+from django.contrib import admin
 from django.urls import include, path
 
 from web import views
@@ -20,4 +21,5 @@ urlpatterns = [
     path("api/onboarding/step", views.api_onboarding_step, name="api_onboarding_step"),
     path("api/onboarding/help", views.api_onboarding_help, name="api_onboarding_help"),
     path("accounts/", include("allauth.urls")),
+    path("admin/", admin.site.urls),
 ]

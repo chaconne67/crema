@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from .models import AppToken, LoginCode, Subscription, digest
+from .models import AppToken, LoginCode, Membership, Subscription, digest
 
 PENDING = "crema_app_login"
 STATE = re.compile(r"[A-Za-z0-9_-]{16,128}")
@@ -284,7 +284,10 @@ def bearer_token(request):
     header = request.headers.get("Authorization", "")
     if not header.startswith("Bearer "):
         return None
-    return AppToken.objects.select_related("user").filter(token_hash=digest(header[7:].strip())).first()
+    token = AppToken.objects.select_related("user").filter(token_hash=digest(header[7:].strip())).first()
+    if token and Membership.objects.filter(user=token.user, suspended_at__isnull=False).exists():
+        return None  # a suspended account signs the app out
+    return token
 
 
 def api_me(request):
@@ -293,8 +296,10 @@ def api_me(request):
         return JsonResponse({"error": "signed_out"}, status=401)
     token.last_used_at = timezone.now()
     token.save(update_fields=["last_used_at"])
+    now = timezone.now()
     return JsonResponse({"email": token.user.email, "name": token.user.get_full_name(),
-                         "plan": Subscription.of(token.user).summary(timezone.now())})
+                         "member": Membership.of(token.user).summary(now),
+                         "plan": Subscription.of(token.user).summary(now)})
 
 
 @csrf_exempt
