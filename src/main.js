@@ -50,6 +50,8 @@ import {
   deleteMessages,
   hermesSessionKey,
   loadAccount,
+  loadGuided,
+  countGuided,
   loadWorkspace,
   onStorageError,
   saveAccount,
@@ -532,6 +534,17 @@ const sidebar = createSidebar({
   },
 });
 
+/** The account's plan is free (crema-agent.site, C1). */
+const planFree = () => loadAccount()?.plan?.status === "free";
+
+/** The free plan tells the engine to learn nothing new and to search by words (crema.free). */
+async function syncPlan() {
+  const free = planFree();
+  const config = await host.hermesAdmin("GET", "/api/config").catch(() => null);
+  if (!config || (config.crema?.free === true) === free) return;
+  await host.hermesAdmin("PUT", "/api/config", { config: { crema: { free } } }).catch(() => {});
+}
+
 async function connect() {
   app.setStatus("checking", "연결 확인 중");
   connected = false;
@@ -541,6 +554,7 @@ async function connect() {
     app.setStatus("connected", connectedLabel());
     refreshModels().catch(() => {});
     refreshAccess();
+    syncPlan();
     fetch(FREE_CATALOG_URL)
       .then((response) => (response.ok ? response.json() : null))
       .then(setFreeCatalog)
@@ -1079,6 +1093,8 @@ const guide = createGuide({
     Object.assign(connection, { auto: true, provider: "", model: "", fast: false });
     saveModelChoice();
   },
+  mayGuide: () => !planFree() || loadGuided() < 1,
+  onGuided: countGuided,
 });
 syncModelChip();
 host.onFileDrop((paths) => app.addFiles(paths));

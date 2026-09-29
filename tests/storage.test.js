@@ -8,6 +8,8 @@ import {
   hermesSessionKey,
   loadMessages,
   loadAccount,
+  loadGuided,
+  countGuided,
   loadWorkspace,
   onStorageError,
   saveAccount,
@@ -111,3 +113,15 @@ describe("workspace storage", () => {
     expect(loadAccount()).toEqual({ email: "me@example.com", name: "", plan });
   });
 });
+
+describe("guided connections", () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it("counts the connections the AI setup guide finished", () => {
+    expect(loadGuided()).toBe(0);
+    countGuided();
+    countGuided();
+    expect(loadGuided()).toBe(2);
+  });
+});
+

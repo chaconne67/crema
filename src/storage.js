@@ -1,5 +1,6 @@
 const WORKSPACE_KEY = "agent-client:workspace:v1";
 const ACCOUNT_KEY = "agent-client:account:v1";
+const GUIDED_KEY = "agent-client:guided:v1";
 const chatKey = (chatId) => `agent-client:chat:${chatId}`;
 
 export const NEW_CHAT_TITLE = "새 대화";
@@ -146,4 +147,13 @@ export function loadAccount() {
 export function saveAccount(account) {
   if (account) writeJson(ACCOUNT_KEY, { email: account.email || "", name: account.name || "", ...(account.plan ? { plan: account.plan } : {}) });
   else window.localStorage.removeItem(ACCOUNT_KEY);
+}
+
+/** How many connections the AI setup guide has finished on this PC (the free plan gets the first one). */
+export function loadGuided() {
+  return Number(readJson(GUIDED_KEY, 0)) || 0;
+}
+
+export function countGuided() {
+  writeJson(GUIDED_KEY, loadGuided() + 1);
 }

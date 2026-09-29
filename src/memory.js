@@ -54,6 +54,7 @@ export function createMemorySection({ host, onOpenChat = () => {}, onUpdate = ()
   let daily = true;
   let lastDaily = null;
   let meaning = null; // { on, chunks, vectors }: meaning search, from the engine's knowledge list
+  let free = false; // the free plan (engine config crema.free): nothing new is learned, search is by words
 
   async function load() {
     try {
@@ -66,6 +67,7 @@ export function createMemorySection({ host, onOpenChat = () => {}, onUpdate = ()
       enabled = memory.memory_enabled !== false || memory.user_profile_enabled !== false;
       mode = config?.knowledge?.search_mode || "balanced";
       daily = config?.knowledge?.nightly !== false;
+      free = config?.crema?.free === true;
       pages = knowledge?.pages || [];
       deleted = knowledge?.deleted || [];
       lastDaily = knowledge?.last_daily || null;
@@ -130,7 +132,8 @@ export function createMemorySection({ host, onOpenChat = () => {}, onUpdate = ()
     const last = lastDaily?.at
       ? `마지막 정리 ${day(lastDaily.at)} · 확인 필요로 바꾼 것 ${lastDaily.needs_review || 0} · 정리한 대화 ${lastDaily.distilled || 0}`
       : "아직 정리하지 않았습니다.";
-    const found = !meaning ? ""
+    const found = free ? "무료 플랜에서는 같은 낱말이 있어야 찾습니다."
+      : !meaning ? ""
       : !meaning.on ? "지금은 같은 낱말이 있어야 찾습니다."
       : meaning.vectors < meaning.chunks ? `다른 말로 물어도 찾도록 준비하는 중 (${Math.floor((meaning.vectors / meaning.chunks) * 100)}%)`
       : "다른 말로 물어도 뜻이 같으면 찾습니다.";
@@ -138,6 +141,7 @@ export function createMemorySection({ host, onOpenChat = () => {}, onUpdate = ()
       <details class="settings-group" data-group="knowledge"${pages.length || deleted.length ? " open" : ""}>
         <summary>일하며 배운 지식<span class="feature-hint">${pages.length}</span></summary>
         <div class="settings-group-body">
+          ${free ? '<p class="feature-hint" data-free>무료 플랜에서는 새로 배우지 않습니다. 쌓인 지식은 보고 고치고 백업할 수 있습니다.</p>' : ""}
           ${kinds || '<p class="feature-hint">아직 없습니다. 함께 일한 대화가 조용해지면 배운 것을 여기에 남깁니다.</p>'}
           ${gone}
           <label for="knowledge-mode">찾는 방식</label>

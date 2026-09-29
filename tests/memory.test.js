@@ -147,6 +147,13 @@ describe("Settings → 기억", () => {
     expect(group.textContent).not.toContain("지운 지식");
   });
 
+  it("on the free plan says nothing new is learned and search is by words", async () => {
+    const { section, el } = setup({ ...ON, crema: { free: true } });
+    await section.load();
+    expect(el.querySelector("[data-free]").textContent).toContain("새로 배우지 않습니다");
+    expect(el.querySelector("[data-meaning]").textContent).toBe("무료 플랜에서는 같은 낱말이 있어야 찾습니다.");
+  });
+
   it("says whether a question in other words is found", async () => {
     for (const [state, text] of [
       [{ on: true, chunks: 4, vectors: 4 }, "다른 말로 물어도 뜻이 같으면 찾습니다."],

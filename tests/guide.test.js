@@ -130,6 +130,7 @@ describe("AI setup guide flow", () => {
 
   it("leads a key from the site into Crema: the step, the control, the found key lit, then the check", async () => {
     options.onConnected = vi.fn(async () => connected.add("gemini"));
+    options.onGuided = vi.fn();
     const guide = await begin("gemini");
     expect(host.guideOpen).toHaveBeenCalledWith("https://aistudio.google.com/apikey", expect.any(Object));
     expect(shell.classList.contains("guiding")).toBe(true);
@@ -179,12 +180,15 @@ describe("AI setup guide flow", () => {
     expect(shell.classList.contains("guiding")).toBe(false);
     expect($(".spotlight")).toBeNull();
     expect(cards[0].textContent).toContain("✓ Gemini 연결 완료 · 켜진 기능: 대화 · 말하기");
+    // A confirmed connection counts toward the free plan's one guided connection.
+    expect(options.onGuided).toHaveBeenCalledTimes(1);
     cards[0].querySelector("button").click();
     expect(options.onUseAuto).toHaveBeenCalled();
     vi.useRealTimers();
   });
 
   it("takes a pasted key of the right shape by itself, and says so when the check does not find it", async () => {
+    options.onGuided = vi.fn();
     await begin("groq");
     page = { url: "https://console.groq.com/keys", title: "API Keys", elements: { e0: "button: Create API Key" }, errors: [], key: "" };
     await vi.advanceTimersByTimeAsync(1600);
@@ -202,6 +206,7 @@ describe("AI setup guide flow", () => {
       },
     });
     expect(cards[0].textContent).toContain("확인하지 못했어요");
+    expect(options.onGuided).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
 
@@ -233,6 +238,14 @@ describe("AI setup guide flow", () => {
     expect(cards[0].textContent).toContain("✓ Brave 검색 연결 완료 · 켜진 기능: 웹 검색");
     expect(cards[0].querySelector("button")).toBeNull();
     vi.useRealTimers();
+  });
+
+  it("on the free plan after its one guided connection, says so instead of opening the page", async () => {
+    options.mayGuide = () => false;
+    await begin("gemini");
+    expect(host.guideOpen).not.toHaveBeenCalled();
+    expect(cards.at(-1).textContent).toContain("무료 플랜에서는 AI 설정 안내를 한 번만");
+    expect(shell.classList.contains("guiding")).toBe(false);
   });
 
   it("keeps a refused key off and asks for a new one", async () => {

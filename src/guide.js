@@ -263,6 +263,9 @@ export function createGuide({
   hasProviders = () => true,
   featuresOf = () => [],
   onUseAuto,
+  // The free plan leads one connection; later ones say so and point to 고급 > Provider.
+  mayGuide = () => true,
+  onGuided = () => {},
 }) {
   const view = document.createElement("div");
   view.className = "guide-view";
@@ -401,6 +404,7 @@ export function createGuide({
       : isConnected(current.id);
     if (active !== current) return;
     stop();
+    if (connected) onGuided();
     showCard(doneCard(current, connected));
   }
 
@@ -557,6 +561,13 @@ export function createGuide({
   async function start(id) {
     const guide = GUIDES[id];
     if (!guide) return;
+    if (!mayGuide()) {
+      showCard(Object.assign(document.createElement("section"), {
+        className: "notice-card",
+        textContent: `무료 플랜에서는 AI 설정 안내를 한 번만 쓸 수 있어요. ${guide.name}은(는) 설정 › 고급 › Provider에서 직접 연결할 수 있고, 구독하면 안내를 계속 쓸 수 있어요.`,
+      }));
+      return;
+    }
     if (active) {
       stop();
       // The old page must be gone before the new one opens under the same webview.
