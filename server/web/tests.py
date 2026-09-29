@@ -377,7 +377,9 @@ class AiWindowTests(TestCase):
 
     def test_other_models_and_a_spent_budget_are_refused(self):
         self.assertEqual(self.chat(model="anthropic/claude-opus-5.5").json()["error"]["type"], "model_not_offered")
-        ModelUsage.objects.create(user=self.user, model="openai/gpt-6-luna", cost_krw=10000)
+        for _ in range(3):  # each rounds to 0 won; together they are the whole budget
+            ModelUsage.objects.create(user=self.user, model="openai/gpt-6-luna", cost_usd="2.381", cost_krw=0)
+        self.assertEqual(ModelUsage.spent_this_month(self.user, timezone.now()), 10000)
         response = self.chat()
         self.assertEqual((response.status_code, response.json()["error"]["type"]), (429, "budget"))
 

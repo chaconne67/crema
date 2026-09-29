@@ -198,7 +198,9 @@ class ModelUsage(models.Model):
 
     @classmethod
     def spent_this_month(cls, user, now) -> int:
-        """Won used since the first of this month (Korea time)."""
+        """Won used since the first of this month (Korea time), from the exact dollar costs (one small
+        request rounds to 0 won, many of them do not)."""
         start = timezone.localtime(now).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        return cls.objects.filter(user=user, at__gte=start).aggregate(total=models.Sum("cost_krw"))["total"] or 0
+        usd = cls.objects.filter(user=user, at__gte=start).aggregate(total=models.Sum("cost_usd"))["total"] or 0
+        return round(float(usd) * settings.CREMA_USD_KRW)
 
