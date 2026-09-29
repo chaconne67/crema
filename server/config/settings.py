@@ -125,3 +125,6 @@ CREMA_CONTACT_EMAIL = os.environ.get("CREMA_CONTACT_EMAIL", "")
 # Jev (typesafe.ai) judges how hard an automatic free-AI request is; without it /api/route answers 503.
 TYPESAFE_API_KEY = os.environ.get("TYPESAFE_API_KEY", "")
 CREMA_DOWNLOAD_URL = "https://github.com/chaconne67/crema/releases/latest/download/Crema-setup-x64.exe"
+# The one Crema subscription (VAT included) and its trial, 2026-09-29 decision.
+CREMA_PRICE_KRW = 4900
+CREMA_TRIAL_DAYS = 30

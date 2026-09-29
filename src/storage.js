@@ -144,6 +144,6 @@ export function loadAccount() {
 
 /** Remembers the account; null forgets it (signed out). */
 export function saveAccount(account) {
-  if (account) writeJson(ACCOUNT_KEY, { email: account.email || "", name: account.name || "" });
+  if (account) writeJson(ACCOUNT_KEY, { email: account.email || "", name: account.name || "", ...(account.plan ? { plan: account.plan } : {}) });
   else window.localStorage.removeItem(ACCOUNT_KEY);
 }

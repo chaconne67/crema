@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from .models import AppToken, LoginCode, digest
+from .models import AppToken, LoginCode, Subscription, digest
 
 PENDING = "crema_app_login"
 STATE = re.compile(r"[A-Za-z0-9_-]{16,128}")
@@ -293,7 +293,8 @@ def api_me(request):
         return JsonResponse({"error": "signed_out"}, status=401)
     token.last_used_at = timezone.now()
     token.save(update_fields=["last_used_at"])
-    return JsonResponse({"email": token.user.email, "name": token.user.get_full_name()})
+    return JsonResponse({"email": token.user.email, "name": token.user.get_full_name(),
+                         "plan": Subscription.of(token.user).summary(timezone.now())})
 
 
 @csrf_exempt

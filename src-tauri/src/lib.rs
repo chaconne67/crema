@@ -276,7 +276,7 @@ async fn account_status() -> Result<serde_json::Value, String> {
   match response.status().as_u16() {
     200 => {
       let me: serde_json::Value = response.json().await.unwrap_or_default();
-      Ok(serde_json::json!({ "state": "signed_in", "email": me["email"], "name": me["name"] }))
+      Ok(serde_json::json!({ "state": "signed_in", "email": me["email"], "name": me["name"], "plan": me["plan"] }))
     }
     401 => {
       let _ = account_entry()?.delete_credential();

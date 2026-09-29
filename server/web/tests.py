@@ -2,13 +2,15 @@ import base64
 import hashlib
 import io
 import json
+from datetime import timedelta
 from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
+from django.utils import timezone
 
-from .models import AppToken, LoginCode
+from .models import AppToken, LoginCode, Subscription
 
 VERIFIER = "v" * 64
 CHALLENGE = base64.urlsafe_b64encode(hashlib.sha256(VERIFIER.encode()).digest()).rstrip(b"=").decode()
@@ -72,7 +74,8 @@ class AppSignInTests(TestCase):
         body = self.exchange(self.signed_in_code()).json()
         self.assertEqual(body["email"], "me@example.com")
         me = self.client.get("/api/me", HTTP_AUTHORIZATION=f"Bearer {body['token']}")
-        self.assertEqual(me.json(), {"email": "me@example.com", "name": "주인"})
+        self.assertEqual(me.json(), {"email": "me@example.com", "name": "주인", "plan": {
+            "status": "none", "days_left": None, "price": 4900, "card": "", "paid_until": None}})
         self.assertNotEqual(AppToken.objects.get().token_hash, body["token"])
 
     def test_wrong_verifier_and_reused_code_are_refused(self):
@@ -173,3 +176,31 @@ class RouteTests(TestCase):
         self.assertEqual(sent["state"]["errors"], ["Wrong code. Try again."])
         self.assertEqual(self.client.post("/api/onboarding/help", json.dumps(body), content_type="application/json").status_code, 401)
         self.assertEqual(self.client.post("/api/onboarding/help", json.dumps({"goal": "x"}), content_type="application/json", **self.auth).status_code, 400)
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class PlanTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user("u2", email="plan@example.com")
+        self.auth = {"HTTP_AUTHORIZATION": f"Bearer {AppToken.issue(self.user)}"}
+
+    def plan(self):
+        return self.client.get("/api/me", **self.auth).json()["plan"]
+
+    def test_trial_days_left_count_the_last_day(self):
+        now = timezone.now()
+        Subscription.objects.create(user=self.user, status="trial", trial_ends_at=now + timedelta(days=29, hours=1))
+        self.assertEqual(self.plan()["days_left"], 30)
+        Subscription.objects.filter(user=self.user).update(trial_ends_at=now + timedelta(hours=1))
+        self.assertEqual(self.plan()["days_left"], 1)
+        Subscription.objects.filter(user=self.user).update(trial_ends_at=now - timedelta(hours=1))
+        self.assertEqual(self.plan()["days_left"], 0)
+
+    def test_paid_plan_shows_card_and_period_and_goes_with_the_account(self):
+        until = timezone.now() + timedelta(days=20)
+        Subscription.objects.create(user=self.user, status="paid", paid_until=until, card_label="신한 1234")
+        plan = self.plan()
+        self.assertEqual((plan["status"], plan["card"], plan["price"], plan["paid_until"]), ("paid", "신한 1234", 4900, until.isoformat()))
+        self.user.delete()
+        self.assertFalse(Subscription.objects.exists())
+

@@ -119,3 +119,14 @@ describe("appearance settings", () => {
     expect(root.spellcheck).toBe(false);
   });
 });
+
+describe("plan card", () => {
+  it("says trial days left, the paid price, or free", async () => {
+    const { planLabel } = await import("../src/settings-panel.js");
+    expect(planLabel({ status: "trial", days_left: 30, price: 4900 })).toBe("체험 중 · 30일 남음");
+    expect(planLabel({ status: "paid", days_left: null, price: 4900 })).toBe("구독 중 · 월 4,900원");
+    expect(planLabel({ status: "free" })).toBe("무료");
+    expect(planLabel({ status: "none" })).toBe("무료");
+    expect(planLabel(undefined)).toBe("무료");
+  });
+});

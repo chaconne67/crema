@@ -104,4 +104,10 @@ describe("workspace storage", () => {
     saveAccount(null);
     expect(loadAccount()).toBeNull();
   });
+
+  it("remembers the account's plan with it", () => {
+    const plan = { status: "trial", days_left: 12, price: 4900, card: "", paid_until: null };
+    saveAccount({ email: "me@example.com", name: "", plan });
+    expect(loadAccount()).toEqual({ email: "me@example.com", name: "", plan });
+  });
 });
