@@ -297,6 +297,13 @@ button {
   border-radius: 20px;
 }
 
+/* Crema's own words that started the chat again: quieter than the user's. */
+.user-message.from-crema {
+  color: var(--muted);
+  background: transparent;
+  border: 1px dashed var(--hairline);
+}
+
 .message-meta {
   display: flex;
   min-height: 28px;
@@ -3361,8 +3368,9 @@ svg.zap {
   font-size: 0.8125rem;
 }
 
-/* In the chat: what a quiet chat left in the notebook, with an undo. */
-.notice-card.remembered {
+/* In the chat: what a quiet chat left in the notebook, with an undo; this chat's turn with a shared file. */
+.notice-card.remembered,
+.notice-card.turn-card {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -3585,6 +3593,22 @@ svg.zap {
   border-top-color: var(--muted);
   border-radius: 50%;
   animation: row-spin 0.8s linear infinite;
+}
+
+/* A chat's turn with a file another chat changes too: waits, the user's order, its turn. */
+.row-turn {
+  padding: 1px 6px;
+  color: var(--muted);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+}
+
+.row-turn[data-turn="ask"],
+.row-turn[data-turn="ready"] {
+  color: var(--accent-strong);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--hairline));
 }
 
 .row-unread {

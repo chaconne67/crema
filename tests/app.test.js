@@ -49,6 +49,40 @@ describe("chat app", () => {
     expect(window.localStorage.getItem("agent-client:chat:chat-b")).toBeNull();
   });
 
+  it("starts a chat again with Crema's words: after its reply when one runs, at once in the background", async () => {
+    let release;
+    const gate = new Promise((resolve) => (release = resolve));
+    const sent = [];
+    const client = {
+      async *streamReply({ messages, conversationId }) {
+        sent.push({ conversationId, content: JSON.stringify(messages[0].content) });
+        if (sent.length === 1) await gate;
+        yield "답";
+      },
+    };
+    const app = createChatApp({ client, host: { openLink: vi.fn() } });
+    app.mount(document.querySelector("#app"));
+    app.showConversation("chat-a");
+    submit("질문");
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+
+    app.wake("chat-a", "[Crema] 이 대화의 차례입니다.");
+    expect(document.querySelector(".queued-text").textContent).toContain("이 대화의 차례입니다.");
+    release();
+    await vi.waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent[1]).toMatchObject({ conversationId: "chat-a" });
+    expect(sent[1].content).toContain("이 대화의 차례입니다.");
+    await vi.waitFor(() => expect(document.querySelector(".user-message.from-crema")?.getAttribute("aria-label")).toBe("Crema 안내"));
+    expect(document.querySelectorAll(".user-message:not(.from-crema)")).toHaveLength(1);
+
+    app.wake("chat-b", "[Crema] 다른 대화의 차례입니다.");
+    await vi.waitFor(() => expect(sent).toHaveLength(3));
+    expect(sent[2]).toMatchObject({ conversationId: "chat-b" });
+    await vi.waitFor(() =>
+      expect(JSON.parse(window.localStorage.getItem("agent-client:chat:chat-b"))[0]).toMatchObject({ role: "user", origin: "crema" }),
+    );
+  });
+
   it("notes under an answer which Provider answered instead, and keeps the note", async () => {
     const client = {
       async *streamReply({ onServed }) {

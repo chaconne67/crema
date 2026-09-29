@@ -43,6 +43,21 @@ describe("sidebar", () => {
     expect(row("c3").querySelector(".row-status")).toBeNull();
   });
 
+  it("says a chat waits, needs the user's order, or has its turn with a shared file; a reply in progress comes first", () => {
+    const chats = [
+      { id: "w", title: "기다림", updatedAt: 3, turn: "wait" },
+      { id: "a", title: "물어봄", updatedAt: 2, turn: "ask", unread: true },
+      { id: "r", title: "차례", updatedAt: 1, turn: "ready" },
+    ];
+    sidebar.render({ ...workspace, chats, activeChatId: null }, new Set(["r"]));
+    const row = (id) => document.querySelector(`[data-open-chat="${id}"]`);
+    expect(row("w").querySelector(".row-turn").textContent).toBe("대기");
+    expect(row("a").querySelector(".row-turn").textContent).toBe("순서");
+    expect(row("a").querySelector(".row-unread")).toBeNull();
+    expect(row("r").querySelector(".row-spinner")).not.toBeNull();
+    expect(row("r").querySelector(".row-turn")).toBeNull();
+  });
+
   it("toggles a project from its row without a chevron", () => {
     expect(document.querySelector(".row-chevron")).toBeNull();
     document.querySelector('[data-toggle-project="p1"]').click();

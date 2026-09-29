@@ -31,8 +31,12 @@ function escapeHtml(value) {
 }
 
 /** A reply in progress shows a spinner; one finished while the chat was not open shows a blue dot until opened. */
+// A chat's turn with a file another chat changes too (main.js readTurns): waits, the user must order, or its turn came.
+const TURN_LABELS = { wait: "대기", ask: "순서", ready: "차례" };
+
 function chatStatus(chat, running) {
   if (running.has(chat.id)) return '<span class="row-status row-spinner" role="img" aria-label="답변 작성 중"></span>';
+  if (TURN_LABELS[chat.turn]) return `<span class="row-status row-turn" data-turn="${chat.turn}">${TURN_LABELS[chat.turn]}</span>`;
   if (chat.unread) return '<span class="row-status row-unread" role="img" aria-label="새 답변"></span>';
   return "";
 }

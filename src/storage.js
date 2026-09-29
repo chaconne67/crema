@@ -58,7 +58,7 @@ export function saveMessages(chatId, messages) {
   writeJson(
     chatKey(chatId),
     // Attachments are kept by name and kind; an image also by its small copy (preview), never the original.
-    messages.map(({ id, role, content, createdAt, status, attachments, note }) => ({
+    messages.map(({ id, role, content, createdAt, status, attachments, note, origin }) => ({
       id,
       role,
       content,
@@ -66,6 +66,8 @@ export function saveMessages(chatId, messages) {
       status,
       ...(attachments?.length ? { attachments: attachments.map(({ kind, name, preview }) => ({ kind, name, ...(preview ? { preview } : {}) })) } : {}),
       ...(note ? { note } : {}),
+      // "crema": Crema's own words that started the chat again, not the user's.
+      ...(origin ? { origin } : {}),
     })),
   );
 }

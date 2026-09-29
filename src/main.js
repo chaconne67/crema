@@ -175,7 +175,9 @@ const hermesClient = createChatClient({
     }
     connected = true;
     app.setStatus("connected", connectedLabel());
-    const project = activeProject();
+    // The chat this turn is for: a chat in the background (a queued turn, a turn that came) keeps its own folder.
+    const runChat = workspace.chats.find((chat) => chatSessions(chat).includes(args.conversationId)) || activeChat();
+    const project = workspace.projects.find((item) => item.id === runChat?.projectId) || null;
     // A reply cut off midway goes to the next free Provider; with none left the cut-off stands.
     const last = sentTurns.get(args.conversationId)?.route;
     const automatic = connection.auto && !args.resume;
@@ -194,7 +196,7 @@ const hermesClient = createChatClient({
       ...args,
       workdir: project?.path,
       // conversationId is the chat's current Hermes session; the scope key stays per chat/project.
-      sessionKey: hermesSessionKey(project, activeChat()?.id ?? args.conversationId),
+      sessionKey: hermesSessionKey(project, runChat?.id ?? args.conversationId),
     });
   },
 });
@@ -277,6 +279,139 @@ function rememberedCard(chat, written) {
   return card;
 }
 
+// Chats that change the same file take turns (the engine's agent/crema_file_turns.py). Every few seconds the
+// app reads who waits, who the user must order and whose turn came: the sidebar shows it, the open chat shows
+// a card, and a chat whose turn came starts again by itself — except right after launch (the user picks it up
+// then) and after a few such starts in a row without the user writing.
+const TURNS_EVERY_MS = 5000;
+const AUTO_WAKES = 3;
+const autoWakes = new Map();
+let turns = { waiting: [], ask: [], wake: [] };
+let turnsRead = false;
+let turnCard = null;
+// One reading at a time (a slow engine must not let two readings start the same chat); a chat being started,
+// or started after a reading was asked for (the card's button), is not started again from that reading.
+let reading = null;
+const waking = new Set();
+const wokeAt = new Map();
+
+const sessionOf = (chat) => hermesSessionId(chatSessions(chat).at(-1));
+const chatOfSession = (sessionId) => workspace.chats.find((chat) => sessionOf(chat) === sessionId) || null;
+const fileName = (path = "") => path.split(/[\\/]/).pop();
+
+function readTurns() {
+  reading ??= readTurnsOnce().finally(() => (reading = null));
+  return reading;
+}
+
+async function readTurnsOnce() {
+  if (!connected) return;
+  const askedAt = Date.now();
+  const next = await host.hermesAdmin("GET", "/api/crema/turns").catch(() => null);
+  if (!next) return;
+  const launched = !turnsRead;
+  turns = next;
+  turnsRead = true;
+  const kinds = new Map([
+    ...next.waiting.map((entry) => [entry.session_id, "wait"]),
+    ...next.ask.map((entry) => [entry.session_id, "ask"]),
+    ...next.wake.map((entry) => [entry.session_id, "ready"]),
+  ]);
+  let changed = false;
+  for (const chat of workspace.chats) {
+    const turn = kinds.get(sessionOf(chat));
+    if (chat.turn === turn) continue;
+    changed = true;
+    if (turn) chat.turn = turn;
+    else delete chat.turn;
+  }
+  for (const entry of next.wake) {
+    const chat = chatOfSession(entry.session_id);
+    if (!chat || launched || (wokeAt.get(chat.id) ?? 0) >= askedAt) continue;
+    if ((autoWakes.get(chat.id) ?? 0) < AUTO_WAKES) await wakeChat(chat, entry);
+  }
+  if (changed) persistWorkspace();
+  showTurnCard();
+}
+
+function wakeText(entry) {
+  const done = (entry.after || []).map((item) => `‘${item.title}’ 대화가 먼저 마쳤습니다(${item.result}).`);
+  return [`[Crema] 이제 이 대화가 ${fileName(entry.path)}을(를) 고칠 차례입니다.`, ...done, "파일을 다시 읽고 하던 일을 이어서 하세요."].join(" ");
+}
+
+async function wakeChat(chat, entry) {
+  if (waking.has(chat.id)) return;
+  waking.add(chat.id);
+  try {
+    // Said to the engine first: a start it did not hear of would start again on the next reading.
+    if (!(await host.hermesAdmin("POST", "/api/crema/turns/woken", { session_id: entry.session_id }).catch(() => null))) return;
+    wokeAt.set(chat.id, Date.now());
+    autoWakes.set(chat.id, (autoWakes.get(chat.id) ?? 0) + 1);
+    delete chat.turn;
+    persistWorkspace();
+    app.wake(chat.id, wakeText(entry));
+  } finally {
+    waking.delete(chat.id);
+  }
+}
+
+/** The open chat's turn as a card: why it waits, or the user's choice of order, or its turn to pick up. */
+function showTurnCard() {
+  const chat = activeChat();
+  const kind = chat?.turn;
+  const entry = kind && { wait: turns.waiting, ask: turns.ask, ready: turns.wake }[kind].find((item) => item.session_id === sessionOf(chat));
+  const key = entry ? `${chat.id}:${kind}:${entry.holder_session}:${entry.path}` : "";
+  if (turnCard?.isConnected && turnCard.dataset.key === key) return;
+  turnCard?.remove();
+  turnCard = null;
+  if (!entry) return;
+  const other = chatOfSession(entry.holder_session)?.title || entry.holder_title;
+  const name = fileName(entry.path);
+  const turnsCall = (path, body) => host.hermesAdmin("POST", `/api/crema/turns/${path}`, body);
+  const mine = entry.session_id;
+  const [text, choices] = {
+    wait: [`‘${other}’ 대화가 먼저 ${name}을(를) 고치고 있어요. 끝나면 이 대화가 이어서 합니다.`, [
+      ["이 대화 먼저", () => turnsCall("order", { first: mine, second: entry.holder_session })],
+      ["기다리지 않기", () => turnsCall("release", { session_id: mine })],
+    ]],
+    ask: [`‘${other}’ 대화와 이 대화가 ${name}을(를) 서로 다르게 바꾸려 해요. ${entry.reason} 어느 쪽이 먼저 할까요?`, [
+      ["이 대화 먼저", () => turnsCall("order", { first: mine, second: entry.holder_session })],
+      [`‘${other}’ 먼저`, () => turnsCall("order", { first: entry.holder_session, second: mine })],
+    ]],
+    ready: [`이 대화가 ${name}을(를) 고칠 차례예요.`, [
+      ["이어서 하기", () => {
+        autoWakes.delete(chat.id);
+        return wakeChat(chat, entry);
+      }],
+    ]],
+  }[kind];
+  const card = document.createElement("section");
+  card.className = "notice-card turn-card";
+  card.dataset.key = key;
+  card.setAttribute("role", "status");
+  const line = document.createElement("span");
+  line.textContent = text;
+  card.append(line);
+  for (const [label, act] of choices) {
+    const button = Object.assign(document.createElement("button"), { className: "text-button", type: "button", textContent: label });
+    button.addEventListener("click", async () => {
+      const buttons = [...card.querySelectorAll("button")];
+      for (const item of buttons) item.disabled = true;
+      try {
+        await act();
+      } catch {
+        line.textContent = `${text} (처리하지 못했습니다. 다시 눌러 주세요.)`;
+        for (const item of buttons) item.disabled = false;
+        return;
+      }
+      await readTurns();
+    });
+    card.append(button);
+  }
+  turnCard = card;
+  app.showCard(card);
+}
+
 function openChat(chatId) {
   if (chatId === workspace.activeChatId) return;
   if (workspace.activeChatId) distill(workspace.activeChatId);
@@ -289,6 +424,7 @@ function openChat(chatId) {
   app.showConversation(chatId, { project: activeProject() });
   refreshBranch();
   persistWorkspace();
+  showTurnCard();
 }
 
 function newChat(projectId = activeChat()?.projectId ?? null) {
@@ -908,6 +1044,8 @@ const app = createChatApp({
     // A reply finished while its chat was not open waits as unread (blue dot) until the chat is opened.
     else if (runningChats.delete(chatId) && status === "complete" && chatId !== workspace.activeChatId) chat.unread = true;
     if (status === "complete") distillLater(chatId);
+    // The user wrote in it: Crema may start it again by itself as many times as before.
+    if (!messages.findLast((message) => message.role === "user")?.origin) autoWakes.delete(chatId);
     // Hermes may switch branches while it works.
     if (chatId === workspace.activeChatId && messages.at(-1)?.status !== "streaming") refreshBranch();
     if (chat.title === NEW_CHAT_TITLE) {
@@ -972,6 +1110,8 @@ ensureSignedIn()
   .then(connect)
   .then((result) => {
     panel.showConnection(result);
+    readTurns();
+    setInterval(readTurns, TURNS_EVERY_MS);
     // First run: who the agent is, into SOUL.md (needs the engine, so after connecting).
     if (result.state === "connected") return personaSetup.show();
   });

@@ -196,8 +196,9 @@ export function createChatApp({
     stack.className = "user-message-stack";
 
     const bubble = document.createElement("article");
-    bubble.className = "user-message markdown";
-    bubble.setAttribute("aria-label", "내 질문");
+    // Crema's own words (a chat started again when its turn with a shared file came) look apart from the user's.
+    bubble.className = message.origin === "crema" ? "user-message markdown from-crema" : "user-message markdown";
+    bubble.setAttribute("aria-label", message.origin === "crema" ? "Crema 안내" : "내 질문");
     renderMarkdown(bubble, message.content);
     bubble.hidden = !message.content;
 
@@ -888,7 +889,7 @@ export function createChatApp({
   }
 
   /** Sends a turn in `runChatId` — the open chat, or a chat in the background sending its next queued turn. */
-  async function sendTurn({ text, attachments: files }, runChatId = chatId) {
+  async function sendTurn({ text, attachments: files, origin }, runChatId = chatId) {
     if (runChatId === chatId) clearSuggestion();
     let request;
     try {
@@ -910,6 +911,7 @@ export function createChatApp({
         : {}),
       createdAt: Date.now(),
       status: "complete",
+      ...(origin ? { origin } : {}),
     };
     const assistantMessage = {
       id: createId(),
@@ -1075,6 +1077,18 @@ export function createChatApp({
       conversation.append(card);
       emptyState.hidden = true;
       scrollToBottom(true);
+    },
+
+    /** Starts chat `id` again with Crema's words (e.g. its turn with a shared file came), after its reply if one runs. */
+    wake(id, text) {
+      const turn = { text, attachments: [], origin: "crema" };
+      if (!runs.has(id)) {
+        sendTurn(turn, id);
+        return;
+      }
+      if (!queues.has(id)) queues.set(id, []);
+      queues.get(id).push(turn);
+      if (id === chatId) renderQueue();
     },
 
     /** Shows a stored chat; an in-flight reply is stopped and saved to its own chat. */
