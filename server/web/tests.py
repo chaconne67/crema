@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from .models import AppToken, LoginCode, Membership, Subscription
+from .models import AppToken, Invite, LoginCode, Membership, Subscription
 
 VERIFIER = "v" * 64
 CHALLENGE = base64.urlsafe_b64encode(hashlib.sha256(VERIFIER.encode()).digest()).rstrip(b"=").decode()
@@ -287,4 +287,44 @@ class AdminTests(TestCase):
         self.client.post("/admin/web/membership/", {"action": "suspend", "_selected_action": [membership.pk]})
         self.assertFalse(AppToken.objects.filter(user=self.member).exists())
         self.assertEqual(self.client.get("/api/me", HTTP_AUTHORIZATION=f"Bearer {self.token}").status_code, 401)
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class InviteTests(TestCase):
+    def setUp(self):
+        self.invite = Invite.objects.create(code="gift-ceo", grade="gift", days=90, max_uses=2, note="대표님 선물")
+
+    def join(self, name):
+        user = get_user_model().objects.create_user(name, email=f"{name}@example.com")
+        self.client.force_login(user)
+        return user, self.client.get("/i/gift-ceo/")
+
+    def test_signed_out_goes_to_google_and_comes_back_to_the_link(self):
+        self.assertEqual(self.client.get("/i/gift-ceo/")["Location"], "/accounts/google/login/?next=/i/gift-ceo/")
+
+    def test_joining_gives_the_grade_for_its_days_and_counts_the_use(self):
+        user, response = self.join("a")
+        self.assertEqual(response["Location"], "/start/")
+        member = Membership.of(user).summary(timezone.now())
+        self.assertEqual((member["grade"], member["full"], member["models"], member["budget"]), ("gift", True, True, 10000))
+        self.assertAlmostEqual((Membership.of(user).expires_at - timezone.now()).days, 89, delta=1)
+        self.assertEqual(self.invite.uses.count(), 1)
+        self.client.get("/i/gift-ceo/")  # again: no second use
+        self.assertEqual(self.invite.uses.count(), 1)
+
+    def test_a_full_or_expired_link_says_so_and_a_better_grade_stays(self):
+        self.join("a")
+        self.join("b")
+        self.assertEqual(self.join("c")[1].status_code, 410)
+        Invite.objects.create(code="old", grade="beta", valid_until=timezone.now() - timedelta(days=1))
+        self.assertEqual(self.client.get("/i/old/").status_code, 410)
+        self.assertEqual(self.client.get("/i/nothing/").status_code, 404)
+        staff = get_user_model().objects.create_user("s", email="s@example.com")
+        membership = Membership.of(staff)
+        membership.apply_grade("staff")
+        membership.save()
+        Invite.objects.create(code="beta-1", grade="beta", days=30)
+        self.client.force_login(staff)
+        self.client.get("/i/beta-1/")
+        self.assertEqual(Membership.of(staff).summary(timezone.now())["grade"], "staff")
 

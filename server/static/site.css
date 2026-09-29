@@ -629,7 +629,9 @@ section {
 }
 
 .doc {
-  max-width: 760px;
+  max-width: 808px;
+  margin: 0 auto;
+  padding: 64px 24px 120px;
 }
 
 .doc h1 {

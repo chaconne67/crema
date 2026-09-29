@@ -8,6 +8,7 @@ urlpatterns = [
     path("privacy/", views.privacy, name="privacy"),
     path("terms/", views.terms, name="terms"),
     path("health/", views.health, name="health"),
+    path("i/<slug:code>/", views.invite, name="invite"),
     path("start/", views.start, name="start"),
     path("download/", views.download, name="download"),
     path("account/", views.account, name="account"),

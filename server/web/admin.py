@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.shortcuts import redirect
 from django.utils import timezone
 
-from .models import AppToken, Membership, Subscription
+from .models import AppToken, Invite, Membership, Subscription
 
 admin.site.site_header = admin.site.site_title = "Crema 관리"
 admin.site.index_title = "회원·등급"
@@ -61,3 +61,24 @@ class MembershipAdmin(admin.ModelAdmin):
 class SubscriptionAdmin(admin.ModelAdmin):
     list_display = ("user", "status", "trial_ends_at", "paid_until")
     search_fields = ("user__email",)
+
+
+@admin.register(Invite)
+class InviteAdmin(admin.ModelAdmin):
+    list_display = ("link", "grade", "days", "used", "max_uses", "valid_until", "note", "created_at")
+    list_filter = ("grade",)
+    search_fields = ("code", "note", "uses__user__email")
+    readonly_fields = ("link", "used_by")
+
+    @admin.display(description="링크")
+    def link(self, obj):
+        return f"https://crema-agent.site/i/{obj.code}/" if obj.pk else "저장하면 만들어집니다"
+
+    @admin.display(description="쓴 사람 수")
+    def used(self, obj):
+        return obj.uses.count()
+
+    @admin.display(description="쓴 사람")
+    def used_by(self, obj):
+        return ", ".join(use.user.email for use in obj.uses.select_related("user")) or "—"
+

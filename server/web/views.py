@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from .models import AppToken, LoginCode, Membership, Subscription, digest
+from .models import AppToken, Invite, LoginCode, Membership, Subscription, digest
 
 PENDING = "crema_app_login"
 STATE = re.compile(r"[A-Za-z0-9_-]{16,128}")
@@ -221,6 +221,18 @@ def member_context(user) -> dict:
     """The signed-in account's grade for the site's pages; a suspended account gets no installer."""
     membership = Membership.of(user)
     return {"member": membership.summary(timezone.now()), "suspended": membership.suspended_at is not None}
+
+
+def invite(request, code):
+    """An invite link: sign in with Google (the link comes back here), get its grade, then the installer."""
+    found = Invite.objects.filter(code=code).first()
+    if not found or not found.usable(timezone.now()) and not (
+            request.user.is_authenticated and found.uses.filter(user=request.user).exists()):
+        return render(request, "invite.html", {"invalid": True}, status=404 if not found else 410)
+    if not request.user.is_authenticated:
+        return redirect(f"{settings.LOGIN_URL}?next=/i/{code}/")
+    found.redeem(request.user, timezone.now())
+    return redirect("start")
 
 
 @login_required
