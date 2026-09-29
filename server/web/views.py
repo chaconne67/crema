@@ -272,7 +272,7 @@ def app_login(request):
     request.session[PENDING] = {"port": int(port), "state": state, "challenge": challenge}
     if request.user.is_authenticated:
         return redirect("app_complete")
-    return redirect(f"{settings.LOGIN_URL}?next=/app/complete/")
+    return redirect("/accounts/google/login/?next=/app/complete/")
 
 
 @login_required

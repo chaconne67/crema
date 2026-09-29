@@ -3,26 +3,27 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{% block title %}Crema — 나를 기억하는 내 PC의 AI 비서{% endblock %}</title>
-    <meta name="description" content="하던 일, 실수, 정한 것을 기억하는 Windows용 AI 비서 Crema. 쓰던 AI 계정을 그대로 연결하고, 기억은 내 PC에 저장합니다." />
+    <title>{% block title %}Crema, 지난번 일을 기억하는 PC용 AI 비서{% endblock %}</title>
+    <meta name="description" content="거래처 조건, 고쳐 달라고 했던 점, 하다 만 일을 기억해 두는 Windows용 AI 비서 Crema. 쓰던 AI 계정을 그대로 연결하고, 메모는 내 PC에 저장해요." />
     <link rel="icon" href="{% static 'crema.svg' %}" type="image/svg+xml" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-kr@5/600.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/nanum-gothic@5/400.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/nanum-gothic@5/700.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/nanum-gothic@5/800.css" />
     <link rel="stylesheet" href="{% static 'site.css' %}" />
   </head>
   <body>
     <header class="site-header">
       <div class="wrap">
-        <a class="brand" href="{% url 'home' %}"><img src="{% static 'crema.svg' %}" alt="" />Crema</a>
+        <a class="brand" href="{% url 'home' %}"><img src="{% static 'crema.svg' %}" alt="" /><span>Crema</span></a>
         <nav aria-label="사이트">
           {% if user.is_authenticated %}
             <a href="{% url 'account' %}">내 계정</a>
             <a class="button small" href="{% url 'start' %}">설치 파일 받기</a>
           {% else %}
             <a class="hide-narrow" href="{% url 'home' %}#price">가격</a>
-            <a class="hide-narrow" href="{% url 'home' %}#faq">자주 묻는 질문</a>
-            <a class="button small" href="{% url 'google_login' %}?next={% url 'start' %}">Google로 시작하기</a>
+            <a href="{% url 'account_login' %}">로그인</a>
+            <a class="button small" href="{% url 'account_login' %}?next={% url 'start' %}">무료로 시작하기</a>
           {% endif %}
         </nav>
       </div>

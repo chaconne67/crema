@@ -104,7 +104,7 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
-LOGIN_URL = "/accounts/google/login/"
+LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/start/"
 ACCOUNT_LOGOUT_REDIRECT_URL = "/"
 SOCIALACCOUNT_ONLY = True

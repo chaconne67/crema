@@ -21,17 +21,19 @@ STATE = "state-1234567890abcdef"
 class PagesTests(TestCase):
     def test_home_asks_to_sign_up_before_the_installer(self):
         page = self.client.get("/").content.decode()
-        self.assertIn("/accounts/google/login/?next=/start/", page)
+        self.assertIn("/accounts/login/?next=/start/", page)
+        self.assertIn("무료로 시작하기", page)
+        self.assertNotIn("Google", page.split("<main>")[1].split("자주 묻는 질문")[0])
         self.assertNotIn("releases/latest/download/Crema-setup-x64.exe", page)
         self.assertNotIn("/download/", page)
 
     def test_installer_and_welcome_need_sign_in_then_give_the_latest_release(self):
         for path in ("/start/", "/download/"):
-            self.assertTrue(self.client.get(path)["Location"].startswith("/accounts/google/login/"))
+            self.assertTrue(self.client.get(path)["Location"].startswith("/accounts/login/"))
         user = get_user_model().objects.create_user("new", email="new@example.com", first_name="새")
         self.client.force_login(user)
         page = self.client.get("/start/").content.decode()
-        self.assertIn("환영합니다, 새님", page)
+        self.assertIn("새님, 가입됐어요", page)
         self.assertIn("무료 회원", page)
         self.assertIn("/download/", page)
         self.assertEqual(self.client.get("/download/")["Location"],
@@ -60,7 +62,12 @@ class PagesTests(TestCase):
     def test_account_needs_sign_in(self):
         response = self.client.get("/account/")
         self.assertEqual(response.status_code, 302)
-        self.assertTrue(response["Location"].startswith("/accounts/google/login/"))
+        self.assertTrue(response["Location"].startswith("/accounts/login/"))
+
+    def test_sign_in_page_lists_the_ways_to_sign_in(self):
+        page = self.client.get("/accounts/login/?next=/start/").content.decode()
+        self.assertIn("Google 계정으로 계속", page)
+        self.assertIn("/accounts/google/login/?process=login&amp;next=%2Fstart%2F", page)
 
 
 @override_settings(SECURE_SSL_REDIRECT=False)
@@ -301,7 +308,7 @@ class InviteTests(TestCase):
         return user, self.client.get("/i/gift-ceo/")
 
     def test_signed_out_goes_to_google_and_comes_back_to_the_link(self):
-        self.assertEqual(self.client.get("/i/gift-ceo/")["Location"], "/accounts/google/login/?next=/i/gift-ceo/")
+        self.assertEqual(self.client.get("/i/gift-ceo/")["Location"], "/accounts/login/?next=/i/gift-ceo/")
 
     def test_joining_gives_the_grade_for_its_days_and_counts_the_use(self):
         user, response = self.join("a")

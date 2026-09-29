@@ -1,223 +1,146 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
-  {% url 'google_login' as google %}{% url 'start' as start %}
-  <section class="hero">
+  {% url 'account_login' as login %}{% url 'start' as start %}
+  <section class="intro">
     <div class="wrap">
+      <h1>지난번에 정한 걸<br />또 설명하지 않아도 돼요</h1>
+      <div class="intro-body">
+        <div class="intro-text">
+          <p>Crema는 Windows PC에서 쓰는 AI 비서예요. 거래처 조건, 고쳐 달라고 했던 점, 하다 만 일을 적어 두었다가 비슷한 일이 생기면 먼저 꺼내 줘요.</p>
+          <div class="actions-row">
+            {% if user.is_authenticated %}
+              <a class="button" href="{{ start }}">설치 파일 받기</a>
+            {% else %}
+              <a class="button" href="{{ login }}?next={{ start }}">무료로 시작하기</a>
+            {% endif %}
+            <a class="link" href="#price">가격 보기</a>
+          </div>
+          <p class="fine">Windows 10, 11에서 쓸 수 있어요. 카드 등록은 필요 없어요.</p>
+        </div>
+        <figure class="screen">
+          <img src="{% static 'landing/hero-chat.png' %}" width="2030" height="1300" alt="Crema 대화 화면. '한빛상사에 보낼 견적서 쓸 건데, 지난번에 정한 기준 뭐였지?'라는 질문에 2026년 9월판 단가표, 부가세 별도, 납기 발주 후 7일, 결제 다음 달 10일을 답하고, 지난번 부가세 표기 실수를 짚어 주는 모습" />
+          <figcaption>"지난번 기준 뭐였지?"라고만 물었는데, 전에 정한 단가표와 한 번 틀렸던 부가세 표기까지 짚어 준 대화예요.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="part grey" id="memory">
+    <div class="wrap">
+      <div class="side">
+        <h2>대화하다 알게 된 건<br />메모로 남겨요</h2>
+        <p>위 대화의 답은 이 메모에서 나왔어요. 정한 기준과 한 번 틀렸던 점이 한 장에 같이 적혀 있어요.</p>
+      </div>
+      <div class="memory-body">
+        <figure class="note-shot">
+          <img src="{% static 'landing/memory-note.png' %}" width="760" height="698" alt="Crema가 적어 둔 메모 한 장. 제목 '한빛상사 견적 기준', 단가·부가세·납기·결제 기준과 지난 견적의 부가세 표기 실수, 그리고 고치기·지우기 단추" />
+        </figure>
+        <ul class="memory-points">
+          <li>메모는 내 PC에만 저장돼요.</li>
+          <li>설정에서 전부 볼 수 있고 틀린 건 고치거나 지울 수 있어요.</li>
+          <li>말을 바꿔 물어도 뜻이 같으면 찾아 줘요.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="part" id="ai">
+    <div class="wrap">
+      <div class="side">
+        <h2>AI는 지금 쓰는 걸<br />그대로 연결해요</h2>
+        <p>이미 쓰는 AI 계정이 있으면 그 계정으로 대화해요. 없으면 무료로 쓸 수 있는 AI부터 시작하면 돼요.</p>
+      </div>
       <div>
-        <p class="eyebrow">Windows용 AI 비서</p>
-        <h1>나를 기억하는<br />내 PC의 AI 비서</h1>
-        <p class="lead">하던 일, 실수했던 점, 정해 둔 기준을 기억합니다.<br />같은 설명을 두 번 하지 않아도 됩니다.</p>
-        <div class="cta">
-          {% if user.is_authenticated %}
-            <a class="button" href="{{ start }}">설치 파일 받기</a>
-          {% else %}
-            <a class="button" href="{{ google }}?next={{ start }}">{% include "_google.html" %}Google로 무료 시작</a>
-            <p class="small-note">가입하면 바로 설치 파일을 받을 수 있어요 · 카드 등록 없음</p>
-          {% endif %}
-          <p class="small-note">Windows 10·11 · 기억은 내 PC에 저장됩니다</p>
-        </div>
-      </div>
-      <figure class="shot" style="margin:0">
-        <div class="shot-bar"><span>Crema</span><span class="win" aria-hidden="true">— ☐ ✕</span></div>
-        <img src="{% static 'landing/hero-chat.png' %}" width="812" height="520" alt="Crema 대화 화면: '한빛상사 견적 기준 뭐였지?'라는 질문에 지난번 정한 단가표·부가세·납기 기준과 예전 실수를 기억해 답하는 모습" />
-      </figure>
-    </div>
-  </section>
-
-  <section class="tint">
-    <div class="wrap">
-      <div class="section-head">
-        <h2>이런 분께 잘 맞습니다</h2>
-      </div>
-      <div class="cards">
-        <div class="card">
-          <h3>사장님</h3>
-          <p>거래처마다 다른 단가와 조건을 매번 찾지 않아도 됩니다. 한 번 알려 준 기준을 다음에도 그대로 씁니다.</p>
-        </div>
-        <div class="card">
-          <h3>사무실 실무자</h3>
-          <p>견적서, 보고서, 정리 양식을 다시 설명하지 않아도 됩니다. 고쳐 준 점은 다음부터 반영합니다.</p>
-        </div>
-        <div class="card">
-          <h3>혼자 일하는 분</h3>
-          <p>지난주에 하던 일을 이어서 합니다. 어디까지 했는지 비서가 먼저 기억해 둡니다.</p>
-        </div>
+        <dl class="pairs">
+          <div><dt>ChatGPT</dt><dd>구독 중이면 로그인만 하면 돼요.</dd></div>
+          <div><dt>Claude</dt><dd>구독 중이면 로그인만 하면 돼요.</dd></div>
+          <div><dt>Gemini</dt><dd>구글 계정만 있으면 무료로 쓸 수 있어요.</dd></div>
+          <div><dt>그 밖의 AI</dt><dd>40여 곳 가운데 이름으로 찾아 연결해요.</dd></div>
+        </dl>
+        <p class="after">가입 화면이 낯설어도 괜찮아요. 그 화면을 Crema 안에 띄우고 다음에 누를 곳을 짚어 드려요.</p>
       </div>
     </div>
   </section>
 
-  <section class="memory">
+  <section class="part" id="more">
     <div class="wrap">
+      <div class="side">
+        <h2>그 밖에<br />맡길 수 있는 일</h2>
+      </div>
+      <dl class="pairs">
+        <div><dt>내 PC의 파일</dt><dd>폴더를 알려 주면 그 안의 문서를 읽고 정리해서 새 파일로 저장해요.</dd></div>
+        <div><dt>여러 단계가 필요한 일</dt><dd>순서대로 해 나가고 끝나면 무엇을 했는지 짧게 알려 줘요.</dd></div>
+        <div><dt>읽기 편한 답</dt><dd>글꼴과 글자 크기, 줄 간격을 내 눈에 맞게 바꿀 수 있어요.</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="part" id="price">
+    <div class="wrap">
+      <div class="side">
+        <h2>무료로 쓰다가<br />필요하면 월 4,900원</h2>
+        <p>AI 사용료는 연결한 AI 계정에서 나가요. Crema에 내는 요금은 기억 기능 값이에요.</p>
+      </div>
       <div>
-        <p class="eyebrow">핵심</p>
-        <h2>어제 한 이야기를,<br />오늘도 기억합니다</h2>
-        <p class="essay">보통의 AI는 대화 창을 닫으면 처음부터 다시 시작합니다. Crema는 함께 일하며 알게 된 것 — 정한 기준, 실수와 그 이유, 하던 일 — 을 한 장씩 정리해 둡니다. 다음에 비슷한 일을 하면 먼저 찾아보고, 같은 실수를 되풀이하지 않게 알려 줍니다.</p>
-        <p class="essay">다른 말로 물어도 뜻이 같으면 찾아냅니다.</p>
-        <p class="promise-line">기억은 내 PC에 저장됩니다. 설정에서 언제든 보고, 고치고, 지울 수 있습니다.</p>
-      </div>
-      <figure class="shot" style="margin:0">
-        <div class="shot-bar"><span>설정 · 기억 · 일하며 배운 지식</span></div>
-        <img src="{% static 'landing/memory-note.png' %}" width="304" height="279" alt="Crema가 정리해 둔 기억 한 장: 한빛상사 견적 기준(단가표 판본, 부가세 별도, 납기, 결제)과 지난 실수, 그리고 고치기·지우기 버튼" />
-      </figure>
-    </div>
-  </section>
-
-  <section class="tint">
-    <div class="wrap">
-      <div class="section-head">
-        <h2>일이 편해지는 세 가지</h2>
-      </div>
-      <div class="cards">
-        <div class="card">
-          <h3>읽기 편한 답</h3>
-          <p>긴 답도 잡지처럼 정돈해 보여 줍니다. 글꼴과 글자 크기, 줄 간격을 내 눈에 맞게 고를 수 있습니다.</p>
-        </div>
-        <div class="card">
-          <h3>내 PC 파일로 일하기</h3>
-          <p>폴더를 알려 주면 그 안의 문서를 읽고, 정리하고, 새 파일로 만들어 둡니다.</p>
-        </div>
-        <div class="card">
-          <h3>맡기면 이어서 하기</h3>
-          <p>여러 단계가 필요한 일도 순서대로 해 나가고, 끝나면 무엇을 했는지 짧게 알려 줍니다.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section>
-    <div class="wrap">
-      <div class="section-head">
-        <h2>쓰던 AI 그대로,<br />연결은 Crema가 도와드립니다</h2>
-        <p>이미 쓰는 AI 계정이 있으면 그 계정으로, 없으면 무료로 쓸 수 있는 AI로 시작합니다.</p>
-      </div>
-      <div class="rows">
-        <div class="row"><strong>ChatGPT</strong><span>구독 중이라면 로그인만 하면 됩니다</span></div>
-        <div class="row"><strong>Claude</strong><span>구독 중이라면 로그인만 하면 됩니다</span></div>
-        <div class="row"><strong>Gemini</strong><span>구글 계정으로 무료로 시작할 수 있습니다</span></div>
-        <div class="row"><strong>그 밖의 AI</strong><span>40여 곳을 이름으로 찾아 연결합니다</span></div>
-      </div>
-      <p class="center-note">처음이어도 괜찮습니다. 가입 화면을 Crema 안에 띄우고, 누를 곳을 하나씩 짚어 드립니다.</p>
-    </div>
-  </section>
-
-  <section class="tint">
-    <div class="wrap">
-      <div class="section-head">
-        <h2>시작은 세 단계면 됩니다</h2>
-      </div>
-      <ol class="steps">
-        <li><h3>Google로 가입</h3><p>이름이나 전화번호를 따로 적지 않습니다.</p></li>
-        <li><h3>설치 파일 받기</h3><p>가입하면 바로 받을 수 있습니다. 설치 파일은 가입한 분께만 드립니다.</p></li>
-        <li><h3>AI 연결하고 대화 시작</h3><p>Crema를 열고 같은 Google 계정으로 로그인한 뒤, 안내를 따라 AI를 연결합니다.</p></li>
-      </ol>
-      <div class="center">
-        {% if user.is_authenticated %}
-          <a class="button" href="{{ start }}">설치 파일 받기</a>
-        {% else %}
-          <a class="button" href="{{ google }}?next={{ start }}">{% include "_google.html" %}Google로 시작하기</a>
-        {% endif %}
+        <table class="plans">
+          <thead>
+            <tr>
+              <th scope="col"><span class="visually-hidden">항목</span></th>
+              <th scope="col"><span class="price">무료</span><span class="price-note">계속 무료</span></th>
+              <th scope="col"><span class="price">월 4,900원</span><span class="price-note">부가세 포함</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">대화</th><td>내 AI 계정으로</td><td>내 AI 계정으로</td></tr>
+            <tr><th scope="row">쌓인 메모</th><td>보기, 고치기, 백업</td><td>보기, 고치기, 백업</td></tr>
+            <tr><th scope="row">새로 기억하기</th><td class="no">안 함</td><td>대화할 때마다</td></tr>
+            <tr><th scope="row">뜻으로 찾기</th><td class="no">안 함</td><td>함</td></tr>
+            <tr><th scope="row">AI 연결 안내</th><td>한 번</td><td>계속</td></tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td></td>
+              <td>
+                {% if user.is_authenticated %}
+                  <a class="button small" href="{{ start }}">설치 파일 받기</a>
+                {% else %}
+                  <a class="button small" href="{{ login }}?next={{ start }}">무료로 시작하기</a>
+                {% endif %}
+              </td>
+              <td><span class="button small" aria-disabled="true">준비 중</span></td>
+            </tr>
+          </tfoot>
+        </table>
+        <p class="after">유료는 아직 준비 중이에요. 시작할 때 먼저 알려 드리고 동의한 분만 결제돼요.</p>
       </div>
     </div>
   </section>
 
-  <section id="price">
+  <section class="part" id="faq">
     <div class="wrap">
-      <div class="section-head">
-        <h2>가격은 하나입니다</h2>
-        <p>AI 사용료는 연결한 AI 계정에서 나갑니다. Crema는 기억과 편한 화면, 연결 안내를 드립니다.</p>
-      </div>
-      <div class="prices">
-        <div class="price">
-          <h3>무료</h3>
-          <p class="amount">0원</p>
-          <span class="per">계속 무료</span>
-          <ul>
-            <li>내 AI 계정으로 대화</li>
-            <li>쌓인 기억 보기·고치기·백업</li>
-            <li>AI 연결 안내 한 번</li>
-          </ul>
-          {% if user.is_authenticated %}
-            <a class="button quiet" href="{{ start }}">설치 파일 받기</a>
-          {% else %}
-            <a class="button quiet" href="{{ google }}?next={{ start }}">무료로 시작</a>
-          {% endif %}
-        </div>
-        <div class="price dark">
-          <h3>Crema</h3>
-          <p class="amount">4,900원</p>
-          <span class="per">월 · 부가세 포함</span>
-          <ul>
-            <li>무료의 모든 것</li>
-            <li>대화에서 배운 것을 계속 기억</li>
-            <li>다른 말로 물어도 뜻으로 찾기</li>
-            <li>AI 연결 안내 계속</li>
-          </ul>
-          <span class="button" aria-disabled="true">곧 시작합니다</span>
-        </div>
-      </div>
-      <p class="center-note">유료 플랜은 준비 중입니다. 시작하면 먼저 알려 드리고, 동의하신 분만 결제됩니다.</p>
-    </div>
-  </section>
-
-  <section class="tint">
-    <div class="wrap">
-      <div class="section-head">
-        <h2>안심하고 쓰세요</h2>
-      </div>
-      <div class="cards">
-        <div class="card"><h3>기억은 내 PC에</h3><p>대화와 기억은 내 PC에 저장됩니다. Crema 서버에 대화를 보관하지 않습니다.</p></div>
-        <div class="card"><h3>보고, 고치고, 지우기</h3><p>Crema가 무엇을 기억했는지 설정에서 그대로 보이고, 원하면 고치거나 지울 수 있습니다.</p></div>
-        <div class="card"><h3>내 AI 계정은 내 것</h3><p>연결한 AI 계정의 키는 내 PC에만 둡니다. 대화는 내가 연결한 AI 회사로만 보내집니다.</p></div>
-      </div>
-    </div>
-  </section>
-
-  <section id="faq">
-    <div class="wrap">
-      <div class="section-head">
+      <div class="side">
         <h2>자주 묻는 질문</h2>
       </div>
-      <div class="faq">
-        <details>
-          <summary><span class="no">01</span>AI 계정이 없어도 쓸 수 있나요?</summary>
-          <p>네. 구글 계정만 있으면 무료로 쓸 수 있는 AI(Gemini 등)를 연결하도록 화면을 보며 안내합니다.</p>
-        </details>
-        <details>
-          <summary><span class="no">02</span>무료와 유료는 무엇이 다른가요?</summary>
-          <p>무료로도 대화하고 이미 쌓인 기억을 볼 수 있습니다. 유료(월 4,900원)는 대화에서 배운 것을 계속 새로 기억하고, 다른 말로 물어도 뜻으로 찾아 줍니다. 유료 플랜은 준비 중입니다.</p>
-        </details>
-        <details>
-          <summary><span class="no">03</span>제 기억과 파일은 어디에 저장되나요?</summary>
-          <p>내 PC에 저장됩니다. 다만 대화할 때 보내는 내용은 내가 연결한 AI 회사(예: OpenAI, Anthropic, Google)로 전송됩니다.</p>
-        </details>
-        <details>
-          <summary><span class="no">04</span>맥이나 휴대폰에서도 되나요?</summary>
-          <p>지금은 Windows 10·11 PC에서만 쓸 수 있습니다.</p>
-        </details>
-        <details>
-          <summary><span class="no">05</span>설치 파일은 왜 가입한 뒤에 받나요?</summary>
-          <p>Crema는 가입한 계정으로 로그인해서 씁니다. 같은 계정으로 앱에 로그인하면 바로 시작할 수 있도록, 가입한 분께 설치 파일을 드립니다.</p>
-        </details>
-        <details>
-          <summary><span class="no">06</span>계정을 없애려면 어떻게 하나요?</summary>
-          <p>로그인한 뒤 ‘내 계정’에서 계정 삭제를 누르면 됩니다. 로그인한 Crema 앱도 모두 로그아웃됩니다.</p>
-        </details>
-      </div>
+      <dl class="qa">
+        <div><dt>AI 계정이 없어도 되나요?</dt><dd>네. Gemini처럼 구글 계정만 있으면 무료로 쓰는 AI가 있어요. 연결할 때는 Crema가 옆에서 짚어 드려요.</dd></div>
+        <div><dt>대화와 메모는 어디에 저장되나요?</dt><dd>내 PC에 저장돼요. 다만 답을 받으려면 대화 내용이 내가 연결한 AI 회사(OpenAI, Anthropic, Google 등)로 전달돼요.</dd></div>
+        <div><dt>맥이나 휴대폰에서도 되나요?</dt><dd>아직은 Windows 10, 11 PC에서만 돼요.</dd></div>
+        <div><dt>왜 가입해야 설치 파일을 받을 수 있나요?</dt><dd>Crema는 가입한 계정으로 로그인해서 써요. 같은 계정으로 앱에 들어가면 바로 이어서 쓸 수 있어요.</dd></div>
+        <div><dt>어떤 계정으로 가입하나요?</dt><dd>지금은 Google 계정으로 가입해요. 이름이나 전화번호는 따로 받지 않아요.</dd></div>
+        <div><dt>탈퇴는 어떻게 하나요?</dt><dd>로그인한 뒤 내 계정에서 계정 삭제를 누르면 돼요. 로그인해 둔 Crema 앱도 함께 로그아웃돼요.</dd></div>
+      </dl>
     </div>
   </section>
 
-  <section class="final">
+  <section class="part closing">
     <div class="wrap">
-      <div class="box">
-        <h2>오늘 한 일을,<br />내일의 Crema가 기억합니다</h2>
-        <p>Windows 10·11 · 카드 등록 없이 무료로 시작</p>
-        {% if user.is_authenticated %}
-          <a class="button" href="{{ start }}">설치 파일 받기</a>
-        {% else %}
-          <a class="button" href="{{ google }}?next={{ start }}">{% include "_google.html" %}Google로 무료 시작</a>
-        {% endif %}
-      </div>
+      <p>오늘 정한 기준, 다음 주에도 Crema가 기억해요.</p>
+      {% if user.is_authenticated %}
+        <a class="button" href="{{ start }}">설치 파일 받기</a>
+      {% else %}
+        <a class="button" href="{{ login }}?next={{ start }}">무료로 시작하기</a>
+      {% endif %}
     </div>
   </section>
 {% endblock %}

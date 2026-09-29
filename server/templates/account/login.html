@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load socialaccount %}
+{% block title %}시작하기 · Crema{% endblock %}
+{% block content %}
+  {% get_providers as providers %}
+  <div class="wrap page">
+    <h1>Crema 시작하기</h1>
+    <p class="lead">쓰던 계정으로 계속하세요. 처음이면 그대로 가입돼요.</p>
+    <div class="methods">
+      {% for provider in providers %}
+        <a class="method" href="{% provider_login_url provider process='login' %}">{% if provider.id == "google" %}{% include "_google.html" %}{% endif %}{{ provider.name }} 계정으로 계속</a>
+      {% endfor %}
+    </div>
+    <p class="small-note">이름이나 전화번호는 따로 받지 않아요.</p>
+  </div>
+{% endblock %}
