@@ -1,146 +1,1333 @@
-{% extends "base.html" %}
-{% load static %}
-{% block content %}
-  {% url 'account_login' as login %}{% url 'start' as start %}
-  <section class="intro">
-    <div class="wrap">
-      <h1>지난번에 정한 걸<br />또 설명하지 않아도 돼요</h1>
-      <div class="intro-body">
-        <div class="intro-text">
-          <p>Crema는 Windows PC에서 쓰는 AI 비서예요. 거래처 조건, 고쳐 달라고 했던 점, 하다 만 일을 적어 두었다가 비슷한 일이 생기면 먼저 꺼내 줘요.</p>
-          <div class="actions-row">
-            {% if user.is_authenticated %}
-              <a class="button" href="{{ start }}">설치 파일 받기</a>
-            {% else %}
-              <a class="button" href="{{ login }}?next={{ start }}">무료로 시작하기</a>
-            {% endif %}
-            <a class="link" href="#price">가격 보기</a>
-          </div>
-          <p class="fine">Windows 10, 11에서 쓸 수 있어요. 카드 등록은 필요 없어요.</p>
-        </div>
-        <figure class="screen">
-          <img src="{% static 'landing/hero-chat.png' %}" width="2030" height="1300" alt="Crema 대화 화면. '한빛상사에 보낼 견적서 쓸 건데, 지난번에 정한 기준 뭐였지?'라는 질문에 2026년 9월판 단가표, 부가세 별도, 납기 발주 후 7일, 결제 다음 달 10일을 답하고, 지난번 부가세 표기 실수를 짚어 주는 모습" />
-          <figcaption>"지난번 기준 뭐였지?"라고만 물었는데, 전에 정한 단가표와 한 번 틀렸던 부가세 표기까지 짚어 준 대화예요.</figcaption>
-        </figure>
-      </div>
-    </div>
-  </section>
+{% load static %}{% url 'start' as start %}{% url 'account_login' as login %}<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Crema, 보는 즐거움 읽는 편안함</title>
+<meta name="description" content="크레마 에이전트는 모든 대화가 잘 편집된 잡지처럼 보기 좋고 읽기 편합니다. 쓰던 AI를 그대로 연결하는 Windows PC용 AI 에이전트." />
+<link rel="icon" href="{% static 'crema.svg' %}" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=Nanum+Gothic+Coding:wght@400;700&family=Nanum+Pen+Script&family=Gaegu:wght@400;700&family=Gowun+Batang:wght@400;700&family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;500;700;800&display=swap">
+<style>
+/* 원칙: 한 화면에 하나의 주제와 하나의 그림. 흰·연회색 바탕에 검은 글씨, 크레마 갈색은 화면마다 한두 곳(행동·핵심)에만. */
+:root {
+  --bg: #f5f5f7;
+  --white: #ffffff;
+  --ink: #1d1d1f;
+  --ink-2: #515154;
+  --ink-3: #86868b;
+  --line: #e5e5ea;
+  --accent: #9a5527;
+  --accent-hi: #b0652d;
+  --accent-wash: #f7eee4;
+  --sans: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --app: "Nanum Gothic", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; word-break: keep-all; overflow-wrap: break-word; }
+h1, h2, h3, p { margin: 0; }
+a { color: inherit; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; background: var(--accent); color: #fff; font-weight: 700; font-size: 17px; text-decoration: none; padding: 13px 26px; border-radius: 999px; transition: background .2s; }
+.btn:hover { background: var(--accent-hi); }
 
-  <section class="part grey" id="memory">
-    <div class="wrap">
-      <div class="side">
-        <h2>대화하다 알게 된 건<br />메모로 남겨요</h2>
-        <p>위 대화의 답은 이 메모에서 나왔어요. 정한 기준과 한 번 틀렸던 점이 한 장에 같이 적혀 있어요.</p>
-      </div>
-      <div class="memory-body">
-        <figure class="note-shot">
-          <img src="{% static 'landing/memory-note.png' %}" width="760" height="698" alt="Crema가 적어 둔 메모 한 장. 제목 '한빛상사 견적 기준', 단가·부가세·납기·결제 기준과 지난 견적의 부가세 표기 실수, 그리고 고치기·지우기 단추" />
-        </figure>
-        <ul class="memory-points">
-          <li>메모는 내 PC에만 저장돼요.</li>
-          <li>설정에서 전부 볼 수 있고 틀린 건 고치거나 지울 수 있어요.</li>
-          <li>말을 바꿔 물어도 뜻이 같으면 찾아 줘요.</li>
-        </ul>
-      </div>
-    </div>
-  </section>
+/* 머리줄 */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: saturate(180%) blur(16px); }
+.top-in { max-width: 1000px; margin: 0 auto; padding: 0 16px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; text-decoration: none; }
+.brand svg { width: 24px; height: 24px; }
+.top nav { display: flex; gap: 24px; font-size: 14px; }
+.top nav a { text-decoration: none; color: var(--ink-2); }
 
-  <section class="part" id="ai">
-    <div class="wrap">
-      <div class="side">
-        <h2>AI는 지금 쓰는 걸<br />그대로 연결해요</h2>
-        <p>이미 쓰는 AI 계정이 있으면 그 계정으로 대화해요. 없으면 무료로 쓸 수 있는 AI부터 시작하면 돼요.</p>
-      </div>
-      <div>
-        <dl class="pairs">
-          <div><dt>ChatGPT</dt><dd>구독 중이면 로그인만 하면 돼요.</dd></div>
-          <div><dt>Claude</dt><dd>구독 중이면 로그인만 하면 돼요.</dd></div>
-          <div><dt>Gemini</dt><dd>구글 계정만 있으면 무료로 쓸 수 있어요.</dd></div>
-          <div><dt>그 밖의 AI</dt><dd>40여 곳 가운데 이름으로 찾아 연결해요.</dd></div>
-        </dl>
-        <p class="after">가입 화면이 낯설어도 괜찮아요. 그 화면을 Crema 안에 띄우고 다음에 누를 곳을 짚어 드려요.</p>
-      </div>
-    </div>
-  </section>
+/* 1. 히어로: 제목 → 설명 → 버튼, 그 아래 노트북과 휴대폰에 띄운 편집된 답 한 장면 */
+.hero { padding: 96px 16px 120px; text-align: center; }
+.hero h1 { font-size: clamp(40px, 6.4vw, 72px); font-weight: 800; letter-spacing: -0.035em; line-height: 1.12; }
+.hero h1 span { display: inline-block; }
+.hero .sub { max-width: 37em; margin: 22px auto 0; font-size: clamp(17px, 1.6vw, 20px); line-height: 1.6; color: var(--ink-2); text-wrap: pretty; }
+.hero .act { margin-top: 32px; display: grid; justify-items: center; gap: 12px; }
+.hero .hint { font-size: 14px; color: var(--ink-3); }
 
-  <section class="part" id="more">
-    <div class="wrap">
-      <div class="side">
-        <h2>그 밖에<br />맡길 수 있는 일</h2>
-      </div>
-      <dl class="pairs">
-        <div><dt>내 PC의 파일</dt><dd>폴더를 알려 주면 그 안의 문서를 읽고 정리해서 새 파일로 저장해요.</dd></div>
-        <div><dt>여러 단계가 필요한 일</dt><dd>순서대로 해 나가고 끝나면 무엇을 했는지 짧게 알려 줘요.</dd></div>
-        <div><dt>읽기 편한 답</dt><dd>글꼴과 글자 크기, 줄 간격을 내 눈에 맞게 바꿀 수 있어요.</dd></div>
-      </dl>
-    </div>
-  </section>
+/* 노트북 + 휴대폰 한 장면. 크기는 em으로 묶어 화면 폭에 맞춰 함께 줄어든다 (데스크톱 1em = 16px) */
+.devices { position: relative; width: 69em; max-width: 100%; margin: 80px auto 0; font-size: clamp(9px, 1.12vw, 16px); text-align: left; }
+.laptop { position: relative; width: 56em; }
+.lid { position: relative; background: linear-gradient(#2a2b2e, #111214); border-radius: 1.4em 1.4em .5em .5em; padding: 1.05em 1.05em 1.3em; box-shadow: 0 0 0 .08em #8e9096, inset 0 0 0 .1em #3a3b3f; }
+.lid::before { content: ""; position: absolute; top: .4em; left: 50%; width: .38em; height: .38em; margin-left: -.19em; border-radius: 50%; background: radial-gradient(circle at 40% 40%, #3b4a63, #0b0c0e 70%); }
+.screen { position: relative; aspect-ratio: 16 / 10; background: var(--white); border-radius: .3em; overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+.base { position: relative; width: 64em; height: 1.15em; margin-left: -4em; background: linear-gradient(#e9eaec 0%, #cfd1d4 45%, #a9abaf 100%); border-radius: .2em .2em 1.6em 1.6em / .2em .2em 1em 1em; box-shadow: inset 0 .08em 0 #fff; }
+.base::before { content: ""; position: absolute; left: 50%; top: 0; width: 9em; height: .5em; margin-left: -4.5em; background: linear-gradient(#bfc1c5, #d8d9dc); border-radius: 0 0 .7em .7em; }
+.ground { position: absolute; left: -6em; right: -2em; bottom: -2.2em; height: 2.6em; background: radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,.22), transparent 70%); filter: blur(.4em); z-index: -1; }
 
-  <section class="part" id="price">
-    <div class="wrap">
-      <div class="side">
-        <h2>무료로 쓰다가<br />필요하면 월 4,900원</h2>
-        <p>AI 사용료는 연결한 AI 계정에서 나가요. Crema에 내는 요금은 기억 기능 값이에요.</p>
-      </div>
-      <div>
-        <table class="plans">
-          <thead>
-            <tr>
-              <th scope="col"><span class="visually-hidden">항목</span></th>
-              <th scope="col"><span class="price">무료</span><span class="price-note">계속 무료</span></th>
-              <th scope="col"><span class="price">월 4,900원</span><span class="price-note">부가세 포함</span></th>
-            </tr>
-          </thead>
+/* 노트북 화면 속 Windows 앱 창 */
+.win-bar { display: flex; align-items: center; gap: .6em; height: 2.5em; padding: 0 0 0 1em; border-bottom: .06em solid var(--line); font-size: .78em; font-weight: 700; color: var(--ink-2); }
+.win-bar svg { width: 1.3em; height: 1.3em; }
+.win-bar .sep { color: #c7c7cc; font-weight: 400; }
+.win-bar .ctl { margin-left: auto; display: flex; height: 100%; }
+.win-bar .ctl i { width: 3.4em; display: grid; place-items: center; font-style: normal; font-weight: 400; color: var(--ink-3); font-size: .95em; }
+.page { padding: 1.6em 3em 1.4em; font-family: var(--app); overflow: hidden; }
+.col { max-width: 37em; margin: 0 auto; display: grid; gap: .95em; }
+.q { justify-self: end; max-width: 80%; background: #f2f2f4; border-radius: 1.1em 1.1em .35em 1.1em; padding: .55em .95em; font-size: .86em; line-height: 1.55; }
+.kick { font-family: var(--sans); font-size: .7em; font-weight: 700; letter-spacing: .04em; color: var(--ink-3); margin-bottom: -.5em; }
+.lead { font-family: var(--sans); font-size: 1.5em; font-weight: 400; line-height: 1.45; letter-spacing: -0.02em; }
+.lead b { font-weight: 800; }
+.cmp { width: 100%; border-collapse: collapse; font-size: .86em; font-variant-numeric: tabular-nums; }
+.cmp th, .cmp td { padding: .62em .5em; text-align: center; border-bottom: .06em solid var(--line); }
+.cmp thead th { font-family: var(--sans); font-size: .95em; font-weight: 700; border-bottom: .1em solid var(--ink); }
+.cmp tbody th { text-align: left; padding-left: 0; font-family: var(--sans); font-weight: 400; color: var(--ink-3); width: 22%; }
+.cmp .pick { background: var(--accent-wash); font-weight: 700; }
+.cmp thead .pick { color: var(--accent); }
+.cmp thead .pick span { display: block; font-size: .75em; font-weight: 700; letter-spacing: .04em; }
+.tip { text-wrap: pretty; background: #f5f5f7; border-radius: .8em; padding: .8em 1.1em; font-size: .86em; line-height: 1.7; color: var(--ink-2); }
+.tip b { color: var(--ink); font-weight: 800; }
+.inp { display: flex; align-items: center; gap: .6em; margin: 0 auto 1.2em; width: calc(100% - 6em); max-width: 37em; border: .06em solid var(--line); border-radius: 1em; padding: .65em .7em .65em 1.1em; font-family: var(--app); font-size: .8em; color: var(--ink-3); box-shadow: 0 .6em 1.6em -1em rgba(0,0,0,.25); }
+.inp span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inp .send { flex: none; width: 1.9em; height: 1.9em; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-size: .9em; }
+.pinp { margin: 0 .7em 1.1em; padding: .55em .5em .55em .85em; font-size: .56em; width: auto; border-radius: 1.4em; }
+
+
+/* 노트북 화면 = Windows 바탕화면 + 작업 표시줄 + 그 위에 떠 있는 크레마 창 */
+.screen { background: #dfe6f1; display: block; }
+.desk { position: absolute; inset: 0; background:
+  radial-gradient(60% 70% at 18% 20%, #f3efe9 0%, transparent 60%),
+  radial-gradient(55% 60% at 85% 80%, #c9d6ea 0%, transparent 65%),
+  radial-gradient(50% 60% at 70% 15%, #e8e3f2 0%, transparent 60%),
+  linear-gradient(160deg, #e9edf4, #d3dcea); }
+.appwin { position: absolute; left: 4%; right: 4%; top: 4.5%; bottom: 10.5%; background: var(--white); border-radius: .55em; overflow: hidden; box-shadow: 0 0 0 .06em rgba(0,0,0,.12), 0 1.2em 2.6em -.6em rgba(20,30,50,.35), 0 .2em .6em rgba(20,30,50,.12); display: grid; grid-template-rows: auto minmax(0, 1fr); font-size: .86em; }
+.appwin .win-bar { background: #f7f7f8; }
+.appbody { display: grid; grid-template-columns: 12.5em minmax(0, 1fr); min-height: 0; }
+.side { background: #f7f7f8; border-right: .06em solid var(--line); padding: .8em .65em; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: .35em; font-family: var(--sans); font-size: .82em; min-height: 0; }
+.side .new { display: flex; align-items: center; justify-content: space-between; background: var(--white); border: .07em solid var(--line); border-radius: .6em; padding: .5em .7em; font-weight: 700; color: var(--ink); }
+.side .new b { font-weight: 400; color: var(--ink-3); }
+.side .find { display: flex; align-items: center; gap: .4em; padding: .4em .7em; color: var(--ink-3); border-radius: .5em; }
+.side .lists { display: grid; align-content: start; gap: .1em; overflow: hidden; }
+.side .grp { font-size: .82em; font-weight: 700; color: var(--ink-3); padding: .9em .7em .35em; }
+.side .it { display: flex; align-items: center; gap: .55em; padding: .42em .7em; border-radius: .5em; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.side .it .e { width: 1.2em; text-align: center; flex: none; font-size: .95em; }
+.side .it.on { background: #ebebee; color: var(--ink); font-weight: 700; }
+.side .me { display: flex; align-items: center; gap: .55em; padding: .6em .4em .1em; border-top: .07em solid var(--line); color: var(--ink-2); }
+.side .me .av { width: 1.7em; height: 1.7em; border-radius: 50%; background: linear-gradient(135deg, #f6d19a, #d99a55); color: #5a3219; display: grid; place-items: center; font-weight: 800; font-size: .85em; flex: none; }
+.side .me .gear { margin-left: auto; color: var(--ink-3); }
+.mainc { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; }
+.appwin .page { padding: 1.3em 2em .6em; }
+.appwin .col { max-width: 34em; gap: .8em; }
+.appwin .lead { font-size: 1.38em; }
+.appwin .cmp th, .appwin .cmp td { padding: .5em .45em; }
+.appwin .tip { padding: .65em .95em; }
+.appwin .inp { margin-bottom: .9em; width: calc(100% - 4em); max-width: 34em; }
+.taskbar { position: absolute; left: 0; right: 0; bottom: 0; height: 7%; background: rgba(243,245,249,.82); backdrop-filter: blur(10px); border-top: .06em solid rgba(0,0,0,.06); display: flex; justify-content: center; align-items: center; gap: .55em; }
+.taskbar .tb { position: relative; width: 1.75em; height: 1.75em; border-radius: .4em; display: grid; place-items: center; }
+.taskbar .tb svg { width: 1.2em; height: 1.2em; }
+.taskbar .tb.on { background: rgba(255,255,255,.75); box-shadow: 0 0 0 .05em rgba(0,0,0,.06); }
+.taskbar .tb.on::after { content: ""; position: absolute; bottom: .08em; left: 50%; width: .6em; height: .14em; margin-left: -.3em; border-radius: .1em; background: var(--accent); }
+
+/* 2. 공감: AI 에이전트의 오류 보고서 한 장 + 읽는 사람의 빨간 펜과 쪽지. 크레마 갈색은 쓰지 않는다 */
+.sec { padding: 128px 16px 112px; text-align: center; }
+.sec.white { background: var(--white); }
+.sec h2 { font-size: clamp(28px, 4.4vw, 50px); font-weight: 800; letter-spacing: -0.035em; line-height: 1.25; }
+.sec h2 span { display: block; }
+.sec .sub { max-width: 35em; margin: 22px auto 0; font-size: clamp(17px, 1.5vw, 19px); line-height: 1.65; color: var(--ink-2); text-wrap: pretty; }
+.report-wrap { position: relative; max-width: 760px; margin: 64px auto 0; }
+.report { position: relative; height: 470px; text-align: left; background: #1e1f22; border-radius: 16px; overflow: hidden; box-shadow: 0 30px 60px -30px rgba(0,0,0,.45); }
+.report::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 42%; background: linear-gradient(rgba(30,31,34,0), #1e1f22 80%); pointer-events: none; }
+.report .bar { display: flex; align-items: center; gap: 7px; height: 40px; padding: 0 16px; background: #2a2b2f; font-family: var(--sans); font-size: 12.5px; color: #9a9ca3; }
+.report .bar i { width: 11px; height: 11px; border-radius: 50%; background: #45464b; }
+.report .bar span { margin-left: 8px; }
+.report pre { margin: 0; padding: 22px 26px; font-family: "Nanum Gothic Coding", ui-monospace, monospace; font-size: 14px; line-height: 1.85; color: #c3c6cc; white-space: pre-wrap; word-break: break-all; }
+.report .h { color: #e8e9ec; font-weight: 700; }
+.report .k { color: #8fb7e8; }
+.report .n { color: #e3b679; }
+.report .d { color: #7d8088; }
+/* 빨간 펜 */
+.pen-o { position: relative; }
+.pen-o::before { content: ""; position: absolute; inset: -5px -9px; border: 2px solid #ff5a4e; border-radius: 50%; transform: rotate(-2deg); opacity: .9; }
+.pen-o[data-n]::after { content: attr(data-n); position: absolute; left: calc(100% + 16px); top: -8px; white-space: nowrap; font-family: "Nanum Pen Script", cursive; font-size: 28px; line-height: 1; color: #ff5a4e; transform: rotate(-4deg); }
+.pen-u { text-decoration: underline wavy #ff5a4e 1.5px; text-underline-offset: 5px; }
+.pen-side { position: absolute; left: -118px; top: 168px; width: 100px; text-align: right; font-family: "Nanum Pen Script", cursive; font-size: 27px; line-height: 1.05; color: #ff5a4e; transform: rotate(-6deg); }
+.pen-side::after { content: ""; display: block; width: 46px; height: 2px; margin: 6px 0 0 auto; background: #ff5a4e; transform: rotate(-8deg); }
+.memo { position: absolute; right: -28px; bottom: 34px; width: 230px; padding: 18px 18px 20px; background: #fff3b8; color: #3a3a3c; font-family: "Nanum Pen Script", cursive; font-size: 30px; line-height: 1.15; text-align: left; transform: rotate(-4deg); box-shadow: 0 14px 28px -10px rgba(0,0,0,.35), 0 2px 4px rgba(0,0,0,.08); }
+@media (max-width: 640px) {
+  .sec { padding: 88px 16px 96px; }
+  .report-wrap { margin-top: 44px; }
+  .report { height: 430px; }
+  .report pre { padding: 16px 16px; font-size: 12.5px; }
+  .memo { right: -4px; bottom: 18px; width: 190px; font-size: 25px; }
+  .pen-side { display: none; }
+  .pen-o[data-n]::after { display: none; }
+}
+
+/* 3. 만든 사람: 그림 없이 글만. 잡지의 인용 지면처럼 큰 글씨, 왼쪽 정렬. 마지막 한 문장만 크레마 색(해결의 시작) */
+.maker { background: var(--bg); padding: 144px 16px; }
+.maker-in { max-width: 820px; margin: 0 auto; }
+.maker .eyebrow { font-size: 15px; font-weight: 700; color: var(--ink-3); }
+.maker .story { margin-top: 28px; font-size: clamp(22px, 2.6vw, 32px); line-height: 1.65; letter-spacing: -0.025em; font-weight: 400; color: var(--ink); text-wrap: pretty; }
+.maker .story p + p { margin-top: 1.05em; }
+.maker .story .memory { color: var(--ink-2); }
+.maker .story .made { color: var(--accent); font-weight: 700; }
+.maker .sign { margin-top: 48px; display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--ink-2); }
+.maker .sign svg { width: 22px; height: 22px; }
+.maker .sign::before { content: ""; width: 32px; height: 1px; background: var(--ink-3); }
+@media (max-width: 640px) {
+  .maker { padding: 96px 20px; }
+  .maker .sign { margin-top: 36px; }
+}
+
+/* 4. 보는 즐거움: 공감의 그 오류 보고서를 크레마가 편집한 한 장 + 오른쪽 여백의 편집 표시(크레마 갈색 펜) */
+.read { background: var(--white); padding: 136px 16px 128px; text-align: center; }
+.read h2 { font-size: clamp(30px, 4.6vw, 52px); font-weight: 800; letter-spacing: -0.035em; line-height: 1.2; }
+.read .sub { max-width: 34em; margin: 22px auto 0; font-size: clamp(17px, 1.5vw, 19px); line-height: 1.65; color: var(--ink-2); text-wrap: pretty; }
+.ed { position: relative; display: grid; grid-template-rows: repeat(6, auto); grid-template-columns: 260px minmax(0, 640px) 44px 216px; justify-content: center; margin: 72px auto 0; text-align: left; }
+.ed .paper { grid-column: 2; grid-row: 1 / -1; background: var(--white); border-radius: 20px; box-shadow: 0 0 0 1px var(--line), 0 30px 70px -30px rgba(0,0,0,.18); }
+.ed .blk { grid-column: 2; position: relative; z-index: 1; padding: 0 40px; font-family: var(--app); }
+.ed .tag { grid-column: 4; align-self: center; position: relative; z-index: 1; font-family: var(--sans); font-size: 15px; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.ed .tag em { font-style: normal; font-size: 11px; font-weight: 700; color: var(--ink-3); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; background: var(--white); }
+.ed .tag::before { content: ""; position: absolute; right: calc(100% + 10px); top: 50%; width: 68px; border-top: 1.5px solid var(--accent); opacity: .7; }
+.ed .tag::after { content: ""; position: absolute; right: calc(100% + 76px); top: calc(50% - 3px); width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.ed .head { display: flex; align-items: center; gap: 10px; padding: 20px 40px 18px; border-bottom: 1px solid var(--line); font-family: var(--sans); font-size: 13px; color: var(--ink-3); }
+.ed .head svg { width: 20px; height: 20px; }
+.ed .head b { color: var(--ink); font-weight: 700; }
+.ed .head span { margin-left: auto; }
+.ed .r1 { padding-top: 30px; }
+.ed .lead2 { font-family: var(--sans); font-size: 26px; line-height: 1.5; letter-spacing: -0.02em; }
+.ed .lead2 b { font-weight: 800; }
+.ed .para { padding-top: 18px; font-size: 16px; line-height: 1.85; color: var(--ink-2); }
+.ed .para b { color: var(--ink); font-weight: 800; }
+.ed .tblk { padding-top: 24px; }
+.ed table { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
+.ed caption { text-align: left; font-family: var(--sans); font-size: 12px; font-weight: 700; color: var(--ink-3); padding-bottom: 8px; }
+.ed th, .ed td { padding: 11px 6px; border-bottom: 1px solid var(--line); text-align: right; }
+.ed thead th { font-family: var(--sans); font-size: 13px; font-weight: 700; color: var(--ink-3); border-bottom: 1.5px solid var(--ink); }
+.ed tbody th { text-align: left; padding-left: 0; font-family: var(--sans); font-weight: 400; color: var(--ink-2); }
+.ed td.after { font-weight: 800; color: var(--ink); }
+.ed td.before { color: var(--ink-3); }
+.ed .bx { padding-top: 22px; }
+.ed .box2 { background: var(--accent-wash); border-radius: 14px; padding: 16px 20px; font-size: 15px; line-height: 1.75; color: var(--ink-2); }
+.ed .box2 b { display: block; color: var(--ink); font-family: var(--sans); font-weight: 800; margin-bottom: 2px; }
+.ed .fold { padding: 22px 40px 30px; }
+.ed .fold span { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 16px; font-family: var(--sans); font-size: 14px; color: var(--ink-3); }
+@media (max-width: 900px) {
+  .ed { grid-template-columns: minmax(0, 640px); grid-template-rows: none; display: block; position: relative; background: var(--white); border-radius: 20px; box-shadow: 0 0 0 1px var(--line), 0 30px 70px -30px rgba(0,0,0,.18); overflow: hidden; }
+  .ed .paper { display: none; }
+  .ed .tag { display: block; }
+  .ed .tag { grid-column: 1; grid-row: auto !important; justify-self: start; align-self: end; padding: 18px 40px 0; font-size: 12.5px; }
+  .ed .tag::before, .ed .tag::after { display: none; }
+  .ed .blk.r1 { padding-top: 6px; }
+  .ed .para, .ed .tblk, .ed .bx { padding-top: 6px; }
+}
+@media (max-width: 640px) {
+  .read { padding: 96px 16px 96px; }
+  .ed { margin-top: 48px; }
+  .ed .blk, .ed .head, .ed .fold { padding-left: 20px; padding-right: 20px; }
+  .ed .tag { padding-left: 20px; padding-right: 20px; }
+  .ed .lead2 { font-size: 21px; }
+  .ed table { font-size: 13.5px; }
+}
+
+
+/* 5. 테마: 같은 답, 다른 캔버스. 이름표를 누르면 캔버스 한 장이 바뀐다 */
+.themes { background: var(--bg); padding: 136px 16px 120px; text-align: center; }
+.themes h2 { font-size: clamp(30px, 4.6vw, 52px); font-weight: 800; letter-spacing: -0.035em; line-height: 1.2; }
+.themes .tsub { max-width: 32em; margin: 22px auto 0; font-size: clamp(17px, 1.5vw, 19px); line-height: 1.65; color: var(--ink-2); text-wrap: balance; }
+.ttabs { margin: 40px auto 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.ttab { appearance: none; border: 1px solid var(--line); background: #fff; color: var(--ink-2); font: 500 15px var(--sans); padding: 8px 16px 8px 8px; border-radius: 999px; display: inline-flex; align-items: center; gap: 9px; cursor: pointer; transition: border-color .2s, box-shadow .2s; }
+.ttab i { width: 26px; height: 26px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+.ttab[aria-selected="true"] { color: var(--ink); font-weight: 700; border-color: var(--ink); box-shadow: 0 6px 16px -8px rgba(0,0,0,.35); }
+.ttab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.twhy { margin: 16px auto 0; max-width: 36em; font-size: 15px; line-height: 1.6; color: var(--ink-3); min-height: 3.2em; }
+.tframe { position: relative; margin: 26px auto 0; max-width: 860px; height: 760px; border-radius: 22px; overflow: hidden; text-align: left; box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 40px 90px -40px rgba(0,0,0,.35); -webkit-mask-image: linear-gradient(#000 78%, transparent); mask-image: linear-gradient(#000 78%, transparent); }
+.tframe .cv { min-height: 100%; }
+.cv h4, .cv blockquote, .cv ul, .cv figure { margin: 0; }
+.sw-clean { background: #fff; } .sw-notes { background: repeating-linear-gradient(0deg, #fff 0 5px, #dbe7f3 5px 6px), #fff; }
+.sw-mag { background: linear-gradient(135deg, #fff 50%, #b3261e 50%); } .sw-scrap { background: radial-gradient(circle at 30% 30%, #f3b6c4 0 30%, transparent 31%), #c9a77c; }
+.sw-chalk { background: #2f4d3c; } .sw-night { background: radial-gradient(circle at 30% 30%, #e2b26b 0 18%, #161a24 50%); }
+/* 캔버스 틀 */
+.cv { position: relative; padding: 56px 64px 64px; }
+.cv .tc-d { display: none; }
+.tc-q { display: inline-block; }
+.tc-qrow { display: flex; justify-content: flex-end; margin-bottom: 28px; }
+.cv table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+.cv ol { padding: 0; list-style: none; margin: 0; }
+
+/* ① 정갈 */
+.t-clean { background: #fff; font-family: "Nanum Gothic", var(--sans); color: #1d1d1f; }
+.t-clean .tc-q { background: #f2f2f4; border-radius: 18px 18px 6px 18px; padding: 10px 16px; font-size: 15px; }
+.t-clean .tc-kick { font: 700 12px var(--sans); color: #86868b; letter-spacing: .04em; }
+.t-clean .tc-title { margin-top: 8px; font: 800 30px/1.3 var(--sans); letter-spacing: -0.03em; }
+.t-clean .tc-lead { margin-top: 16px; font: 400 22px/1.6 var(--sans); letter-spacing: -0.02em; color: #1d1d1f; }
+.t-clean .tc-lead mark { background: none; font-weight: 800; color: #1d1d1f; }
+.t-clean table { margin-top: 28px; font-size: 15px; }
+.t-clean th, .t-clean td { padding: 12px 8px; text-align: center; border-bottom: 1px solid #e5e5ea; }
+.t-clean thead th { font: 700 14px var(--sans); border-bottom: 1.5px solid #1d1d1f; }
+.t-clean tbody th { text-align: left; padding-left: 0; font-weight: 400; color: #86868b; }
+.t-clean .tc-pick { background: #f7eee4; font-weight: 800; }
+.t-clean thead .tc-pick { color: #9a5527; }
+.t-clean .tc-sub { margin-top: 36px; font: 700 16px var(--sans); }
+.t-clean ol { margin-top: 12px; display: grid; gap: 10px; font-size: 16px; line-height: 1.7; color: #515154; counter-reset: c; }
+.t-clean ol li { counter-increment: c; position: relative; padding-left: 28px; }
+.t-clean ol li::before { content: counter(c); position: absolute; left: 0; top: 2px; font: 700 14px var(--sans); color: #86868b; }
+.t-clean ol b { color: #1d1d1f; }
+.t-clean .tc-warn { margin-top: 28px; background: #f5f5f7; border-radius: 14px; padding: 16px 20px; font-size: 15px; line-height: 1.75; color: #515154; }
+.t-clean .tc-warn b { color: #1d1d1f; margin-right: 6px; }
+.t-clean .tc-pull { margin-top: 40px; padding-top: 28px; border-top: 1px solid #e5e5ea; font: 500 22px/1.5 var(--sans); color: #1d1d1f; letter-spacing: -0.02em; }
+
+/* ② 필기 노트: 모눈 공책 + 손글씨 + 형광펜 + 박스 + 별표 + 주석 + 포스트잇 */
+.t-notes { background-color: #fffefa; background-image: linear-gradient(#dfe9f4 1px, transparent 1px), linear-gradient(90deg, #dfe9f4 1px, transparent 1px); background-size: 26px 26px; font-family: "Gaegu", cursive; color: #2b2f36; padding-left: 96px; }
+.t-notes::before { content: ""; position: absolute; left: 70px; top: 0; bottom: 0; border-left: 2px solid #f2a6a6; }
+.t-notes .tc-q { font-family: "Nanum Gothic", sans-serif; font-size: 14px; background: #fff; border: 1.5px solid #9aa5b4; border-radius: 16px 16px 4px 16px; padding: 8px 14px; color: #4b5563; }
+.t-notes .tc-kick { font-family: "Nanum Pen Script", cursive; font-size: 26px; color: #3b6fd8; transform: rotate(-2deg); display: table; margin-bottom: 4px; }
+.t-notes .tc-title { margin-top: 2px; font: 700 40px/1.2 "Gaegu", cursive; display: inline; background: linear-gradient(transparent 58%, #fff06b 58%, #fff06b 92%, transparent 92%); padding: 0 6px; }
+.t-notes .tc-lead { margin-top: 22px; font-size: 25px; line-height: 1.6; }
+.t-notes .tc-lead mark { background: linear-gradient(100deg, transparent 2%, #ffb3cf 4%, #ffb3cf 96%, transparent 98%); color: inherit; padding: 0 4px; font-weight: 700; border-radius: 4px; }
+.t-notes table { margin-top: 26px; font-size: 21px; border: 2px solid #2b2f36; border-radius: 6px; background: rgba(255,255,255,.75); }
+.t-notes th, .t-notes td { padding: 8px 6px; text-align: center; border: 1.5px solid #6b7280; }
+.t-notes thead th { background: #c6f1df; font-weight: 700; }
+.t-notes tbody th { text-align: left; padding-left: 12px; font-weight: 400; color: #4b5563; }
+.t-notes .tc-pick { position: relative; font-weight: 700; color: #d6336c; }
+.t-notes thead .tc-pick::after { content: ""; position: absolute; inset: 2px 6px; border: 2.5px solid #e03131; border-radius: 48% 52% 46% 54% / 55% 45% 55% 45%; transform: rotate(-3deg); }
+.t-notes .tc-sub { margin-top: 34px; font: 700 27px "Gaegu", cursive; }
+.t-notes .tc-sub::before { content: "✎ "; color: #3b6fd8; }
+.t-notes ol { margin-top: 10px; display: grid; gap: 6px; font-size: 23px; line-height: 1.5; }
+.t-notes ol li::before { font-family: "Nanum Pen Script", cursive; font-size: 30px; color: #3b6fd8; margin-right: 8px; }
+.t-notes ol li:nth-child(1)::before { content: "①"; } .t-notes ol li:nth-child(2)::before { content: "②"; } .t-notes ol li:nth-child(3)::before { content: "③"; }
+.t-notes ol li:nth-child(1)::after { content: " ★★★"; color: #f59f00; font-size: 20px; }
+.t-notes ol b { background: linear-gradient(transparent 60%, #b5f0d9 60%); }
+.t-notes .tc-warn { margin-top: 30px; font-size: 22px; line-height: 1.6; padding: 14px 20px 16px; border: 2.5px solid #e03131; border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; position: relative; background: rgba(255,255,255,.7); }
+.t-notes .tc-warn b { font-family: "Nanum Pen Script", cursive; font-size: 30px; color: #e03131; margin-right: 6px; }
+.t-notes .tc-pull { margin: 40px 0 0 auto; width: 280px; transform: rotate(2.5deg); background: #fff59a; padding: 26px 22px 22px; font: 400 30px/1.25 "Nanum Pen Script", cursive; color: #2b2f36; box-shadow: 0 12px 22px -12px rgba(0,0,0,.35); position: relative; }
+.t-notes .tc-pull::before { content: ""; position: absolute; top: -12px; left: 50%; width: 92px; height: 24px; margin-left: -46px; background: repeating-linear-gradient(45deg, rgba(126,200,227,.75) 0 8px, rgba(166,220,238,.75) 8px 16px); transform: rotate(-4deg); }
+.t-notes .tc-d-notes { display: block; position: absolute; font-family: "Nanum Pen Script", cursive; color: #3b6fd8; }
+.t-notes .tc-n1 { right: 60px; top: 132px; font-size: 26px; transform: rotate(-6deg); }
+.t-notes .tc-n1::before { content: "↙"; display: inline-block; margin-right: 4px; font-size: 30px; }
+.t-notes .tc-n2 { left: 22px; top: 610px; font-size: 24px; color: #e03131; transform: rotate(-12deg); }
+
+/* ③ 잡지 */
+.t-mag { background: #fff; color: #161616; font-family: "Gowun Batang", serif; padding: 60px 72px 64px; }
+.t-mag .tc-q { font: 400 13px "Nanum Gothic", sans-serif; color: #777; border-bottom: 1px solid #ddd; padding-bottom: 6px; }
+.t-mag .tc-qrow { justify-content: flex-start; }
+.t-mag .tc-kick { font: 800 12px var(--sans); letter-spacing: .32em; color: #b3261e; border-top: 3px solid #161616; padding-top: 12px; display: block; }
+.t-mag .tc-title { margin-top: 14px; font: 700 50px/1.12 "Nanum Myeongjo", serif; letter-spacing: -0.04em; }
+.t-mag .tc-lead { margin-top: 26px; font-size: 19px; line-height: 1.85; color: #2a2a2a; }
+.t-mag .tc-lead::first-letter { float: left; font: 800 76px/0.8 "Nanum Myeongjo", serif; color: #b3261e; margin: 8px 10px 0 0; }
+.t-mag .tc-lead mark { background: none; color: #b3261e; font-weight: 700; }
+.t-mag table { margin-top: 30px; font: 400 15px "Nanum Gothic", sans-serif; border-top: 2px solid #161616; border-bottom: 2px solid #161616; }
+.t-mag th, .t-mag td { padding: 12px 8px; text-align: center; border-bottom: 1px solid #e3e3e3; }
+.t-mag thead th { font: 700 12px var(--sans); letter-spacing: .14em; color: #777; }
+.t-mag tbody th { text-align: left; padding-left: 0; font-weight: 700; }
+.t-mag .tc-pick { color: #b3261e; font-weight: 800; }
+.t-mag .tc-cols { margin-top: 34px; column-count: 2; column-gap: 40px; column-rule: 1px solid #e3e3e3; }
+.t-mag .tc-sub { font: 700 20px "Nanum Myeongjo", serif; break-after: avoid; }
+.t-mag ol { margin-top: 10px; display: grid; gap: 10px; font-size: 16px; line-height: 1.8; }
+.t-mag ol li::before { font: 800 13px var(--sans); color: #b3261e; margin-right: 8px; }
+.t-mag ol li:nth-child(1)::before { content: "1"; } .t-mag ol li:nth-child(2)::before { content: "2"; } .t-mag ol li:nth-child(3)::before { content: "3"; }
+.t-mag .tc-warn { margin-top: 0; break-before: column; break-inside: avoid; font-size: 16px; line-height: 1.8; font-style: normal; padding: 14px 0 0; border-top: 1px solid #161616; }
+.t-mag .tc-warn b { display: block; font: 800 11px var(--sans); letter-spacing: .28em; color: #b3261e; margin-bottom: 4px; }
+.t-mag .tc-pull { margin-top: 44px; text-align: center; font: 700 34px/1.35 "Nanum Myeongjo", serif; letter-spacing: -0.03em; padding: 26px 0; border-top: 1px solid #161616; border-bottom: 1px solid #161616; }
+.t-mag .tc-pull::before { content: "“"; display: block; font-size: 64px; line-height: .6; color: #b3261e; }
+.t-mag .tc-d-mag { display: flex; justify-content: space-between; margin-top: 30px; font: 400 12px var(--sans); color: #999; letter-spacing: .1em; }
+
+/* ④ 스크랩북 */
+.t-scrap { background-color: #cdb08a; background-image: radial-gradient(rgba(255,255,255,.18) 1px, transparent 1.5px), radial-gradient(rgba(80,50,20,.12) 1px, transparent 1.5px); background-size: 14px 14px, 23px 23px; font-family: "Gaegu", cursive; color: #2f2a24; }
+.t-scrap .tc-q { background: #fff; font: 400 14px "Nanum Gothic", sans-serif; padding: 9px 14px; transform: rotate(1.5deg); box-shadow: 0 6px 12px -6px rgba(0,0,0,.35); }
+.t-scrap .tc-kick { display: inline-block; background: #1f1f1f; color: #fff; font: 700 15px "Nanum Gothic Coding", monospace; letter-spacing: .12em; padding: 6px 12px; border-radius: 3px; box-shadow: inset 0 -2px 0 rgba(255,255,255,.12), 0 3px 6px rgba(0,0,0,.25); transform: rotate(-2deg); }
+.t-scrap .tc-title { margin-top: 18px; display: inline-block; background: #fff; padding: 12px 22px 14px; font: 700 36px/1.2 "Gaegu", cursive; transform: rotate(-1deg); box-shadow: 0 10px 18px -10px rgba(0,0,0,.4); }
+.t-scrap .tc-lead { margin-top: 22px; background: #fffaf0; font-size: 23px; line-height: 1.6; padding: 22px 26px; clip-path: polygon(0 4%, 4% 0, 9% 3%, 15% 0, 22% 3%, 30% 0, 38% 3%, 47% 0, 56% 3%, 64% 0, 73% 3%, 81% 0, 89% 3%, 96% 0, 100% 4%, 100% 100%, 0 100%); box-shadow: 0 10px 18px -10px rgba(0,0,0,.4); }
+.t-scrap .tc-lead mark { background: #ffd6e0; color: inherit; padding: 0 4px; font-weight: 700; }
+.t-scrap .tc-tblwrap { position: relative; margin-top: 26px; background: #fff; padding: 18px 20px 14px; transform: rotate(.8deg); box-shadow: 0 12px 20px -12px rgba(0,0,0,.45); }
+.t-scrap .tc-tblwrap::before { content: ""; position: absolute; top: -12px; left: 30px; width: 90px; height: 24px; background: repeating-linear-gradient(90deg, rgba(244,181,197,.85) 0 10px, rgba(250,214,224,.85) 10px 20px); transform: rotate(-6deg); }
+.t-scrap table { font-size: 20px; }
+.t-scrap th, .t-scrap td { padding: 8px 6px; text-align: center; border-bottom: 1px solid #c7dcf2; }
+.t-scrap thead th { border-bottom: 2px solid #e05050; }
+.t-scrap tbody th { text-align: left; font-weight: 400; color: #6b5d4f; }
+.t-scrap .tc-pick { font-weight: 700; color: #c2255c; }
+.t-scrap .tc-sub { margin-top: 34px; display: inline-block; background: #1f1f1f; color: #fff; font: 700 14px "Nanum Gothic Coding", monospace; letter-spacing: .1em; padding: 5px 11px; border-radius: 3px; transform: rotate(1.5deg); }
+.t-scrap ol { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 12px; font-size: 20px; line-height: 1.4; }
+.t-scrap ol li { flex: 1 1 200px; padding: 14px 14px 16px; box-shadow: 0 8px 14px -8px rgba(0,0,0,.4); }
+.t-scrap ol li:nth-child(1) { background: #fff3a8; transform: rotate(-2deg); } .t-scrap ol li:nth-child(2) { background: #c9f0dc; transform: rotate(1.5deg); } .t-scrap ol li:nth-child(3) { background: #cfe3ff; transform: rotate(-1deg); }
+.t-scrap .tc-warn { margin-top: 26px; background: #fff; padding: 16px 20px; font-size: 20px; line-height: 1.55; border-left: 0; box-shadow: 0 10px 18px -10px rgba(0,0,0,.4); transform: rotate(-.6deg); }
+.t-scrap .tc-warn b { color: #c92a2a; margin-right: 6px; }
+.t-scrap .tc-pull { margin: 34px 0 0 auto; width: 270px; background: #fff; padding: 12px 12px 18px; transform: rotate(3deg); box-shadow: 0 14px 24px -12px rgba(0,0,0,.5); font: 400 26px/1.2 "Nanum Pen Script", cursive; text-align: center; }
+.t-scrap .tc-pull::before { content: "💻"; display: grid; place-items: center; height: 150px; margin-bottom: 10px; font-size: 64px; background: linear-gradient(160deg, #ffe8cc, #ffd0a8); }
+.t-scrap .tc-d-scrap { display: grid; place-items: center; position: absolute; left: 110px; bottom: 120px; width: 112px; height: 112px; border: 4px double #d6336c; border-radius: 50%; color: #d6336c; font: 700 22px/1.1 "Gaegu", cursive; text-align: center; transform: rotate(-14deg); opacity: .85; }
+
+/* ⑤ 칠판 */
+.t-chalk { background: radial-gradient(60% 40% at 30% 20%, rgba(255,255,255,.06), transparent 70%), radial-gradient(50% 35% at 75% 70%, rgba(255,255,255,.05), transparent 70%), #2f4d3c; color: #f3f2e9; font-family: "Gaegu", cursive; border: 16px solid #8a5a35; box-shadow: inset 0 0 0 2px #6e4527; }
+.t-chalk .tc-q { font: 400 14px "Nanum Gothic", sans-serif; color: #2f4d3c; background: #f3f2e9; border-radius: 14px 14px 4px 14px; padding: 8px 14px; opacity: .92; }
+.t-chalk .tc-kick { font: 400 26px "Nanum Pen Script", cursive; color: #ffe08a; }
+.t-chalk .tc-title { margin-top: 2px; font: 700 42px/1.2 "Gaegu", cursive; text-shadow: 0 0 1px rgba(255,255,255,.6); }
+.t-chalk .tc-title::after { content: ""; display: block; height: 6px; margin-top: 6px; width: 62%; background: repeating-linear-gradient(90deg, #ffe08a 0 22px, transparent 22px 26px); border-radius: 3px; opacity: .85; }
+.t-chalk .tc-lead { margin-top: 20px; font-size: 25px; line-height: 1.6; }
+.t-chalk .tc-lead mark { background: none; color: #ffb3c8; font-weight: 700; border-bottom: 3px solid #ffb3c8; }
+.t-chalk table { margin-top: 26px; font-size: 22px; }
+.t-chalk th, .t-chalk td { padding: 8px 6px; text-align: center; border-bottom: 2px dashed rgba(243,242,233,.45); }
+.t-chalk thead th { color: #9fe0ff; }
+.t-chalk tbody th { text-align: left; font-weight: 400; color: rgba(243,242,233,.75); }
+.t-chalk .tc-pick { position: relative; color: #ffe08a; font-weight: 700; }
+.t-chalk thead .tc-pick::after { content: ""; position: absolute; inset: -2px 8px; border: 3px solid #ffb3c8; border-radius: 50%; transform: rotate(-4deg); opacity: .9; }
+.t-chalk .tc-sub { margin-top: 32px; font: 700 28px "Gaegu", cursive; color: #9fe0ff; }
+.t-chalk ol { margin-top: 8px; display: grid; gap: 4px; font-size: 23px; line-height: 1.5; }
+.t-chalk ol li::before { content: "✓ "; color: #ffe08a; }
+.t-chalk .tc-warn { margin-top: 26px; font-size: 22px; line-height: 1.55; padding: 14px 18px; border: 3px solid #ffb3c8; border-radius: 14px 30px 18px 26px; }
+.t-chalk .tc-warn b { color: #ffb3c8; margin-right: 6px; }
+.t-chalk .tc-pull { margin-top: 36px; text-align: center; font: 400 40px/1.2 "Nanum Pen Script", cursive; color: #fff; }
+.t-chalk .tc-d-chalk { display: flex; gap: 14px; justify-content: flex-end; margin: 28px -64px -64px; padding: 14px 40px; background: #6e4527; box-shadow: inset 0 3px 0 #8a5a35; }
+.t-chalk .tc-d-chalk i { width: 44px; height: 12px; border-radius: 6px; }
+.t-chalk .tc-d-chalk i:nth-child(1) { background: #f3f2e9; } .t-chalk .tc-d-chalk i:nth-child(2) { background: #ffe08a; } .t-chalk .tc-d-chalk i:nth-child(3) { background: #ffb3c8; }
+.t-chalk .tc-d-chalk span { margin-left: 18px; width: 86px; height: 22px; border-radius: 4px; background: linear-gradient(#3d3d3d 0 55%, #c8b28c 55%); }
+
+/* ⑥ 밤 */
+.t-night { background: radial-gradient(70% 45% at 15% 0%, rgba(226,178,107,.20), transparent 70%), #151821; color: #e9e4d8; font-family: "Nanum Myeongjo", serif; }
+.t-night .tc-q { font: 400 14px "Nanum Gothic", sans-serif; color: #c9c4b8; background: #232735; border-radius: 16px 16px 5px 16px; padding: 9px 15px; }
+.t-night .tc-kick { font: 700 12px var(--sans); color: #e2b26b; letter-spacing: .2em; }
+.t-night .tc-title { margin-top: 10px; font: 800 34px/1.3 "Nanum Myeongjo", serif; letter-spacing: -0.03em; color: #f4efe3; }
+.t-night .tc-lead { margin-top: 18px; font-size: 21px; line-height: 1.9; color: #ddd7c9; }
+.t-night .tc-lead mark { background: none; color: #e2b26b; font-weight: 800; }
+.t-night table { margin-top: 28px; font: 400 15px "Nanum Gothic", sans-serif; color: #cfc9bb; }
+.t-night th, .t-night td { padding: 12px 8px; text-align: center; border-bottom: 1px solid #2b3040; }
+.t-night thead th { font-weight: 700; color: #8f8a7e; border-bottom: 1px solid #5a5649; }
+.t-night tbody th { text-align: left; padding-left: 0; font-weight: 400; color: #8f8a7e; }
+.t-night .tc-pick { color: #f1c27d; font-weight: 800; background: rgba(226,178,107,.08); }
+.t-night .tc-sub { margin-top: 38px; font: 700 19px "Nanum Myeongjo", serif; color: #f4efe3; }
+.t-night ol { margin-top: 12px; display: grid; gap: 10px; font-size: 17px; line-height: 1.9; color: #cfc9bb; }
+.t-night ol li::before { content: "—  "; color: #e2b26b; }
+.t-night ol b { color: #f4efe3; }
+.t-night .tc-warn { margin-top: 28px; font: 400 16px/1.8 "Nanum Gothic", sans-serif; color: #cfc9bb; background: #1d2130; border: 1px solid #2b3040; border-radius: 14px; padding: 16px 20px; }
+.t-night .tc-warn b { color: #e2b26b; margin-right: 6px; }
+.t-night .tc-pull { margin-top: 44px; text-align: center; font: 400 26px/1.6 "Nanum Myeongjo", serif; color: #f1c27d; }
+
+@media (max-width: 720px) {
+  .cv { padding: 36px 22px 44px; min-height: 0; }
+  .t-notes { padding-left: 46px; } .t-notes::before { left: 30px; }
+  .t-notes .tc-d-notes, .t-scrap .tc-d-scrap { display: none; }
+  .t-mag { padding: 40px 24px 44px; } .t-mag .tc-title { font-size: 36px; } .t-mag .tc-cols { column-count: 1; }
+  .t-chalk { border-width: 10px; } .t-chalk .tc-d-chalk { margin: 24px -22px -44px; }
+  .t-notes .tc-title, .t-scrap .tc-title, .t-chalk .tc-title { font-size: 31px; }
+  .cv table { font-size: 15px !important; }
+  .t-notes .tc-pull, .t-scrap .tc-pull { width: 220px; }
+}
+
+@media (max-width: 640px) {
+  .themes { padding: 96px 16px 88px; }
+  .tframe { height: 640px; }
+}
+
+/* 6. 노트: 기억을 종류별로 나눠 두고(왼쪽, 잠깐→오래), 새 대화의 답이 필요한 것만 골라 쓴다(오른쪽) */
+.notes6 { background: var(--white); padding: 136px 16px 120px; text-align: center; }
+.notes6 h2 { font-size: clamp(30px, 4.6vw, 52px); font-weight: 800; letter-spacing: -0.035em; line-height: 1.2; }
+.notes6 h2 span { display: inline-block; }
+.notes6 .nsub { max-width: 35em; margin: 22px auto 0; font-size: clamp(17px, 1.5vw, 19px); line-height: 1.65; color: var(--ink-2); text-wrap: balance; }
+.scene6 { max-width: 1100px; margin: 96px auto 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 400px); gap: 64px; align-items: center; text-align: left; }
+.mems { position: relative; padding-left: 44px; }
+.mems .axis { position: absolute; left: 0; top: 10px; bottom: 10px; width: 30px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; font-family: var(--sans); font-size: 12px; font-weight: 700; color: var(--ink-3); }
+.mems .axis::before { content: ""; position: absolute; top: 24px; bottom: 24px; left: 50%; width: 2px; transform: translateX(-50%); background: linear-gradient(var(--line), var(--accent)); border-radius: 2px; }
+.mems .axis span { background: var(--white); padding: 2px 0; position: relative; }
+.mem { display: grid; grid-template-columns: minmax(0, 1fr) 236px; gap: 28px; align-items: center; padding: 28px 26px 28px 28px; border-radius: 18px; background: var(--white); box-shadow: 0 0 0 1px var(--line); position: relative; }
+.mem + .mem { margin-top: 22px; }
+.mem.used { box-shadow: 0 0 0 1.5px var(--accent), 0 18px 40px -28px rgba(154,85,39,.55); }
+.mem.used::before { content: "이번 답변에 사용"; position: absolute; right: 18px; top: -10px; font-family: var(--sans); font-size: 11px; font-weight: 700; color: var(--accent); background: var(--white); box-shadow: 0 0 0 1.5px var(--accent); border-radius: 999px; padding: 1px 8px; }
+.mem h3 { font-family: var(--sans); font-size: 17px; font-weight: 800; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; }
+.mem h3 em { font-style: normal; font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent-wash); border-radius: 999px; padding: 2px 8px; }
+.mem p { margin-top: 8px; font-family: var(--sans); font-size: 14px; line-height: 1.7; color: var(--ink-2); text-wrap: pretty; }
+.mx { font-family: var(--app); font-size: 12.5px; line-height: 1.5; color: var(--ink); }
+.mx-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mx-chips span { background: #f2f2f4; border-radius: 999px; padding: 4px 10px; }
+.mx-card { background: #fbfaf8; border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; }
+.mx-card b { display: block; font-family: var(--sans); font-weight: 700; }
+.mx-card i { display: block; font-style: normal; color: var(--ink-3); font-size: 11.5px; margin-top: 2px; }
+.mx-card .ok { color: var(--ink); }
+.mx-card .ok::before { content: "✓ "; color: var(--accent); font-weight: 700; }
+.mx-graph { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.mx-graph span { background: var(--accent-wash); color: #6f3c18; border-radius: 6px; padding: 3px 8px; }
+.mx-graph s { text-decoration: none; color: var(--accent); font-weight: 700; }
+.mx-graph p { flex-basis: 100%; margin: 6px 0 0; font-family: var(--app); font-size: 12px; color: var(--accent); }
+.mx-log { font-size: 12px; color: var(--ink-3); line-height: 1.7; border-left: 2px solid var(--line); padding-left: 10px; }
+.later { position: relative; }
+.later .when { font-family: var(--sans); font-size: 13px; font-weight: 700; color: var(--ink-3); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.later .when::before { content: ""; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--accent); }
+.chat6 { background: var(--white); border-radius: 18px; padding: 28px 26px 24px; box-shadow: 0 0 0 1px var(--line), 0 40px 80px -40px rgba(0,0,0,.28); display: grid; gap: 20px; font-family: var(--app); }
+.chat6 .q6 { justify-self: end; max-width: 88%; background: #f2f2f4; border-radius: 16px 16px 5px 16px; padding: 9px 14px; font-size: 14.5px; line-height: 1.6; }
+.chat6 .a6 { font-size: 15px; line-height: 1.75; color: var(--ink); }
+.chat6 .a6 b { font-weight: 800; }
+.chat6 table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.chat6 th { font-family: var(--sans); font-weight: 600; color: var(--ink-3); text-align: left; padding: 0 6px 6px 0; font-size: 12px; }
+.chat6 td { padding: 7px 6px 7px 0; border-top: 1px solid var(--line); }
+.chat6 tr.pk td { font-weight: 800; }
+.chat6 tr.pk td:first-child::after { content: " 추천"; font-size: 11px; color: var(--accent); }
+.chat6 .used6 { border-top: 1px dashed var(--line); padding-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-family: var(--sans); font-size: 12px; color: var(--ink-3); }
+.chat6 .used6 span { color: var(--accent); background: var(--accent-wash); border-radius: 999px; padding: 3px 10px; font-weight: 600; }
+.chat6 .used6 svg { width: 15px; height: 15px; }
+.nsafe { margin-top: 96px; font-size: 16px; color: var(--ink-2); }
+@media (max-width: 960px) {
+  .scene6 { grid-template-columns: minmax(0, 1fr); gap: 48px; max-width: 600px; }
+}
+@media (max-width: 640px) {
+  .notes6 { padding: 96px 16px 88px; }
+  .scene6 { margin-top: 48px; }
+  .mems { padding-left: 0; }
+  .mems .axis { display: none; }
+  .mem { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 24px 20px; }
+  .mem + .mem { margin-top: 18px; }
+  .nsafe { margin-top: 56px; }
+}
+
+/* 7. 쉬운 시작: 대화가 그대로 이어지고, 크레마의 답 속에 가입 페이지가 한 장 들어 있다. 넣을 칸만 살짝 짚는다 */
+.start7 { background: var(--bg); padding: 136px 16px 120px; text-align: center; }
+.start7 h2 { font-size: clamp(30px, 4.6vw, 52px); font-weight: 800; letter-spacing: -0.035em; line-height: 1.2; }
+.start7 h2 span { display: inline-block; }
+.start7 .ssub { max-width: 35em; margin: 22px auto 0; font-size: clamp(17px, 1.5vw, 19px); line-height: 1.65; color: var(--ink-2); text-wrap: balance; }
+.sheet7 { max-width: 1040px; margin: 80px auto 0; background: var(--white); border-radius: 16px; overflow: hidden; text-align: left; box-shadow: 0 0 0 1px rgba(0,0,0,.05), 0 50px 100px -48px rgba(0,0,0,.32); font-family: var(--app); }
+.sheet7 .head7 { display: flex; align-items: center; gap: 8px; padding: 0 0 0 18px; height: 40px; border-bottom: 1px solid #ecebe8; font-family: var(--sans); font-size: 13px; color: var(--ink-3); }
+.sheet7 .head7 svg { width: 16px; height: 16px; }
+.sheet7 .head7 b { color: var(--ink); font-weight: 700; }
+.sheet7 .head7 .wctl { margin-left: auto; display: flex; }
+.sheet7 .head7 .wctl i { width: 44px; height: 40px; display: grid; place-items: center; font-style: normal; font-size: 11px; color: var(--ink-3); }
+.body7 { display: grid; grid-template-columns: 220px minmax(0, 1fr); }
+.side7 { background: #f7f6f4; border-right: 1px solid #ecebe8; padding: 16px 12px; display: flex; flex-direction: column; gap: 2px; font-size: 13.5px; color: var(--ink-2); }
+.side7 span { padding: 7px 10px; border-radius: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.side7 .on { background: var(--white); color: var(--ink); font-weight: 700; box-shadow: 0 0 0 1px #ecebe8; }
+.side7 .hd { margin-top: 14px; padding-bottom: 4px; font-family: var(--sans); font-size: 11px; font-weight: 700; color: var(--ink-3); }
+.side7 .me7 { margin-top: auto; display: flex; align-items: center; gap: 8px; }
+.side7 .me7 i { width: 22px; height: 22px; border-radius: 50%; background: var(--accent-wash); color: var(--accent); font-style: normal; font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+.main7 { min-width: 0; padding: 28px 0 24px; }
+.main7 > * { max-width: 680px; margin-left: auto; margin-right: auto; }
+.main7 > .ask7 { max-width: 600px; }
+.talk7 { padding: 0 40px 28px; display: grid; gap: 22px; }
+.talk7 .me { justify-self: end; max-width: 80%; background: #f2f2f4; border-radius: 18px 18px 6px 18px; padding: 10px 16px; font-size: 15px; line-height: 1.6; }
+.talk7 .cr { display: grid; gap: 14px; font-size: 15.5px; line-height: 1.75; color: var(--ink); }
+.talk7 .cr b { font-weight: 800; }
+.steps7 { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--sans); font-size: 12.5px; color: var(--ink-3); }
+.steps7 span { display: inline-flex; align-items: center; gap: 7px; }
+.steps7 span::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.steps7 .now { color: var(--accent); font-weight: 700; }
+.steps7 .now::before { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-wash); }
+.web7 { border-radius: 16px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 18px 40px -28px rgba(0,0,0,.35); font-family: var(--sans); }
+.web7 .addr { display: flex; align-items: center; justify-content: space-between; padding: 9px 14px; background: #fafafa; border-bottom: 1px solid #ececef; font-size: 12px; color: var(--ink-3); }
+.web7 .addr span { display: inline-flex; align-items: center; gap: 7px; }
+.web7 .addr i { width: 14px; height: 14px; border-radius: 4px; background: linear-gradient(135deg, #5b7bd5, #3b4a6b); }
+.web7 .pg { background: linear-gradient(#f5f6f9, #eef0f4); padding: 30px 16px 32px; }
+.web7 .form { width: min(320px, 100%); margin: 0 auto; background: var(--white); border-radius: 14px; padding: 24px 24px 20px; box-shadow: 0 0 0 1px rgba(0,0,0,.05), 0 10px 24px -16px rgba(0,0,0,.25); }
+.web7 h4 { margin: 0 0 16px; font-size: 19px; font-weight: 800; letter-spacing: -0.02em; color: #1f2a44; }
+.web7 .fld { margin-bottom: 12px; }
+.web7 .fld > u { display: block; text-decoration: none; font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
+.web7 .fld > i { position: relative; display: block; height: 40px; border-radius: 9px; border: 1px solid #d8d8dd; font-style: normal; font-size: 13.5px; color: #a1a1a6; padding: 0 12px; line-height: 38px; }
+.web7 .fld.on { margin-bottom: 16px; }
+.web7 .fld.on > i { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(154,85,39,.14); }
+.web7 .fld.on > i::after { content: "여기에 입력"; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 11.5px; font-weight: 700; line-height: 1; color: var(--accent); background: var(--accent-wash); border-radius: 999px; padding: 5px 9px; }
+.web7 .go7 { height: 40px; border-radius: 9px; background: #1f2a44; color: var(--white); font-size: 13.5px; font-weight: 700; display: grid; place-items: center; margin-top: 4px; }
+.talk7 .after { font-size: 13.5px; color: var(--ink-3); }
+.sheet7 .ask7 { margin: 0 auto; width: calc(100% - 80px); display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 16px; padding: 10px 10px 10px 16px; font-size: 14px; color: var(--ink-3); }
+.sheet7 .ask7 span { flex: 1; }
+.sheet7 .ask7 b { width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: var(--white); display: grid; place-items: center; font-size: 14px; }
+.ways { max-width: 1000px; margin: 80px auto 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; text-align: left; }
+.ways h3 { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; }
+.ways h3::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.ways p { margin-top: 8px; font-size: 16px; line-height: 1.65; color: var(--ink-2); text-wrap: pretty; }
+@media (max-width: 860px) {
+  .body7 { grid-template-columns: minmax(0, 1fr); }
+  .side7 { display: none; }
+  .ways { grid-template-columns: minmax(0, 1fr); gap: 28px; max-width: 560px; }
+}
+@media (max-width: 640px) {
+  .start7 { padding: 96px 16px 88px; }
+  .sheet7 { margin-top: 48px; }
+  .sheet7 .head7 .wctl { display: none; }
+  .main7 { padding: 20px 0 16px; }
+  .talk7 { padding: 0 16px 22px; gap: 18px; }
+  .web7 .pg { padding: 22px 12px 24px; }
+  .web7 .form { padding: 20px 18px 18px; }
+  .sheet7 .ask7 { width: calc(100% - 32px); }
+  .ways { margin-top: 56px; }
+}
+
+/* 8. 아쉬운 점을 고쳤다: 아쉬움(작은 글) → 고친 것(제목) 짝 일곱 칸. 크기를 달리한 격자, 칸마다 작은 화면 조각 */
+.fix8 { background: var(--white); padding: 136px 16px 120px; text-align: center; }
+.fix8 h2 { font-size: clamp(30px, 4.6vw, 52px); font-weight: 800; letter-spacing: -0.035em; line-height: 1.2; }
+.fix8 h2 span { display: inline-block; }
+.fix8 .fsub { max-width: 36em; margin: 22px auto 0; font-size: clamp(17px, 1.5vw, 19px); line-height: 1.65; color: var(--ink-2); text-wrap: balance; }
+.bento8 { max-width: 1080px; margin: 72px auto 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; text-align: left; }
+.tile8 { background: var(--bg); border-radius: 24px; padding: 30px 30px 28px; display: flex; flex-direction: column; gap: 22px; min-width: 0; overflow: hidden; }
+.tile8.wide { grid-column: span 2; }
+.tile8.tall { grid-row: span 2; }
+.tile8 .was { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--ink-3); display: flex; align-items: center; gap: 8px; }
+.tile8 h3 { margin-top: 8px; font-size: 22px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.35; text-wrap: balance; }
+.tile8 .d { margin-top: 8px; font-size: 15px; line-height: 1.65; color: var(--ink-2); }
+.mini8 { margin-top: auto; background: var(--white); border-radius: 16px; box-shadow: 0 0 0 1px rgba(0,0,0,.05), 0 16px 34px -24px rgba(0,0,0,.3); font-family: var(--app); font-size: 13.5px; color: var(--ink); }
+/* A 다음 말 */
+.m-next { padding: 18px 18px 16px; display: grid; gap: 14px; }
+.m-next .ans { line-height: 1.7; color: var(--ink-2); }
+.m-next .ans b { color: var(--ink); font-weight: 800; }
+.m-next .box { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 14px; padding: 10px 10px 10px 14px; }
+.m-next .box span { flex: 1; min-width: 0; color: #b0b0b5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-next .box span::before { content: ""; display: inline-block; width: 1.5px; height: 16px; background: var(--ink); vertical-align: -3px; margin-right: 2px; }
+.m-next .hint { justify-self: end; font-family: var(--sans); font-size: 12px; color: var(--ink-3); display: flex; align-items: center; gap: 6px; }
+.m-next kbd { font: 700 11px var(--sans); color: var(--ink); background: var(--white); border: 1px solid #d2d2d7; border-bottom-width: 2px; border-radius: 5px; padding: 1px 7px; }
+.m-next .send { width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--white); display: grid; place-items: center; font-size: 13px; flex: none; }
+/* B 화면 맞춤 */
+.m-type { padding: 18px 18px 16px; display: grid; gap: 12px; font-family: var(--sans); font-size: 12.5px; }
+.m-type .row { display: grid; grid-template-columns: 4.6em minmax(0, 1fr) 3.4em; align-items: center; gap: 10px; color: var(--ink-2); }
+.m-type .row b { font-weight: 600; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
+.m-type .sel { grid-column: span 2; border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; color: var(--ink); display: flex; justify-content: space-between; }
+.m-type .bar { position: relative; height: 4px; border-radius: 4px; background: var(--line); }
+.m-type .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--accent); }
+.m-type .bar i::after { content: ""; position: absolute; right: -7px; top: 50%; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; background: var(--white); box-shadow: 0 0 0 1px rgba(0,0,0,.12), 0 2px 5px rgba(0,0,0,.18); }
+.m-type .sw { display: flex; gap: 8px; grid-column: span 2; }
+.m-type .sw i { width: 20px; height: 20px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); }
+.m-type .sw i.on { box-shadow: 0 0 0 2px var(--white), 0 0 0 4px var(--accent); }
+.m-type .prev { margin-top: 6px; border-top: 1px solid var(--line); padding-top: 16px; font-family: "Nanum Gothic", sans-serif; font-size: 16px; line-height: 1.85; letter-spacing: -0.01em; color: var(--ink); }
+.m-type .prev b { font-family: var(--sans); font-weight: 800; }
+/* C 모델 */
+.m-model { padding: 8px; display: grid; gap: 2px; }
+.m-model span { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; }
+.m-model span i { width: 18px; height: 18px; border-radius: 6px; flex: none; }
+.m-model span em { margin-left: auto; font-style: normal; font-family: var(--sans); font-size: 11.5px; color: var(--ink-3); }
+.m-model span.on { background: var(--accent-wash); font-weight: 800; }
+.m-model span.on em { color: var(--accent); font-weight: 700; }
+/* D 프로젝트 */
+.m-proj { padding: 8px; display: grid; gap: 2px; }
+.m-proj span { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; }
+.m-proj span em { margin-left: auto; font-style: normal; font-family: var(--sans); font-size: 11.5px; color: var(--ink-3); }
+.m-proj span.on { background: #f2f2f4; font-weight: 800; }
+/* E 파일 */
+.m-file { padding: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-family: var(--sans); font-size: 12.5px; }
+.m-file span { border: 1px solid var(--line); border-radius: 8px; padding: 5px 9px; display: inline-flex; align-items: center; gap: 6px; }
+.m-file span i { width: 10px; height: 12px; border-radius: 2px; flex: none; }
+.m-file s { text-decoration: none; color: var(--accent); font-weight: 700; }
+.m-file span.new { border-color: var(--accent); background: var(--accent-wash); color: #6f3c18; font-weight: 700; }
+/* F 휴대폰 */
+.m-voice { padding: 14px 14px 12px; display: grid; gap: 10px; font-family: var(--sans); }
+.m-voice .app { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--ink-3); }
+.m-voice .app i { width: 14px; height: 14px; border-radius: 4px; background: #f7d34a; }
+.m-voice .field { font-family: var(--app); font-size: 13.5px; line-height: 1.55; border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; }
+.m-voice .field::after { content: ""; display: inline-block; width: 1.5px; height: 15px; background: var(--accent); vertical-align: -2px; margin-left: 2px; }
+.m-voice .bar { display: flex; align-items: center; gap: 10px; }
+.m-voice kbd { font: 700 11px var(--sans); color: var(--white); background: var(--accent); border-radius: 6px; padding: 4px 8px; box-shadow: 0 2px 0 #6f3c18; }
+.m-voice .wave { display: flex; align-items: center; gap: 3px; height: 18px; }
+.m-voice .wave i { width: 3px; border-radius: 2px; background: var(--accent); opacity: .75; }
+.m-voice .wave i:nth-child(1) { height: 6px; } .m-voice .wave i:nth-child(2) { height: 12px; } .m-voice .wave i:nth-child(3) { height: 18px; } .m-voice .wave i:nth-child(4) { height: 10px; } .m-voice .wave i:nth-child(5) { height: 15px; } .m-voice .wave i:nth-child(6) { height: 8px; } .m-voice .wave i:nth-child(7) { height: 5px; }
+.m-voice em { margin-left: auto; font-style: normal; font-size: 11.5px; font-weight: 700; color: var(--accent); }
+/* G 확인과 짐작 */
+.m-sure { padding: 16px; display: grid; gap: 10px; line-height: 1.6; }
+.m-sure p { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.m-sure em { font-style: normal; font-family: var(--sans); font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.m-sure .ok em { color: #2f6b3a; background: #e7f3e9; }
+.m-sure .guess em { color: #8a6a12; background: #fbf1d6; }
+.m-sure .guess { color: var(--ink-2); }
+@media (max-width: 960px) {
+  .bento8 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tile8.tall { grid-row: auto; }
+}
+@media (max-width: 640px) {
+  .fix8 { padding: 96px 16px 88px; }
+  .bento8 { grid-template-columns: minmax(0, 1fr); margin-top: 48px; gap: 12px; }
+  .tile8.wide { grid-column: auto; }
+  .tile8 { padding: 24px 20px 20px; border-radius: 20px; }
+  .tile8 h3 { font-size: 20px; }
+}
+
+/* 9. 가격: 커피 한 잔 값. 무료와 크레마 두 장, 아래에 이름 뜻 한 줄 */
+.price9 { background: var(--bg); padding: 136px 16px 120px; text-align: center; }
+.price9 h2 { font-size: clamp(30px, 4.6vw, 52px); font-weight: 800; letter-spacing: -0.035em; line-height: 1.2; }
+.price9 .psub { max-width: 34em; margin: 22px auto 0; font-size: clamp(17px, 1.5vw, 19px); line-height: 1.65; color: var(--ink-2); text-wrap: balance; }
+.plans9 { max-width: 1080px; margin: 72px auto 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; text-align: left; }
+.plan9 { background: var(--white); border-radius: 24px; padding: 34px 32px 30px; display: flex; flex-direction: column; box-shadow: 0 0 0 1px rgba(0,0,0,.05); }
+.plan9.pro { box-shadow: 0 0 0 2px var(--accent), 0 30px 60px -36px rgba(154,85,39,.55); }
+.plan9 .nm { font-size: 15px; font-weight: 700; color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
+.plan9 .nm svg { width: 18px; height: 18px; }
+.plan9.pro .nm { color: var(--accent); }
+.plan9 .amt { margin-top: 14px; font-size: 44px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.plan9 .amt small { font-size: 16px; font-weight: 600; color: var(--ink-3); letter-spacing: 0; margin-left: 4px; }
+.plan9 .tag { margin-top: 10px; font-size: 15px; color: var(--ink-2); }
+.plan9 ul { list-style: none; margin: 26px 0 30px; padding: 22px 0 0; border-top: 1px solid var(--line); display: grid; gap: 12px; font-size: 15.5px; }
+.plan9 li { display: flex; gap: 10px; align-items: baseline; }
+.plan9 li::before { content: "✓"; color: var(--accent); font-weight: 800; flex: none; }
+.plan9 li.plus { color: var(--ink-3); font-size: 14px; }
+.plan9 li.plus::before { content: "+"; color: var(--ink-3); }
+.plan9 .cta9 { margin-top: auto; display: flex; justify-content: center; align-items: center; height: 50px; border-radius: 999px; font-weight: 700; font-size: 16px; text-decoration: none; border: 1.5px solid var(--ink); color: var(--ink); }
+.plan9.pro .cta9 { background: var(--accent); border-color: var(--accent); color: var(--white); }
+.price9 .pnote { margin-top: 24px; font-size: 14.5px; color: var(--ink-3); }
+.name9 { max-width: 560px; margin: 64px auto 0; display: flex; align-items: center; gap: 18px; text-align: left; }
+.name9 svg { width: 52px; height: 52px; flex: none; }
+.name9 p { font-size: 16px; line-height: 1.7; color: var(--ink-2); text-wrap: pretty; }
+.name9 p b { color: var(--ink); font-weight: 700; }
+@media (max-width: 900px) {
+  .plans9 { grid-template-columns: minmax(0, 1fr); max-width: 440px; }
+}
+@media (max-width: 640px) {
+  .price9 { padding: 96px 16px 88px; }
+  .plans9 { margin-top: 48px; gap: 12px; }
+  .plan9 { padding: 28px 24px 24px; border-radius: 20px; }
+  .name9 { margin-top: 48px; align-items: flex-start; gap: 14px; }
+  .name9 svg { width: 40px; height: 40px; }
+}
+
+/* 10. 마지막 권유: 진한 커피색 위에 내려다본 에스프레소 한 잔, 주인님 문장, 단추 하나 */
+.end10 { background: radial-gradient(120% 90% at 50% 0%, #2c1d15 0%, #17100c 70%); color: #f6efe6; padding: 140px 16px 128px; text-align: center; }
+.end10 .cup10 { width: min(260px, 64vw); height: auto; display: block; margin: 0 auto; filter: drop-shadow(0 40px 50px rgba(0,0,0,.55)); }
+.end10 h2 { margin-top: 56px; font-size: clamp(30px, 4.4vw, 52px); font-weight: 800; letter-spacing: -0.035em; line-height: 1.3; }
+.end10 h2 span { display: block; text-wrap: balance; }
+.end10 h2 .gold { color: #e0a96d; }
+.end10 .go10 { margin-top: 44px; display: inline-flex; align-items: center; justify-content: center; height: 56px; padding: 0 34px; border-radius: 999px; background: #f3e2c7; color: #1c130e; font-weight: 800; font-size: 17px; text-decoration: none; transition: background .2s; }
+.end10 .go10:hover { background: #fff1db; }
+.end10 .hint10 { margin-top: 16px; font-size: 14px; color: rgba(246,239,230,.6); }
+@media (max-width: 640px) {
+  .end10 { padding: 104px 16px 96px; }
+  .end10 h2 { margin-top: 40px; font-size: 27px; }
+}
+
+/* 11. 푸터: 마지막 권유의 커피색을 이어 받아 조용히 닫는다 */
+.foot11 { background: #110c09; color: rgba(246,239,230,.62); padding: 56px 16px 40px; font-size: 14px; }
+.foot11 .in { max-width: 1080px; margin: 0 auto; }
+.foot11 .row1 { display: flex; justify-content: space-between; align-items: flex-start; gap: 32px; padding-bottom: 32px; border-bottom: 1px solid rgba(246,239,230,.1); }
+.foot11 .brand { display: grid; gap: 10px; }
+.foot11 .brand span { font-size: 14px; font-weight: 400; color: rgba(246,239,230,.62); }
+.foot11 .brand b { display: flex; align-items: center; gap: 9px; color: #f6efe6; font-size: 17px; font-weight: 800; }
+.foot11 .brand svg { width: 22px; height: 22px; }
+.foot11 .links { display: flex; gap: 56px; }
+.foot11 .links div { display: grid; gap: 10px; align-content: start; }
+.foot11 .links span { font-size: 12.5px; font-weight: 700; color: rgba(246,239,230,.4); }
+.foot11 a { color: rgba(246,239,230,.75); text-decoration: none; }
+.foot11 a:hover { color: #f6efe6; }
+.foot11 .row2 { padding-top: 24px; display: flex; justify-content: space-between; gap: 16px; font-size: 13px; color: rgba(246,239,230,.45); }
+@media (max-width: 640px) {
+  .foot11 .row1 { flex-direction: column; }
+  .foot11 .links { gap: 40px; }
+  .foot11 .row2 { flex-direction: column; gap: 6px; }
+}
+
+/* 12. 자주 묻는 질문: 왼쪽 제목, 오른쪽 묶음별 접는 질문(details) */
+.faq12 { background: var(--white); padding: 136px 16px 120px; }
+.faq12 .in { max-width: 1080px; margin: 0 auto; display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 64px; }
+.faq12 .head12 h2 { font-size: clamp(30px, 3.6vw, 44px); font-weight: 800; letter-spacing: -0.035em; line-height: 1.2; }
+.faq12 .head12 p { margin-top: 18px; font-size: 16px; line-height: 1.65; color: var(--ink-2); }
+.faq12 .head12 a { color: var(--accent); font-weight: 700; text-decoration: none; }
+.faq12 .head12 { position: sticky; top: 96px; align-self: start; }
+.faq12 .grp + .grp { margin-top: 44px; }
+.faq12 .grp h3 { font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: .02em; padding-bottom: 10px; }
+.faq12 details { border-top: 1px solid var(--line); }
+.faq12 .grp details:last-child { border-bottom: 1px solid var(--line); }
+.faq12 summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 20px 2px; font-size: 18px; font-weight: 700; letter-spacing: -0.015em; }
+.faq12 summary::-webkit-details-marker { display: none; }
+.faq12 summary::after { content: ""; width: 12px; height: 12px; flex: none; background: linear-gradient(var(--ink-3), var(--ink-3)) center / 12px 2px no-repeat, linear-gradient(var(--ink-3), var(--ink-3)) center / 2px 12px no-repeat; transition: transform .2s; }
+.faq12 details[open] summary::after { transform: rotate(45deg); }
+.faq12 summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.faq12 details p { padding: 0 40px 22px 2px; margin-top: -4px; font-size: 16px; line-height: 1.75; color: var(--ink-2); text-wrap: pretty; }
+@media (max-width: 860px) {
+  .faq12 .in { grid-template-columns: minmax(0, 1fr); gap: 40px; max-width: 680px; }
+  .faq12 .head12 { position: static; }
+}
+@media (max-width: 640px) {
+  .faq12 { padding: 96px 16px 88px; }
+  .faq12 summary { font-size: 16.5px; padding: 18px 2px; }
+  .faq12 details p { padding-right: 8px; font-size: 15.5px; }
+}
+
+/* 휴대폰 */
+.phone { position: absolute; right: 0; bottom: -1.2em; width: 15.5em; padding: .5em; border-radius: 2.7em; background: linear-gradient(135deg, #e4e4e6, #9fa1a6 40%, #d4d5d8 60%, #8b8d92); box-shadow: 0 1.6em 3em -1em rgba(0,0,0,.35), 0 .3em .8em rgba(0,0,0,.15); }
+.phone-in { background: #0c0c0d; border-radius: 2.25em; padding: .4em; }
+.phone .scr { position: relative; aspect-ratio: 9 / 19.5; background: var(--white); border-radius: 1.9em; overflow: hidden; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; font-family: var(--app); }
+.island { position: absolute; top: .55em; left: 50%; width: 4.6em; height: 1.35em; margin-left: -2.3em; border-radius: 1em; background: #0c0c0d; }
+.sb { display: flex; justify-content: space-between; align-items: center; height: 4.3em; padding: .4em 2.2em 0; font-family: var(--sans); font-size: .62em; font-weight: 700; }
+.sb .r { display: flex; gap: .45em; align-items: center; }
+.sig { display: flex; gap: .15em; align-items: flex-end; height: .8em; }
+.sig i { width: .22em; background: var(--ink); border-radius: .05em; }
+.sig i:nth-child(1) { height: 35%; } .sig i:nth-child(2) { height: 55%; } .sig i:nth-child(3) { height: 78%; } .sig i:nth-child(4) { height: 100%; }
+.sb .bat { width: 1.7em; height: .8em; border: .1em solid var(--ink); border-radius: .25em; position: relative; }
+.sb .bat::after { content: ""; position: absolute; inset: .1em .3em .1em .1em; background: var(--ink); border-radius: .1em; }
+.ph { display: flex; align-items: center; gap: .4em; padding: .3em .9em .55em; border-bottom: .06em solid var(--line); font-family: var(--sans); font-size: .64em; font-weight: 700; color: var(--ink-2); }
+.ph svg { width: 1.3em; height: 1.3em; }
+.pc { padding: .8em .8em; display: grid; gap: .6em; align-content: start; }
+.pc .q { font-size: .62em; max-width: 90%; }
+.pc .kick { font-size: .5em; margin-bottom: -.4em; }
+.pc .lead { font-size: .98em; line-height: 1.45; }
+.pc .cmp { font-size: .58em; }
+.pc .cmp th, .pc .cmp td { padding: .55em .25em; }
+.pc .tip { font-size: .58em; padding: .7em .8em; border-radius: .9em; }
+
+@media (max-width: 760px) {
+  .devices { font-size: 16px; width: auto; margin-top: 48px; }
+  .laptop { display: none; }
+  .phone { position: relative; right: auto; bottom: auto; margin: 0 auto; width: 17em; }
+  .ground { display: none; }
+}
+@media (max-width: 640px) {
+  .hero { padding: 64px 16px 80px; }
+  .top nav { gap: 16px; }
+}
+</style>
+
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <radialGradient id="crema-fill" cx="0.42" cy="0.36" r="0.75"><stop offset="0" stop-color="#f6d19a"/><stop offset="0.5" stop-color="#d99a55"/><stop offset="1" stop-color="#9a5527"/></radialGradient>
+    <clipPath id="logo-clip"><path d="M512 196 C 720 196 852 320 852 488 C 852 656 720 780 512 780 C 468 780 428 775 392 764 L 262 836 C 244 846 226 828 234 810 L 280 710 C 210 654 172 578 172 488 C 172 320 304 196 512 196 Z"/></clipPath>
+    <symbol id="logo" viewBox="160 186 704 660">
+      <g clip-path="url(#logo-clip)">
+        <rect x="150" y="150" width="740" height="720" fill="#3b1f10"/>
+        <path d="M150 420 C 300 370 420 470 560 420 C 690 374 790 440 880 410 L 880 150 L 150 150 Z" fill="url(#crema-fill)"/>
+        <path d="M150 420 C 300 370 420 470 560 420 C 690 374 790 440 880 410" fill="none" stroke="#f6d19a" stroke-width="22" opacity="0.8"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="{% url 'home' %}"><svg aria-hidden="true"><use href="#logo"/></svg>Crema</a>
+    <nav><a href="#price">가격</a><a href="#faq">자주 묻는 질문</a>{% if user.is_authenticated %}<a href="{% url 'account' %}">내 계정</a>{% else %}<a href="{% url 'account_login' %}">로그인</a>{% endif %}</nav>
+  </div>
+</header>
+
+<main>
+  <!-- 1. 히어로 -->
+  <section class="hero">
+    <h1><span>보는 즐거움,</span> <span>읽는 편안함.</span></h1>
+    <p class="sub">크레마 에이전트는 모든 대화가 잘 편집된 잡지처럼 보기 좋고 읽기 편합니다. 함께 정한 것은 종류별로 기억해 두었다가, 다음 대화에서 꺼내 씁니다.</p>
+    <div class="act">
+      <a class="btn" href="{% if user.is_authenticated %}{{ start }}{% else %}{{ login }}?next={{ start }}{% endif %}">{% if user.is_authenticated %}설치 파일 받기{% else %}무료로 시작하기{% endif %}</a>
+      <span class="hint">Windows PC용. 쓰던 AI를 그대로 연결합니다.</span>
+    </div>
+
+    <div class="devices" role="img" aria-label="노트북과 휴대폰에 띄운 크레마 대화 예시: 노트북 세 대를 묻자 결론 한 문장, 추천 칸을 표시한 비교표, 고르는 요령으로 편집한 답. 휴대폰에서도 같은 답이 화면에 맞게 편집되어 보인다">
+      <div class="laptop">
+        <div class="lid">
+          <div class="screen">
+            <div class="desk"></div>
+            <div class="appwin">
+              <div class="win-bar"><svg aria-hidden="true"><use href="#logo"/></svg>Crema<span class="sep">/</span>노트북 고르기<span class="ctl"><i>—</i><i>▢</i><i>✕</i></span></div>
+              <div class="appbody">
+                <aside class="side">
+                  <span class="new">새 대화<b>＋</b></span>
+                  <span class="find">⌕ 대화 찾기</span>
+                  <div class="lists">
+                    <span class="grp">프로젝트</span>
+                    <span class="it on"><span class="e">💻</span>노트북 고르기</span>
+                    <span class="it"><span class="e">🧾</span>한빛상사 견적</span>
+                    <span class="it"><span class="e">📊</span>10월 매출 보고서</span>
+                    <span class="it"><span class="e">🖨️</span>사무실 프린터 문제</span>
+                    <span class="it"><span class="e">🏝️</span>제주 워크숍 일정</span>
+                    <span class="grp">노트</span>
+                    <span class="it"><span class="e">📝</span>노트북 고르는 기준</span>
+                    <span class="it"><span class="e">📝</span>한빛상사 견적 기준</span>
+                  </div>
+                  <span class="me"><span class="av">하</span>김하늘<span class="gear">⚙</span></span>
+                </aside>
+                <div class="mainc">
+                  <div class="page"><div class="col">
+        <p class="q">회사에서 쓸 노트북, 이 세 개 중에 뭐가 나아?</p>
+        <p class="kick">비교</p>
+        <p class="lead">회의와 문서 작업이 많다면 <b>B&nbsp;노트북</b>이 알맞습니다.</p>
+        <table class="cmp">
+          <thead><tr><th></th><th>A</th><th class="pick"><span>추천</span>B</th><th>C</th></tr></thead>
           <tbody>
-            <tr><th scope="row">대화</th><td>내 AI 계정으로</td><td>내 AI 계정으로</td></tr>
-            <tr><th scope="row">쌓인 메모</th><td>보기, 고치기, 백업</td><td>보기, 고치기, 백업</td></tr>
-            <tr><th scope="row">새로 기억하기</th><td class="no">안 함</td><td>대화할 때마다</td></tr>
-            <tr><th scope="row">뜻으로 찾기</th><td class="no">안 함</td><td>함</td></tr>
-            <tr><th scope="row">AI 연결 안내</th><td>한 번</td><td>계속</td></tr>
+            <tr><th>가격</th><td>89만 원</td><td class="pick">129만 원</td><td>189만 원</td></tr>
+            <tr><th>무게</th><td>1.6kg</td><td class="pick">1.2kg</td><td>1.4kg</td></tr>
+            <tr><th>배터리</th><td>8시간</td><td class="pick">15시간</td><td>12시간</td></tr>
           </tbody>
-          <tfoot>
-            <tr>
-              <td></td>
-              <td>
-                {% if user.is_authenticated %}
-                  <a class="button small" href="{{ start }}">설치 파일 받기</a>
-                {% else %}
-                  <a class="button small" href="{{ login }}?next={{ start }}">무료로 시작하기</a>
-                {% endif %}
-              </td>
-              <td><span class="button small" aria-disabled="true">준비 중</span></td>
-            </tr>
-          </tfoot>
         </table>
-        <p class="after">유료는 아직 준비 중이에요. 시작할 때 먼저 알려 드리고 동의한 분만 결제돼요.</p>
+        <p class="tip">들고 다닐 일이 많다면 <b>무게와 배터리부터</b> 보세요. C는 영상 편집용이라 사무용으로는 남는 성능입니다.</p>
+</div></div>
+                  <div class="inp"><span>B 노트북 가장 싼 곳도 찾아 줘</span><span class="send">↑</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="taskbar">
+              <span class="tb"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="2" width="7.5" height="7.5" rx="1" fill="#4a8fe0"/><rect x="10.5" y="2" width="7.5" height="7.5" rx="1" fill="#4a8fe0"/><rect x="2" y="10.5" width="7.5" height="7.5" rx="1" fill="#4a8fe0"/><rect x="10.5" y="10.5" width="7.5" height="7.5" rx="1" fill="#4a8fe0"/></svg></span>
+              <span class="tb"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5" fill="none" stroke="#515154" stroke-width="1.8"/><path d="M12.5 12.5l4.5 4.5" stroke="#515154" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+              <span class="tb"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5.5a1.5 1.5 0 0 1 1.5-1.5h4l2 2h7A1.5 1.5 0 0 1 18 7.5v8A1.5 1.5 0 0 1 16.5 17h-13A1.5 1.5 0 0 1 2 15.5z" fill="#f2c14e"/></svg></span>
+              <span class="tb on"><svg aria-hidden="true"><use href="#logo"/></svg></span>
+              <span class="tb"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="#5aa0e6"/><path d="M2.5 10h15M10 2.5c2.5 2.6 2.5 12.4 0 15M10 2.5c-2.5 2.6-2.5 12.4 0 15" stroke="#fff" stroke-width="1.2" fill="none"/></svg></span>
+            </div>
+          </div>
+        </div>
+        <div class="base"></div>
+        <div class="ground"></div>
       </div>
+      <div class="phone"><div class="phone-in"><div class="scr">
+        <span class="island"></span>
+        <div class="sb"><span>9:41</span><span class="r"><span class="sig"><i></i><i></i><i></i><i></i></span><span class="bat"></span></span></div>
+        <div class="ph"><svg aria-hidden="true"><use href="#logo"/></svg>노트북 고르기</div>
+        <div class="pc">
+        <p class="q">회사에서 쓸 노트북, 이 세 개 중에 뭐가 나아?</p>
+        <p class="kick">비교</p>
+        <p class="lead">회의와 문서 작업이 많다면 <b>B&nbsp;노트북</b>이 알맞습니다.</p>
+        <table class="cmp">
+          <thead><tr><th></th><th>A</th><th class="pick"><span>추천</span>B</th><th>C</th></tr></thead>
+          <tbody>
+            <tr><th>가격</th><td>89만 원</td><td class="pick">129만 원</td><td>189만 원</td></tr>
+            <tr><th>무게</th><td>1.6kg</td><td class="pick">1.2kg</td><td>1.4kg</td></tr>
+            <tr><th>배터리</th><td>8시간</td><td class="pick">15시간</td><td>12시간</td></tr>
+          </tbody>
+        </table>
+        <p class="tip">들고 다닐 일이 많다면 <b>무게와 배터리부터</b> 보세요. C는 영상 편집용이라 사무용으로는 남는 성능입니다.</p>
+        </div>
+        <div class="inp pinp"><span>가장 싼 곳도 찾아 줘</span><span class="send">↑</span></div>
+      </div></div></div>
     </div>
   </section>
 
-  <section class="part" id="faq">
-    <div class="wrap">
-      <div class="side">
+  <!-- 2. 공감 -->
+  <section class="sec white">
+    <h2><span>편하자고 쓴 AI인데,</span><span>그 설명을 읽느라 괴롭습니다.</span></h2>
+    <p class="sub">AI는 일을 잘합니다. 보고도 읽으면 알아듣습니다. 다만 오류 번호와 함수 이름, "이래서 저래서"가 줄줄이 이어지는 설명을 매번 끝까지 따라가야 결론이 나옵니다. 그게 지치고 짜증 납니다.</p>
+    <div class="report-wrap">
+      <div class="report" role="img" aria-label="AI 에이전트의 오류 분석 보고 예시: 긴 오류 번호, 함수 이름이 화살표로 이어진 사슬, 전문 용어가 가득한 문장. 읽는 사람이 빨간 펜으로 동그라미와 물음표를 쳐 두었다">
+        <div class="bar"><i></i><i></i><i></i><span>에이전트 보고</span></div>
+<pre><span class="h">## 오류 분석 결과 보고</span>
+<span class="d">err_id</span>: <span class="pen-o" data-n="하…">7f3a9c2e-4b1d-4e8a-9c3f-21d8b6a0e5f4</span>
+<span class="d">발생</span>: 2026-10-01T09:41:07.381+09:00 (<span class="k">worker-03</span>)
+
+원인 추적 결과 <span class="pen-u">OrderSyncWorker.run() → fetchPendingBatch() → db.acquire()</span> 경로에서 커넥션 풀 고갈(<span class="n">pool_size=10, in_use=10</span>)로 대기 큐 적체가 발생했고, 이로 인해 <span class="k">retryWithBackoff()</span>가 지수 백오프(<span class="n">base=200ms, max=30s</span>)로 재시도하는 과정에서 <span class="pen-o">idempotency_key</span> 충돌이 일어났으며, 그 결과 트랜잭션 격리 수준(<span class="k">READ COMMITTED</span>)에서 <span class="pen-u">phantom read</span>가 발생하여 일부 주문의 상태 전이가 <span class="k">PENDING → SYNCED</span>로 이중 기록되었고, 이에 따라 <span class="k">/api/v2/orders/sync</span>의 p95 지연이 <span class="n">4,812ms → 12,407ms</span>로 증가한 것으로 판단되며, 관련 커밋 <span class="n">a91c3fe</span>, <span class="n">4d02b7e</span>에서 도입된 <span class="k">ConnectionPoolConfig.max_overflow=0</span> 설정이 직접적인 계기로 보이나 <span class="k">pgbouncer</span>의 <span class="k">transaction pooling</span> 모드와의 상호작용도 배제할 수 없어 추가 확인이 필요합니다.
+
+<span class="h">### 조치 내역</span>
+1) <span class="k">ConnectionPoolConfig.max_overflow</span>를 <span class="n">0 → 5</span>로 조정하고 <span class="k">pool_pre_ping=True</span>를 적용하여 유휴 커넥션 재사용 시의 끊김을 방지했으며,
+2) <span class="k">retryWithBackoff()</span>에 <span class="k">jitter</span>를 추가하고 <span class="k">idempotency_key</span> 생성 로직을 <span class="k">uuid4 → uuid7</span>로 변경하여 동시 재시도 시 충돌 가능성을 낮췄고,
+3) 회귀 테스트 <span class="k">test_order_sync_concurrency.py</span>를 추가했으나 <span class="k">CI</span>의 <span class="k">flaky</span> 판정으로 재실행이 필요하며…
+</pre>
+      </div>
+      <p class="pen-side" aria-hidden="true">3번째<br>읽는 중</p>
+      <p class="memo">그래서…<br>어떻게 됐다는 거야?</p>
+    </div>
+  </section>
+
+  <!-- 3. 만든 사람 -->
+  <section class="maker">
+    <div class="maker-in">
+      <p class="eyebrow">크레마는 여기서 시작했습니다</p>
+      <div class="story">
+        <p>오랫동안 여러 AI 에이전트와 함께 일했습니다. 어제 못 하던 일을 오늘 해내는, 놀라운 시대였습니다.</p>
+        <p>깊이 써 볼수록 저마다 조금씩 아쉬움이 보였습니다. 좋은 점은 한데 모으고, 아쉬운 점은 다듬고 싶었습니다. 그렇게 직접 만들기 시작했습니다.</p>
+        <p class="memory">만들면서 자꾸 떠오른 건 어릴 적 잡지였습니다. 사진과 글자가 제자리에 놓인 지면을 한 장 한 장 아껴 넘기던 그 즐거움.</p>
+        <p class="made">그 즐거움을 AI와 일하는 시간에 담고 싶었습니다.</p>
+      </div>
+      <p class="sign"><svg aria-hidden="true"><use href="#logo"/></svg>크레마를 만든 사람</p>
+    </div>
+  </section>
+
+  <!-- 4. 보는 즐거움 -->
+  <section class="read">
+    <h2>긴 답일수록 차이가 납니다.</h2>
+    <p class="sub">크레마는 AI가 쓰는 방식부터 바꿉니다. 결론을 먼저 쓰고, 쉬운 말로 풀고, 일한 과정 대신 결과를 보여 줍니다. 그 위에 잡지처럼 편집합니다.</p>
+    <div class="ed" role="img" aria-label="앞의 오류 보고서를 크레마가 다시 쓰고 편집한 예시: 결론 한 문장, 쉬운 말로 쓴 짧은 원인, 전후를 비교한 표, 남은 일을 담은 상자, 접어 둔 기술 기록. 오른쪽 여백에 말(한마디 결론 먼저, 쉬운 말과 과정 대신 결과, 번호와 용어는 접어서)과 모양(비교는 표로, 남은 일은 따로) 표시가 붙어 있다">
+      <div class="paper"></div>
+      <div class="head blk" style="grid-row:1"><svg aria-hidden="true"><use href="#logo"/></svg><b>주문 동기화 오류</b><span>오늘 오전 9:41</span></div>
+      <span class="tag" style="grid-row:2"><em>말</em>한마디 결론 먼저</span>
+      <div class="blk r1" style="grid-row:2"><p class="lead2"><b>주문 동기화가 늦어지던 문제, 고쳤습니다.</b> 겹쳐 기록된 주문 12건도 바로잡았습니다.</p></div>
+      <span class="tag" style="grid-row:3"><em>말</em>쉬운 말, 과정 대신 결과</span>
+      <div class="blk para" style="grid-row:3"><p>원인은 데이터베이스 연결이 모자랐던 것입니다. <b>연결 수를 늘리고</b>, 실패했을 때 다시 시도하는 방식을 바꿨습니다.</p></div>
+      <span class="tag" style="grid-row:4"><em>모양</em>비교는 표로</span>
+      <div class="blk tblk" style="grid-row:4">
+        <table>
+          <caption>무엇이 달라졌나</caption>
+          <thead><tr><th></th><th>전</th><th>후</th></tr></thead>
+          <tbody>
+            <tr><th>주문 처리 시간</th><td class="before">12.4초</td><td class="after">0.9초</td></tr>
+            <tr><th>남는 연결</th><td class="before">0개</td><td class="after">5개</td></tr>
+            <tr><th>겹친 기록</th><td class="before">12건</td><td class="after">0건</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <span class="tag" style="grid-row:5"><em>모양</em>남은 일은 따로</span>
+      <div class="blk bx" style="grid-row:5"><p class="box2"><b>확인 한 가지만 남았습니다</b>자동 테스트가 한 번 불안정하게 끝나 다시 돌리는 중입니다. 결과가 나오면 바로 알려 드릴게요.</p></div>
+      <span class="tag" style="grid-row:6"><em>말</em>번호와 용어는 접어서</span>
+      <div class="blk fold" style="grid-row:6"><span>자세한 기술 기록 보기<b aria-hidden="true">›</b></span></div>
+    </div>
+  </section>
+
+  <!-- 5. 테마 -->
+  <section class="themes">
+    <h2>같은 답, 다른 캔버스.</h2>
+    <p class="tsub">글꼴과 자간, 줄 간격과 색을 하나하나 고르지 않아도 테마 하나로 화면 전체가 바뀝니다. 어떤 테마든 쉽게 쓴 답 위에 입혀집니다. 테마는 커뮤니티에서 계속 늘어납니다.</p>
+    <div class="ttabs" role="tablist" aria-label="테마">
+      <button class="ttab" role="tab" aria-selected="false" data-t="clean"><i class="sw-clean"></i>정갈</button>
+      <button class="ttab" role="tab" aria-selected="true" data-t="notes"><i class="sw-notes"></i>필기 노트</button>
+      <button class="ttab" role="tab" aria-selected="false" data-t="mag"><i class="sw-mag"></i>잡지</button>
+      <button class="ttab" role="tab" aria-selected="false" data-t="scrap"><i class="sw-scrap"></i>스크랩북</button>
+      <button class="ttab" role="tab" aria-selected="false" data-t="chalk"><i class="sw-chalk"></i>칠판</button>
+      <button class="ttab" role="tab" aria-selected="false" data-t="night"><i class="sw-night"></i>밤</button>
+    </div>
+    <p class="twhy" id="twhy">공부 잘하는 친구의 노트를 빌려 본 적 있나요? 형광펜, 박스, 별표, 여백의 주석까지. 보는 것만으로 즐거운 필기를 그대로 옮겼습니다.</p>
+    <div class="tframe">
+      <article class="cv t-notes" id="tcv" role="tabpanel" aria-label="노트북 비교 답을 테마로 꾸민 화면">
+      <div class="tc-qrow"><p class="tc-q">회사에서 쓸 노트북, 이 세 개 중에 뭐가 나아?</p></div>
+      <p class="tc-kick">비교 정리</p>
+      <h3 class="tc-title">노트북 세 대, 한눈에</h3>
+      <p class="tc-lead">회의와 문서 작업이 많다면 <mark>B&nbsp;노트북</mark>이 가장 알맞습니다. 가볍고 오래가서 매일 들고 다니기 좋고, 값은 셋 중 가운데입니다.</p>
+      <div class="tc-tblwrap">
+        <table>
+          <thead><tr><th></th><th>A</th><th class="tc-pick">B (추천)</th><th>C</th></tr></thead>
+          <tbody>
+            <tr><th>가격</th><td>89만 원</td><td class="tc-pick">129만 원</td><td>189만 원</td></tr>
+            <tr><th>무게</th><td>1.6kg</td><td class="tc-pick">1.2kg</td><td>1.4kg</td></tr>
+            <tr><th>배터리</th><td>8시간</td><td class="tc-pick">15시간</td><td>12시간</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tc-cols">
+        <h4 class="tc-sub">고를 때 볼 세 가지</h4>
+        <ol>
+          <li><b>무게</b>, 매일 들고 다니면 1.3kg 아래</li>
+          <li><b>배터리</b>, 하루 종일 회의면 10시간 이상</li>
+          <li><b>화면</b>, 문서 작업은 14인치면 충분</li>
+        </ol>
+        <p class="tc-warn"><b>조심</b>C는 영상 편집용이라 사무용으로는 값에 비해 남는 성능입니다.</p>
+      </div>
+      <blockquote class="tc-pull">들고 다닐 일이 많다면, 무게부터.</blockquote>
+
+      <span class="tc-d tc-d-notes tc-n1">이거 제일 중요!!</span>
+      <span class="tc-d tc-d-notes tc-n2">외워 두기</span>
+      <span class="tc-d tc-d-scrap">오늘의<br>추천<br>B</span>
+      <div class="tc-d tc-d-mag"><span>CREMA 2026 가을</span><span>— 24 —</span></div>
+      <div class="tc-d tc-d-chalk" aria-hidden="true"><i></i><i></i><i></i><span></span></div>
+    </article>
+    </div>
+  </section>
+
+  <!-- 6. 노트 -->
+  <section class="notes6">
+    <h2><span>같은 설명을 두 번</span> <span>하지 않아도 됩니다.</span></h2>
+    <p class="nsub">기억에도 종류가 있습니다. 이름처럼 잠깐 쓰는 것도 있고, 일하는 요령이나 함께 정한 기준, 오래 쌓아 둘 자료도 있습니다. 크레마는 종류마다 알맞은 방식으로 저장해 둡니다. 대화마다 필요한 기억이 다르니, 그때그때 맞는 기억을 찾아 꼭 필요한 곳에 씁니다.</p>
+    <div class="scene6">
+      <div class="mems" role="list" aria-label="크레마가 나눠 두는 다섯 가지 기억, 잠깐 쓰는 것부터 오래 두는 것까지">
+        <div class="axis" aria-hidden="true"><span>잠깐</span><span>오래</span></div>
+        <div class="mem" role="listitem">
+          <div><h3>방금 일</h3><p>이름, 방금 한 일처럼 짧은 것. 대화하는 동안 쥐고 있습니다.</p></div>
+          <div class="mx mx-chips"><span>김하늘 님</span><span>방금: 노트북 비교표</span></div>
+        </div>
+        <div class="mem used" role="listitem">
+          <div><h3>일하는 요령</h3><p>일을 처리하는 방법. 실수하면 요령으로 고쳐 두고, 다음엔 되풀이하지 않습니다.</p></div>
+          <div class="mx mx-card"><b>제품 비교할 때</b><span class="ok">가격은 배송비까지 넣어 맞추기</span><i>9월 30일 실수에서 배움</i></div>
+        </div>
+        <div class="mem used" role="listitem">
+          <div><h3>기준과 교훈</h3><p>함께 정한 기준과 방침, 겪으며 얻은 교훈. 일을 시작하기 전에 먼저 봅니다.</p></div>
+          <div class="mx mx-card"><b>노트북 고르는 기준</b>1.3kg 아래, 배터리 10시간 이상<i>이유: 외근이 잦아서</i></div>
+        </div>
+        <div class="mem used" role="listitem">
+          <div><h3>지식과 자료 <em>가장 공들인 곳</em></h3><p>주제별 노트로 정리하고 서로 이어 둡니다. 쌓일수록 새로 알게 되는 것이 생깁니다.</p></div>
+          <div class="mx mx-graph"><span>노트북</span><s>—</s><span>태블릿</span><s>—</s><span>외근 일정</span><p>알게 된 것: 고른 기기가 모두 가벼운 쪽</p></div>
+        </div>
+        <div class="mem" role="listitem">
+          <div><h3>대화 기록</h3><p>모든 대화를 원문 그대로 둡니다. 필요할 때 다시 찾아봅니다.</p></div>
+          <div class="mx mx-log">9월 30일 노트북 고르기<br>9월 24일 한빛상사 견적<br>9월 18일 제주 워크숍 일정</div>
+        </div>
+      </div>
+      <div class="later">
+        <p class="when">3주 뒤, 새 대화</p>
+        <div class="chat6">
+          <p class="q6">외근용 태블릿도 하나 살까 하는데, 뭐가 좋을까?</p>
+          <p class="a6">지난번에 정한 기준대로 <b>가볍고 오래가는 것</b>부터 봤어요. 가격은 배송비까지 넣어 맞췄습니다.</p>
+          <table>
+            <thead><tr><th>제품</th><th>무게</th><th>배터리</th><th>가격</th></tr></thead>
+            <tbody>
+              <tr class="pk"><td>태블릿 A</td><td>480g</td><td>12시간</td><td>79만 원</td></tr>
+              <tr><td>태블릿 B</td><td>560g</td><td>10시간</td><td>64만 원</td></tr>
+            </tbody>
+          </table>
+          <p class="used6"><svg aria-hidden="true"><use href="#logo"/></svg>사용한 기억 <span>기준과 교훈</span><span>일하는 요령</span><span>지식과 자료</span></p>
+        </div>
+      </div>
+    </div>
+    <p class="nsafe">기억은 모두 내 PC에 있습니다. 언제든 열어 보고 고치고 지웁니다.</p>
+  </section>
+
+  <!-- 7. 쉬운 시작 -->
+  <section class="start7">
+    <h2><span>어디에 뭘 써야 할지,</span> <span>크레마가 짚어 줍니다.</span></h2>
+    <p class="ssub">처음 보는 가입 화면은 관공서 서류 양식처럼 막막합니다. 설명 따로, 화면 따로 띄워 두면 둘을 맞춰 보느라 또 헤맵니다. 크레마는 대화 속에 가입 페이지를 그대로 넣습니다. 말로 알려 주고 바로 아래 화면에서 넣을 칸을 짚어 주니, 따라 하기만 하면 가입도 AI 연결도 끝납니다.</p>
+    <div class="sheet7" role="img" aria-label="크레마 대화. 무료 AI로 시작하고 싶다는 말에 크레마가 네 단계 중 가입부터 하자고 답하고, 그 답 바로 아래에 가입 페이지가 들어 있다. 이메일 칸에 여기에 입력 표시가 붙어 있다">
+      <p class="head7"><svg aria-hidden="true"><use href="#logo"/></svg><b>Crema</b><span>/ 무료 AI 연결하기</span><span class="wctl" aria-hidden="true"><i>—</i><i>▢</i><i>✕</i></span></p>
+      <div class="body7">
+      <div class="side7" aria-hidden="true">
+        <span>＋ 새 대화</span>
+        <span>대화 찾기</span>
+        <span class="hd">프로젝트</span>
+        <span class="on">🔌 무료 AI 연결하기</span>
+        <span>💻 노트북 고르기</span>
+        <span>🧾 한빛상사 견적</span>
+        <span>📊 10월 매출 보고서</span>
+        <span>🏝️ 제주 워크숍 일정</span>
+        <span class="hd">노트</span>
+        <span>📝 노트북 고르는 기준</span>
+        <span>📝 한빛상사 견적 기준</span>
+        <span class="me7"><i>김</i>김하늘</span>
+      </div>
+      <div class="main7">
+      <div class="talk7">
+        <p class="me">무료 AI로 시작하고 싶어. 어떻게 하면 돼?</p>
+        <div class="cr">
+          <p>무료로 쓸 수 있는 AI 서비스에 가입하고 크레마에 연결하면 됩니다. 가입부터 같이 해요.</p>
+          <p class="steps7"><span class="now">가입</span><span>메일 확인</span><span>크레마에 연결</span><span>연결 확인</span></p>
+          <p>아래 화면의 <b>이메일</b> 칸에 자주 쓰는 주소를 넣어 주세요.</p>
+          <div class="web7">
+            <p class="addr"><span><i></i>AI 서비스</span><span>ai-service.example</span></p>
+            <div class="pg">
+              <div class="form">
+                <h4>계정 만들기</h4>
+                <div class="fld on"><u>이메일</u><i>name@example.com</i></div>
+                <div class="fld"><u>비밀번호</u><i>8자 이상</i></div>
+                <p class="go7">계속</p>
+              </div>
+            </div>
+          </div>
+          <p class="after">넣고 나면 다음 칸을 알려 드릴게요.</p>
+        </div>
+      </div>
+      <p class="ask7"><span>크레마에게 물어보기</span><b>↑</b></p>
+      </div>
+      </div>
+    </div>
+    <div class="ways">
+      <div><h3>쓰던 AI는 그대로</h3><p>ChatGPT나 Claude를 쓰고 있다면 그대로 이어서 연결합니다.</p></div>
+      <div><h3>없으면 지금부터</h3><p>쓰던 AI가 없어도 무료 AI로 바로 시작합니다.</p></div>
+      <div><h3>모델은 골라서</h3><p>적은 비용으로 여러 모델을 골라 쓰고, 한 회사에 묶이지 않습니다.</p></div>
+    </div>
+  </section>
+
+  <!-- 8. 아쉬운 점을 고쳤다 -->
+  <section class="fix8">
+    <h2><span>잘 만든 에이전트들의</span> <span>아쉬운 점을 고쳤습니다.</span></h2>
+    <p class="fsub">여러 에이전트를 매일 쓰면서 아쉬웠던 것들입니다. 크레마에서는 하나씩 고쳤습니다.</p>
+    <div class="bento8">
+      <article class="tile8 wide">
+        <div>
+          <p class="was">한 곳에만 있던 것</p>
+          <h3>다음에 할 말을 미리 적어 둡니다.</h3>
+          <p class="d">답을 읽고 나면 입력창에 다음 말이 흐리게 떠 있습니다. Tab 한 번이면 그대로 씁니다.</p>
+        </div>
+        <div class="mini8 m-next" aria-hidden="true">
+          <p class="ans">회의와 문서 작업이 많다면 <b>B&nbsp;노트북</b>이 알맞습니다. 무게 1.2kg, 배터리 15시간으로 세 제품 중 가장 오래갑니다.</p>
+          <p class="box"><span>B 노트북 가장 싸게 파는 곳도 찾아 줘</span><b class="send">↑</b></p>
+          <p class="hint"><kbd>Tab</kbd>예상 입력 사용</p>
+        </div>
+      </article>
+      <article class="tile8 tall">
+        <div>
+          <p class="was">어디에도 없던 것</p>
+          <h3>글꼴과 자간, 줄 간격까지 내 눈에 맞춥니다.</h3>
+          <p class="d">글자 크기와 굵기, 본문 너비와 색도 고릅니다.</p>
+        </div>
+        <div class="mini8 m-type" aria-hidden="true">
+          <p class="row"><span>글꼴</span><span class="sel">나눔고딕<span>⌄</span></span></p>
+          <p class="row"><span>글자 크기</span><span class="bar"><i style="width:46%"></i></span><b>16</b></p>
+          <p class="row"><span>자간</span><span class="bar"><i style="width:40%"></i></span><b>-0.01</b></p>
+          <p class="row"><span>줄 간격</span><span class="bar"><i style="width:68%"></i></span><b>1.85</b></p>
+          <p class="row"><span>본문 너비</span><span class="bar"><i style="width:58%"></i></span><b>680</b></p>
+          <p class="row"><span>바탕색</span><span class="sw"><i class="on" style="background:#fffdf9"></i><i style="background:#f4efe6"></i><i style="background:#eef2f6"></i><i style="background:#2b2b2b"></i></span></p>
+          <p class="prev">결론부터 말하면 <b>B 노트북</b>입니다. 가볍고 오래가서 외근이 잦은 날에 알맞습니다.</p>
+          <p class="prev" style="border:0;padding:0;margin:0">무게는 1.2kg, 배터리는 15시간으로 세 제품 가운데 가장 오래갑니다.</p>
+        </div>
+      </article>
+      <article class="tile8">
+        <div>
+          <p class="was">자기 회사 모델만 쓰던 것</p>
+          <h3>어느 회사 모델이든 골라 씁니다.</h3>
+        </div>
+        <div class="mini8 m-model" aria-hidden="true">
+          <span class="on"><i style="background:#d97757"></i>Claude<em>지금 사용</em></span>
+          <span><i style="background:#10a37f"></i>GPT<em>구독 연결</em></span>
+          <span><i style="background:#4f8df5"></i>Gemini<em>무료</em></span>
+          <span><i style="background:#7c6cf2"></i>Llama<em>무료</em></span>
+        </div>
+      </article>
+      <article class="tile8">
+        <div>
+          <p class="was">대화가 뒤섞이던 것</p>
+          <h3>일마다 대화를 모아 둡니다.</h3>
+        </div>
+        <div class="mini8 m-proj" aria-hidden="true">
+          <span class="on">📊 10월 매출 보고서<em>대화 12</em></span>
+          <span>🧾 한빛상사 견적<em>대화 7</em></span>
+          <span>💻 노트북 고르기<em>대화 3</em></span>
+          <span>🏝️ 제주 워크숍 일정<em>대화 2</em></span>
+        </div>
+      </article>
+      <article class="tile8">
+        <div>
+          <p class="was">내 파일에 손이 안 닿던 것</p>
+          <h3>내 PC의 파일로 바로 일합니다. 한글 문서도.</h3>
+        </div>
+        <div class="mini8 m-file" aria-hidden="true">
+          <span><i style="background:#1f8a4c"></i>10월_매출.xlsx</span>
+          <span><i style="background:#3d8bd9"></i>한빛상사_견적.hwp</span>
+          <span><i style="background:#2b5fb4"></i>회의록.docx</span>
+          <s>→</s>
+          <span class="new"><i style="background:#3d8bd9"></i>10월_매출보고서.hwp</span>
+        </div>
+      </article>
+      <article class="tile8">
+        <div>
+          <p class="was">타자로만 쓰던 것</p>
+          <h3>어느 프로그램에서나 말로 씁니다.</h3>
+          <p class="d">9,900원에 들어 있는 Thock 음성 입력입니다.</p>
+        </div>
+        <div class="mini8 m-voice" aria-hidden="true">
+          <p class="app"><i></i>메신저 · 박 팀장</p>
+          <p class="field">내일 회의 자료는 오전 중에 보내 드릴게요</p>
+          <p class="bar"><kbd>CapsLock</kbd><span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><em>듣는 중</em></p>
+        </div>
+      </article>
+      <article class="tile8">
+        <div>
+          <p class="was">아는 척하던 것</p>
+          <h3>확인한 것과 짐작한 것을 나눠 말합니다.</h3>
+        </div>
+        <div class="mini8 m-sure" aria-hidden="true">
+          <p class="ok"><em>확인함</em><span>주문 12건이 두 번 기록됐습니다.</span></p>
+          <p class="guess"><em>짐작</em><span>새벽 점검 때 생긴 일로 보입니다. 기록을 더 봐야 합니다.</span></p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- 9. 가격 -->
+  <section class="price9" id="price">
+    <h2>한 달에 커피 한 잔 값.</h2>
+    <p class="psub">무료로 시작하고, 마음에 들면 한 달 4,900원입니다. 말로 쓰는 음성 입력까지 쓰려면 9,900원입니다.</p>
+    <div class="plans9">
+      <div class="plan9">
+        <p class="nm">무료</p>
+        <p class="amt">0원</p>
+        <p class="tag">가입하면 먼저 모든 기능을 체험합니다. 체험이 끝나도 계속 씁니다.</p>
+        <ul>
+          <li>잡지처럼 편집된 대화</li>
+          <li>쓰던 AI 연결, 무료 AI로 시작</li>
+          <li>쌓인 기억 보기와 고치기</li>
+          <li>기본 테마</li>
+        </ul>
+        <a class="cta9" href="{% if user.is_authenticated %}{{ start }}{% else %}{{ login }}?next={{ start }}{% endif %}">{% if user.is_authenticated %}설치 파일 받기{% else %}무료로 시작하기{% endif %}</a>
+      </div>
+      <div class="plan9 pro">
+        <p class="nm"><svg aria-hidden="true"><use href="#logo"/></svg>크레마</p>
+        <p class="amt">4,900원<small>/ 월</small></p>
+        <p class="tag">커피 한 잔 값으로 크레마를 모두 씁니다.</p>
+        <ul>
+          <li class="plus">무료의 모든 것에 더해</li>
+          <li>새로 배우고, 다른 말로 물어도 찾아내는 기억</li>
+          <li>모든 테마</li>
+          <li>가입·연결 안내 언제든</li>
+        </ul>
+        <a class="cta9" href="{% if user.is_authenticated %}{{ start }}{% else %}{{ login }}?next={{ start }}{% endif %}">{% if user.is_authenticated %}설치 파일 받기{% else %}무료로 시작하기{% endif %}</a>
+      </div>
+      <div class="plan9">
+        <p class="nm"><svg aria-hidden="true"><use href="#logo"/></svg>크레마 + Thock 음성 입력</p>
+        <p class="amt">9,900원<small>/ 월</small></p>
+        <p class="tag">타자 대신 말로 씁니다.</p>
+        <ul>
+          <li class="plus">4,900원의 모든 것에 더해</li>
+          <li>어느 프로그램에서나 CapsLock을 누르고 말하면 글로</li>
+          <li>크레마 입력창에서도 말로</li>
+          <li>매달 음성 입력 시간 제공</li>
+        </ul>
+        <a class="cta9" href="{% if user.is_authenticated %}{{ start }}{% else %}{{ login }}?next={{ start }}{% endif %}">{% if user.is_authenticated %}설치 파일 받기{% else %}무료로 시작하기{% endif %}</a>
+      </div>
+    </div>
+    <p class="pnote">AI 사용료는 연결한 AI 계정의 요금 그대로입니다. 무료 AI만 써도 됩니다.</p>
+    <div class="name9">
+      <svg aria-hidden="true"><use href="#logo"/></svg>
+      <p><b>크레마</b>는 에스프레소 맨 위에 생기는 금빛 층입니다. 커피에서 향이 가장 좋은 부분입니다. 매일 하는 일 위에 그 한 층을 올리는 값입니다.</p>
+    </div>
+  </section>
+
+  <!-- 12. 자주 묻는 질문 -->
+  <section class="faq12" id="faq">
+    <div class="in">
+      <div class="head12">
         <h2>자주 묻는 질문</h2>
+        <p>찾는 답이 없다면 <a href="mailto:cto@aishift.kr">cto@aishift.kr</a>로 물어봐 주세요.</p>
       </div>
-      <dl class="qa">
-        <div><dt>AI 계정이 없어도 되나요?</dt><dd>네. Gemini처럼 구글 계정만 있으면 무료로 쓰는 AI가 있어요. 연결할 때는 Crema가 옆에서 짚어 드려요.</dd></div>
-        <div><dt>대화와 메모는 어디에 저장되나요?</dt><dd>내 PC에 저장돼요. 다만 답을 받으려면 대화 내용이 내가 연결한 AI 회사(OpenAI, Anthropic, Google 등)로 전달돼요.</dd></div>
-        <div><dt>맥이나 휴대폰에서도 되나요?</dt><dd>아직은 Windows 10, 11 PC에서만 돼요.</dd></div>
-        <div><dt>왜 가입해야 설치 파일을 받을 수 있나요?</dt><dd>Crema는 가입한 계정으로 로그인해서 써요. 같은 계정으로 앱에 들어가면 바로 이어서 쓸 수 있어요.</dd></div>
-        <div><dt>어떤 계정으로 가입하나요?</dt><dd>지금은 Google 계정으로 가입해요. 이름이나 전화번호는 따로 받지 않아요.</dd></div>
-        <div><dt>탈퇴는 어떻게 하나요?</dt><dd>로그인한 뒤 내 계정에서 계정 삭제를 누르면 돼요. 로그인해 둔 Crema 앱도 함께 로그아웃돼요.</dd></div>
-      </dl>
+      <div class="qs12">
+      <div class="grp"><h3>시작하기</h3>
+        <details open><summary>어떤 컴퓨터에서 쓰나요?</summary><p>Windows PC에 설치해서 씁니다. 맥은 아직 지원하지 않습니다.</p></details>
+        <details><summary>AI 계정이 없어도 되나요?</summary><p>네. 무료로 쓸 수 있는 AI부터 가입하고 연결하도록 크레마가 대화 속에서 하나씩 짚어 줍니다.</p></details>
+        <details><summary>쓰던 ChatGPT나 Claude 구독을 그대로 쓸 수 있나요?</summary><p>네. 그 계정으로 로그인해서 연결합니다. 구독 요금은 지금처럼 그 회사에 냅니다.</p></details>
+        <details><summary>컴퓨터를 잘 몰라도 쓸 수 있나요?</summary><p>네. 설치하고 구글 계정으로 로그인하면 바로 씁니다. 명령어를 치거나 설정 파일을 고칠 일은 없습니다.</p></details>
+      </div>
+      <div class="grp"><h3>요금</h3>
+        <details><summary>AI 사용료는 따로 드나요?</summary><p>크레마는 AI 모델 값을 받지 않습니다. 연결한 AI 계정의 요금 그대로이고, 무료 AI만 써도 됩니다.</p></details>
+        <details><summary>체험이 끝나면 어떻게 되나요?</summary><p>무료로 이어서 씁니다. 쌓인 기억은 그대로 남아 보고 고칠 수 있습니다. 새로 배우는 기억과 모든 테마는 4,900원부터입니다.</p></details>
+        <details><summary>9,900원의 음성 입력은 무엇인가요?</summary><p>Thock 음성 입력이 크레마 안에 들어 있습니다. 카카오톡, 브라우저, 문서 어디서든 CapsLock을 누르고 말하면 글로 써 줍니다. 따로 설치하지 않아도 됩니다.</p></details>
+      </div>
+      <div class="grp"><h3>기억과 개인정보</h3>
+        <details><summary>대화와 기억은 어디에 저장되나요?</summary><p>내 PC에 저장됩니다. 답을 받으려고 보내는 내용만 내가 연결한 AI 회사로 갑니다. 무료 AI 자동 고르기를 쓰면 알맞은 AI를 정하려고 크레마 서버에 잠깐 보내며, 저장하지 않습니다.</p></details>
+        <details><summary>크레마가 무엇을 기억했는지 볼 수 있나요?</summary><p>네. 설정의 기억 화면에서 모두 보입니다. 틀리면 고치고, 싫으면 지웁니다. 지운 것도 사흘 안에는 되돌릴 수 있습니다.</p></details>
+        <details><summary>그만 쓰면 기억은 어떻게 되나요?</summary><p>백업 파일로 내보내 가져갈 수 있습니다. PC에서 지우면 남지 않습니다.</p></details>
+      </div>
+      <div class="grp"><h3>기능</h3>
+        <details><summary>다른 AI 앱과 무엇이 다른가요?</summary><p>답을 잡지처럼 편집해 읽기 편하게 보여 줍니다. 기억을 종류별로 쌓아 같은 설명을 되풀이하지 않게 하고, 여러 회사의 AI를 골라 씁니다.</p></details>
+        <details><summary>한글(HWP) 문서도 다루나요?</summary><p>네. 내 PC의 한글, 엑셀, 워드 파일을 읽고 정리해 새 문서로 만듭니다.</p></details>
+        <details><summary>화면을 내 취향대로 바꿀 수 있나요?</summary><p>글꼴, 글자 크기, 자간, 줄 간격, 본문 너비, 색을 고릅니다. 테마 하나로 화면 전체를 바꿀 수도 있습니다.</p></details>
+        <details><summary>회사나 팀에서 함께 쓸 수 있나요?</summary><p>지금은 한 사람이 쓰는 개인용입니다.</p></details>
+      </div>
+      </div>
     </div>
   </section>
 
-  <section class="part closing">
-    <div class="wrap">
-      <p>오늘 정한 기준, 다음 주에도 Crema가 기억해요.</p>
-      {% if user.is_authenticated %}
-        <a class="button" href="{{ start }}">설치 파일 받기</a>
-      {% else %}
-        <a class="button" href="{{ login }}?next={{ start }}">무료로 시작하기</a>
-      {% endif %}
-    </div>
+  <!-- 10. 마지막 권유 -->
+  <section class="end10" id="start">
+    <svg class="cup10" viewBox="0 0 260 240" aria-hidden="true">
+      <defs>
+        <radialGradient id="cr10" cx="46%" cy="44%" r="60%">
+          <stop offset="0" stop-color="#f0c48c"/>
+          <stop offset=".35" stop-color="#d79a5a"/>
+          <stop offset=".72" stop-color="#a8642e"/>
+          <stop offset="1" stop-color="#5a2f14"/>
+        </radialGradient>
+        <radialGradient id="sc10" cx="50%" cy="45%" r="55%">
+          <stop offset=".7" stop-color="#f7f1ea"/>
+          <stop offset="1" stop-color="#ddd3c7"/>
+        </radialGradient>
+        <linearGradient id="cu10" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#ffffff"/>
+          <stop offset="1" stop-color="#e9e1d7"/>
+        </linearGradient>
+      </defs>
+      <ellipse cx="124" cy="124" rx="112" ry="108" fill="url(#sc10)"/>
+      <ellipse cx="124" cy="124" rx="86" ry="83" fill="none" stroke="#e6ddd2" stroke-width="2"/>
+      <rect x="186" y="110" width="58" height="26" rx="13" fill="url(#cu10)" stroke="#e2d8cc" stroke-width="1.5"/>
+      <circle cx="124" cy="122" r="74" fill="url(#cu10)" stroke="#e2d8cc" stroke-width="1.5"/>
+      <circle cx="124" cy="122" r="62" fill="url(#cr10)"/>
+      <path d="M100 108c10-14 34-16 44-4 9 11-2 26-17 24-11-1-15-11-8-17" fill="none" stroke="#f6d8ae" stroke-width="3" stroke-linecap="round" opacity=".55"/>
+      <g fill="#f8dfba" opacity=".55"><circle cx="150" cy="96" r="2"/><circle cx="92" cy="140" r="1.6"/><circle cx="140" cy="150" r="1.4"/><circle cx="108" cy="92" r="1.2"/><circle cx="160" cy="128" r="1.6"/><circle cx="118" cy="160" r="1.1"/></g>
+      <ellipse cx="104" cy="92" rx="22" ry="9" fill="#fff" opacity=".12" transform="rotate(-28 104 92)"/>
+    </svg>
+    <h2><span>커피 한 잔의 여유,</span><span>에스프레소 위의 크레마처럼</span><span class="gold">보는 즐거움이 있는 크레마 에이전트</span></h2>
+    <a class="go10" href="{% if user.is_authenticated %}{{ start }}{% else %}{{ login }}?next={{ start }}{% endif %}">{% if user.is_authenticated %}설치 파일 받기{% else %}무료로 시작하기{% endif %}</a>
+    <p class="hint10">Windows PC용. 쓰던 AI를 그대로 연결합니다.</p>
   </section>
-{% endblock %}
+</main>
+  <!-- 11. 푸터 -->
+  <footer class="foot11">
+    <div class="in">
+      <div class="row1">
+        <p class="brand"><b><svg aria-hidden="true"><use href="#logo"/></svg>Crema</b><span>보는 즐거움, 읽는 편안함.</span></p>
+        <nav class="links" aria-label="바닥글">
+          <div><span>크레마</span><a href="#price">가격</a><a href="{% if user.is_authenticated %}{{ start }}{% else %}{{ login }}?next={{ start }}{% endif %}">{% if user.is_authenticated %}설치 파일 받기{% else %}무료로 시작하기{% endif %}</a></div>
+          <div><span>도움</span><a href="mailto:cto@aishift.kr">문의</a><a href="{% url 'privacy' %}">개인정보처리방침</a><a href="{% url 'terms' %}">이용약관</a></div>
+        </nav>
+      </div>
+      <div class="row2"><span>만든 곳 AI Shift</span><span>© 2026 AI Shift</span></div>
+    </div>
+  </footer>
+
+
+<script>
+(() => {
+  const WHY = {
+    clean: '군더더기 없는 흰 종이. 결론과 표만 또렷하게 남기고 나머지는 물러납니다.',
+    notes: '공부 잘하는 친구의 노트를 빌려 본 적 있나요? 형광펜, 박스, 별표, 여백의 주석까지. 보는 것만으로 즐거운 필기를 그대로 옮겼습니다.',
+    mag: '잘 편집된 잡지 한 면처럼. 큰 명조 제목, 첫 글자 장식, 두 단 배치와 인용구로 천천히 읽히는 지면입니다.',
+    scrap: '다이어리를 꾸미듯. 크라프트지 위에 테이프로 붙인 종이 조각, 라벨 테이프 제목, 도장과 폴라로이드.',
+    chalk: '선생님의 판서처럼 또박또박. 초록 칠판에 분필 글씨, 색분필로 친 밑줄과 동그라미.',
+    night: '늦은 밤 스탠드 불빛 아래처럼. 어두운 바탕에 부드러운 명조, 눈이 편한 호박색 강조.'
+  };
+  const cv = document.getElementById('tcv');
+  const why = document.getElementById('twhy');
+  const tabs = [...document.querySelectorAll('.ttab')];
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => x.setAttribute('aria-selected', x === t ? 'true' : 'false'));
+    cv.className = 'cv t-' + t.dataset.t;
+    why.textContent = WHY[t.dataset.t];
+  }));
+})();
+</script>
+</body>
+</html>
