@@ -11,7 +11,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from . import voice
 from .models import ErrorReport, ReportConsent, VoiceSession
@@ -31,6 +31,18 @@ def _provider_post(url, key, payload, timeout):
         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return json.load(response)
+
+
+@require_GET
+def api_app_me(request):
+    """The account as Thock asks for it at start and every few minutes (Thock's /api/app/me answer)."""
+    token = bearer_token(request)
+    if not token:
+        return JsonResponse({"error": "signed_out"}, status=401)
+    user = token.user
+    return JsonResponse({"email": user.email, "account_id": str(user.pk), "name": user.get_full_name(),
+                         "beta_ready": settings.CREMA_VOICE_READY, "access": voice.access_status(user),
+                         "error_reports": voice.voice_me(user)["error_reports"]})
 
 
 @csrf_exempt

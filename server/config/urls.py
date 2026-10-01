@@ -21,6 +21,7 @@ urlpatterns = [
     path("api/me", views.api_me, name="api_me"),
     path("api/app/logout", views.api_logout, name="api_logout"),
     path("api/app/invite", views.api_invite, name="api_invite"),
+    path("api/app/me", thock.api_app_me, name="api_app_me"),
     path("api/thock/session", thock.api_session, name="api_thock_session"),
     path("api/thock/finish", thock.api_finish, name="api_thock_finish"),
     path("api/thock/key", thock.api_key, name="api_thock_key"),

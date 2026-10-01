@@ -178,6 +178,13 @@ class VoiceAccessTests(TestCase):
         provider.assert_not_called()
         keys.assert_not_called()
 
+    def test_thock_reads_the_account_as_from_its_own_server(self):
+        me = self.client.get("/api/app/me", **self.headers).json()
+        self.assertEqual((me["email"], me["account_id"], me["beta_ready"]), ("test@example.com", str(self.user.pk), True))
+        self.assertEqual((me["access"]["allowed"], me["access"]["remaining_seconds"]), (True, 7200))
+        self.assertEqual(me["error_reports"], {"enabled": None, "notice": "2026-10-01"})
+        self.assertEqual(self.client.get("/api/app/me").status_code, 401)
+
     def test_unconfigured_server_offers_no_voice(self):
         with self.settings(CREMA_VOICE_READY=False), patch("web.thock._provider_post") as provider:
             self.assertEqual(self.post("/api/thock/session", {"request_id": str(uuid4())}).status_code, 503)
