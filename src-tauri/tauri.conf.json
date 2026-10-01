@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://127.0.0.1:4173",
-    "beforeDevCommand": "npm run engine && npm run dev",
-    "beforeBuildCommand": "npm run build && npm run engine"
+    "beforeDevCommand": "npm run engine && npm run thock && npm run dev",
+    "beforeBuildCommand": "npm run build && npm run engine && npm run thock"
   },
   "app": {
     "windows": [
@@ -39,7 +39,8 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "engine/": "engine/"
+      "engine/": "engine/",
+      "thock/": "thock/"
     },
     "android": {
       "debugApplicationIdSuffix": ".debug"

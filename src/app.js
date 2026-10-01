@@ -121,6 +121,8 @@ export function createChatApp({
   canTranscribe = () => false,
   // Whether a dictation service is connected; without one the mic says how to connect one.
   dictationReady = () => true,
+  // The Thock built in (9,900원 plan): true when it took the press (dictating into this focused input field).
+  onVoice = null,
   suggestNext = null,
   answerApproval = null,
   onRenameChat = () => {},
@@ -654,6 +656,15 @@ export function createChatApp({
     if (recorder) {
       recorder.stop();
       return;
+    }
+    if (onVoice) {
+      textarea.focus();
+      try {
+        if (await onVoice()) return;
+      } catch (error) {
+        showNotice({ title: "음성 입력", text: error?.userMessage || "음성 입력을 시작하지 못했습니다.", tone: "error" });
+        return;
+      }
     }
     if (!dictationReady()) {
       showNotice({

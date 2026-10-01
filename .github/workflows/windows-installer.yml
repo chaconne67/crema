@@ -55,6 +55,11 @@ jobs:
             if (-not (Test-Path "$engine\$file")) { throw "engine file missing: $file" }
           }
           "engine: $(Get-Content "$engine\engine.commit")"
+          # The Thock built in for the 9,900원 plan (scripts/build-thock.ps1).
+          foreach ($file in "Thock.exe", "thock.commit", "_internal\thock\settings.html") {
+            if (-not (Test-Path "$env:LOCALAPPDATA\Crema\thock\$file")) { throw "thock file missing: $file" }
+          }
+          "thock: $(Get-Content "$env:LOCALAPPDATA\Crema\thock\thock.commit")"
           # The bundled Python loads the Korean/CJK tokenizer and finds a two-letter word with it.
           @'
           import sqlite3, sys

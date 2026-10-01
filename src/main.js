@@ -535,6 +535,9 @@ const sidebar = createSidebar({
   },
 });
 
+/** The access includes Thock voice input (the 9,900원 plan and the kinds not sold). */
+const voiceIncluded = () => loadAccount()?.member?.voice === true;
+
 /** The account uses the narrow free plan: its grade is not full use (crema-agent.site /api/me member). */
 const planFree = () => loadAccount()?.member?.full === false;
 
@@ -552,6 +555,9 @@ async function syncPlan() {
   if (change.put) await host.hermesAdmin("PUT", "/api/config", { config: change.put }).catch(() => {});
   if (change.remove) await host.hermesAdmin("DELETE", `/api/providers/custom-endpoints/${change.remove}`).catch(() => {});
   if (change.put || change.remove) await refreshModels().catch(() => {});
+  // The built-in Thock runs while the access includes voice.
+  if (voiceIncluded()) host.thockStart().catch(() => {});
+  else host.thockStop();
 }
 
 async function connect() {
@@ -599,6 +605,7 @@ const panel = createSettingsPanel({
     const chat = workspace.chats.find((item) => item.id === sessionId || chatSessions(item).includes(sessionId));
     if (chat) openChat(chat.id);
   },
+  loadVoicePage: () => host.thockPage(),
   async onRedeemInvite(code) {
     await host.redeemInvite(code);
     const status = await host.accountStatus().catch(() => null);
@@ -610,6 +617,7 @@ const panel = createSettingsPanel({
     const message = "Crema에서 로그아웃할까요?\n다시 쓰려면 Google 계정으로 다시 로그인해야 합니다. 대화 기록은 이 PC에 그대로 남습니다.";
     if (!(await host.confirm(message, "로그아웃"))) return;
     await host.signOut().catch(() => {});
+    host.thockStop();
     saveAccount(null);
     panel.setAccount(null);
     await ensureSignedIn();
@@ -985,6 +993,11 @@ const app = createChatApp({
   answerApproval: (request, allow) => host.answerApproval(request, allow),
   describeServed,
   canTranscribe: () => connected,
+  onVoice: async () => {
+    if (!voiceIncluded()) return false;
+    await host.thockDictate();
+    return true;
+  },
   // The dictation route of the connected Providers; before they load it is unknown, so the engine is asked.
   dictationReady: () => {
     const listen = panel.mediaPlan().find((item) => item.kind.key === "listen");
@@ -1133,6 +1146,11 @@ if (activeChat()) {
   newChat(null);
 }
 const signIn = createSignIn({ host });
+// The built-in Thock's pill opens Crema's settings at 음성 입력.
+host.onVoiceSettings(() => {
+  panel.open();
+  panel.showVoice();
+});
 
 /**
  * Crema starts signed in to crema-agent.site: first run (or after signing out) asks for Google first.

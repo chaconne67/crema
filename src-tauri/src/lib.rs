@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use futures_util::StreamExt;
 use tauri::ipc::Channel;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::Notify;
 
 const KEYRING_SERVICE: &str = "agent-client";
@@ -27,6 +27,7 @@ struct Engine {
 struct AppState {
   runs: Mutex<HashMap<String, Arc<Notify>>>,
   engine: tokio::sync::Mutex<Option<Engine>>,
+  thock: Mutex<Option<Child>>,
 }
 
 #[cfg(windows)]
@@ -300,6 +301,92 @@ async fn sign_out() -> Result<(), String> {
     Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
     Err(_) => Err("keyring".into()),
   }
+}
+
+// Thock built in (the 9,900원 plan, docs: Crema-이용권-권한-Thock방식-계획-2026-10-01.md): the installer's Thock.exe
+// runs with Crema's server and sign-in (read by name from Windows Credential Manager) and its own data folder.
+// It writes its settings page's port and token to embedded.json; a Thock already running on its own keeps
+// CapsLock and this one ends at once (its single-instance lock), so there is no embedded.json then.
+
+fn thock_home(app: &AppHandle) -> Result<PathBuf, String> {
+  app.path().app_local_data_dir().map(|dir| dir.join("thock")).map_err(|_| "thock_unavailable".to_string())
+}
+
+/// Starts the built-in Thock unless it is running.
+#[tauri::command]
+fn thock_start(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+  let mut thock = state.thock.lock().unwrap();
+  if let Some(child) = thock.as_mut() {
+    if matches!(child.try_wait(), Ok(None)) {
+      return Ok(());
+    }
+  }
+  let exe = app.path().resource_dir().map_err(|_| "thock_unavailable".to_string())?.join("thock").join("Thock.exe");
+  let home = thock_home(&app)?;
+  std::fs::create_dir_all(&home).map_err(|_| "thock_unavailable".to_string())?;
+  let _ = std::fs::remove_file(home.join("embedded.json"));
+  let host = std::env::current_exe().map_err(|_| "thock_unavailable".to_string())?;
+  let child = Command::new(exe)
+    .env("THOCK_EMBEDDED", "1")
+    .env("THOCK_HOME", &home)
+    .env("THOCK_SITE", ACCOUNT_SITE)
+    .env("THOCK_CREDENTIAL", format!("{ACCOUNT_KEY_USER}.{KEYRING_SERVICE}"))
+    .env("THOCK_HOST_EXE", host)
+    .stdin(Stdio::null())
+    .stdout(Stdio::null())
+    .stderr(Stdio::null())
+    .spawn()
+    .map_err(|_| "thock_unavailable".to_string())?;
+  tie_to_app(&child);
+  *thock = Some(child);
+  Ok(())
+}
+
+/// Ends the built-in Thock (an access without voice, signing out).
+#[tauri::command]
+fn thock_stop(app: AppHandle, state: State<'_, AppState>) {
+  if let Some(mut child) = state.thock.lock().unwrap().take() {
+    let _ = child.kill();
+    let _ = child.wait();
+  }
+  if let Ok(home) = thock_home(&app) {
+    let _ = std::fs::remove_file(home.join("embedded.json"));
+  }
+}
+
+/// The running Thock's settings page port and token (embedded.json).
+fn thock_local(app: &AppHandle) -> Result<(u64, String), String> {
+  let text = std::fs::read_to_string(thock_home(app)?.join("embedded.json")).map_err(|_| "thock_unavailable".to_string())?;
+  let value: serde_json::Value = serde_json::from_str(&text).map_err(|_| "thock_unavailable".to_string())?;
+  match (value["port"].as_u64(), value["token"].as_str()) {
+    (Some(port), Some(token)) => Ok((port, token.to_string())),
+    _ => Err("thock_unavailable".into()),
+  }
+}
+
+/// Thock's settings page, shown in Crema's settings under 음성 입력.
+#[tauri::command]
+fn thock_page(app: AppHandle) -> Result<String, String> {
+  let (port, token) = thock_local(&app)?;
+  Ok(format!("http://127.0.0.1:{port}/?t={token}&w=0"))
+}
+
+/// The mic button: Thock starts a dictation into the field Crema has focused (the next press stops it).
+#[tauri::command]
+async fn thock_dictate(app: AppHandle) -> Result<(), String> {
+  let (port, token) = thock_local(&app)?;
+  let response = http_client()?
+    .post(format!("http://127.0.0.1:{port}/api/dictate"))
+    .header("X-Token", token)
+    .json(&serde_json::json!({}))
+    .timeout(Duration::from_secs(3))
+    .send()
+    .await
+    .map_err(|_| "thock_unavailable".to_string())?;
+  if !response.status().is_success() {
+    return Err("thock_unavailable".into());
+  }
+  Ok(())
 }
 
 // What the signed-in app asks crema-agent.site: to judge with Jev how hard an automatic free-AI request is
@@ -868,10 +955,14 @@ fn cancel_chat(state: State<'_, AppState>, run_id: String) {
 pub fn run() {
   tauri::Builder::default()
     // A second launch focuses the running window: two windows would overwrite each other's chats.
-    .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+    .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
       if let Some(window) = app.get_webview_window("main") {
         let _ = window.unminimize();
         let _ = window.set_focus();
+      }
+      // The built-in Thock's pill asks for its settings: Crema shows them under 음성 입력.
+      if args.iter().any(|arg| arg == "--voice-settings") {
+        let _ = app.emit("voice-settings", ());
       }
     }))
     .plugin(tauri_plugin_opener::init())
@@ -892,6 +983,10 @@ pub fn run() {
       account_status,
       sign_out,
       site_post,
+      thock_start,
+      thock_stop,
+      thock_page,
+      thock_dictate,
       guide_open,
       guide_bounds,
       guide_close,

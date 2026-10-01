@@ -1,4 +1,5 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { confirm as confirmDialog, message as messageDialog, open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -26,6 +27,7 @@ const ERROR_MESSAGES = {
   code_expired: "사용 기한이 지난 초대 코드입니다. 새 코드를 요청해 주세요.",
   access_exists: "지금 이용권이 이 초대 코드와 같거나 더 넓어서 바꾸지 않았습니다.",
   too_many_attempts: "초대 코드를 여러 번 잘못 넣었습니다. 한 시간 뒤에 다시 시도해 주세요.",
+  thock_unavailable: "음성 입력을 시작하지 못했습니다. 따로 설치한 Thock이 켜져 있으면 CapsLock으로 쓰거나, 그 Thock을 끄고 Crema를 다시 시작해 주세요.",
   file_read: "파일을 읽지 못했습니다.",
   file_too_large: "20MB보다 큰 이미지는 첨부할 수 없습니다.",
   file_write: "파일을 저장하지 못했습니다.",
@@ -167,6 +169,15 @@ export function createDesktopHost() {
     guideStep: (body) => call("site_post", { path: "/api/onboarding/step", body }),
     /** "막혔어요": what stops the user on a page ({ cause }), from crema-agent.site with Jev. */
     guideHelp: (body) => call("site_post", { path: "/api/onboarding/help", body }),
+    /** Thock built in (9,900원 plan): start or stop it, its settings page, a dictation into the focused field. */
+    thockStart: () => call("thock_start"),
+    thockStop: () => call("thock_stop").catch(() => {}),
+    thockPage: () => call("thock_page"),
+    thockDictate: () => call("thock_dictate"),
+    /** Thock's pill asks for its settings. */
+    onVoiceSettings(callback) {
+      listen("voice-settings", () => callback()).catch(() => {});
+    },
     /** An invite code (as Thock's): the access it gives, or the site's reason it does not. */
     redeemInvite: (code) => call("site_post", { path: "/api/app/invite", body: { code } }),
 

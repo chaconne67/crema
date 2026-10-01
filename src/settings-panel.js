@@ -64,6 +64,8 @@ const SECTION_ICONS = {
   persona: icon('<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/>'),
   appearance: icon('<path d="M12 4v16"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 20h6"/>'),
   theme: icon('<path d="M12 2v2"/><path d="M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715"/><path d="M16 12a4 4 0 0 0-4-4"/><path d="m19 5-1.256 1.256"/><path d="M20 12h2"/>'),
+  // Lucide (ISC) "mic".
+  voice: icon('<path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/>'),
   input: icon('<path d="M10 8h.01"/><path d="M12 12h.01"/><path d="M14 8h.01"/><path d="M16 12h.01"/><path d="M18 8h.01"/><path d="M6 8h.01"/><path d="M7 16h10"/><path d="M8 12h.01"/><rect width="20" height="16" x="2" y="4" rx="2"/>'),
 };
 
@@ -144,6 +146,7 @@ export function createSettingsPanel({
   onMediaChange = () => {},
   onSignOut,
   onRedeemInvite = async () => {},
+  loadVoicePage = async () => "",
   onGuide = () => {},
   // (open) → the panel opened or closed; the sign-up guide's page must not cover it.
   onOpenChange = () => {},
@@ -269,6 +272,7 @@ export function createSettingsPanel({
       providers: catalog.length ? `${catalog.length}개 연결됨` : "",
       media: mediaSection?.summary() || "",
       memory: memorySection?.summary() || "",
+      voice: voiceLabel(account?.member, account?.voice).replace("음성 입력 · ", ""),
       model: [connection.auto ? AUTO_LABEL : connection.model, connection.fast && "빠른 속도", connection.reasoning && reasoning?.label].filter(Boolean).join(" · "),
       appearance: `시스템 ${current.systemSize}px · 본문 ${current.size}px`,
       theme: THEMES.find(([value]) => value === current.theme)?.[1] || "",
@@ -322,6 +326,20 @@ export function createSettingsPanel({
       section.append(toggle, body);
       toggle.setAttribute("aria-expanded", String(openIds.includes(id)));
       body.hidden = !openIds.includes(id);
+    }
+  }
+
+  /** The built-in Thock's settings page, for an access with voice. */
+  async function loadVoice() {
+    if (panel.querySelector("[data-voice-section]").hidden) return;
+    const frame = panel.querySelector("[data-voice-frame]");
+    const status = panel.querySelector("[data-voice-status]");
+    try {
+      const url = await loadVoicePage();
+      if (frame.src !== url) frame.src = url;
+      status.textContent = "";
+    } catch (error) {
+      status.textContent = error?.userMessage || "음성 입력 설정을 불러오지 못했습니다.";
     }
   }
 
@@ -399,7 +417,17 @@ export function createSettingsPanel({
       onOpenChange(true);
       loadPersona();
       memorySection?.load();
+      loadVoice();
       panel.querySelector("[data-close-settings]").focus();
+    },
+
+    /** Opened from the built-in Thock's pill: 음성 입력, unfolded. */
+    showVoice() {
+      const section = panel.querySelector('[data-section="voice"]');
+      if (section.hidden) return;
+      setSectionOpen(section, true);
+      section.scrollIntoView?.({ block: "start" });
+      loadVoice();
     },
 
     showConnection(result) {
@@ -413,6 +441,7 @@ export function createSettingsPanel({
       const voiceLine = panel.querySelector("[data-plan-voice]");
       voiceLine.textContent = voiceLabel(account?.member, account?.voice);
       voiceLine.hidden = !voiceLine.textContent;
+      panel.querySelector("[data-voice-section]").hidden = account?.member?.voice !== true;
       panel.querySelector("[data-account-line]").textContent = account
         ? [account.email, account.name].filter(Boolean).join(" · ")
         : "로그인하지 않았습니다.";
@@ -471,6 +500,12 @@ export function createSettingsPanel({
             <input id="invite-code" type="text" autocomplete="off" spellcheck="false" maxlength="32" placeholder="CRM-XXXX-XXXX" />
             <button class="secondary-button" type="button" data-redeem-invite>코드 확인</button>
             <p class="provider-status" data-invite-status role="status"></p>
+          </section>
+
+          <section class="settings-section" aria-labelledby="voice-title" data-voice-section hidden>
+            <h3 id="voice-title">음성 입력</h3>
+            <iframe class="voice-frame" data-voice-frame title="음성 입력 설정"></iframe>
+            <p class="provider-status" data-voice-status role="status"></p>
           </section>
 
           <section class="settings-section" aria-labelledby="media-title">

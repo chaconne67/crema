@@ -153,3 +153,33 @@ describe("Settings → 내 플랜", () => {
     expect(input.value).toBe("");
   });
 });
+
+describe("Settings → 음성 입력", () => {
+  it("shows the built-in Thock's settings page for an access with voice", async () => {
+    document.body.innerHTML = "";
+    window.matchMedia = vi.fn(() => ({ matches: false, addEventListener() {} }));
+    const { createSettingsPanel } = await import("../src/settings-panel.js");
+    const { loadAppearance } = await import("../src/settings.js");
+    const loadVoicePage = vi.fn(async () => "http://127.0.0.1:50123/?t=tok&w=0");
+    const panel = createSettingsPanel({
+      appearance: loadAppearance(), connection: {}, host: { readSoul: vi.fn(async () => "") },
+      onAppearanceChange() {}, onConnectionChange() {}, onConnect: async () => ({ state: "connected", message: "" }),
+      onProvidersChanged: async () => {}, onSignOut() {}, loadVoicePage,
+    });
+    const shell = document.createElement("div");
+    document.body.append(shell);
+    panel.mount(shell);
+    const section = document.querySelector('[data-section="voice"]');
+    panel.setAccount({ email: "a@example.com", member: { label: "4,900원 이용권", voice: false } });
+    panel.open();
+    expect(section.hidden).toBe(true);
+    expect(loadVoicePage).not.toHaveBeenCalled();
+    panel.setAccount({ email: "a@example.com", member: { label: "9,900원 이용권", voice: true },
+      voice: { remaining_seconds: 600, allowance_seconds: 7200 } });
+    panel.showVoice();
+    await vi.waitFor(() => expect(document.querySelector("[data-voice-frame]").src).toBe("http://127.0.0.1:50123/?t=tok&w=0"));
+    expect(section.hidden).toBe(false);
+    expect(section.querySelector(".section-body").hidden).toBe(false);
+    expect(section.querySelector(".section-summary").textContent).toBe("10분 남음 (기간마다 120분)");
+  });
+});

@@ -392,6 +392,28 @@ describe("chat app", () => {
     expect(document.querySelector(".notice-card").textContent).toContain("받아쓰기 서비스를 연결해야 합니다");
   });
 
+  it("gives the mic to the built-in Thock with the input field focused", async () => {
+    const getUserMedia = vi.fn();
+    Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia } });
+    let focused = null;
+    const onVoice = vi.fn(async () => {
+      focused = document.activeElement;
+      return true;
+    });
+    const app = createChatApp({
+      client: { async *streamReply() {} }, host: { openLink: vi.fn() },
+      canTranscribe: () => true, dictationReady: () => false, onVoice,
+    });
+    app.mount(document.querySelector("#app"));
+    app.showConversation("chat-1");
+    app.setStatus("connected", "연결됨");
+    document.querySelector("[data-mic]").click();
+    await vi.waitFor(() => expect(onVoice).toHaveBeenCalled());
+    expect(focused).toBe(document.querySelector("#prompt"));
+    expect(getUserMedia).not.toHaveBeenCalled();
+    expect(document.querySelector(".notice-card")).toBeNull();
+  });
+
   it("opens a picker at once saying it is loading, and tells whether it is still open", () => {
     let stillOpen;
     const onCommand = vi.fn((id, arg, ui) => {
