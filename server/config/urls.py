@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import include, path
 
-from web import views
+from web import thock, views
 
 urlpatterns = [
     path("", views.home, name="home"),
@@ -21,6 +21,11 @@ urlpatterns = [
     path("api/me", views.api_me, name="api_me"),
     path("api/app/logout", views.api_logout, name="api_logout"),
     path("api/app/invite", views.api_invite, name="api_invite"),
+    path("api/thock/session", thock.api_session, name="api_thock_session"),
+    path("api/thock/finish", thock.api_finish, name="api_thock_finish"),
+    path("api/thock/key", thock.api_key, name="api_thock_key"),
+    path("api/thock/consent", thock.api_consent, name="api_thock_consent"),
+    path("api/thock/errors", thock.api_errors, name="api_thock_errors"),
     path("api/free-catalog", views.free_catalog, name="free_catalog"),
     path("api/route", views.api_route, name="api_route"),
     path("api/onboarding/step", views.api_onboarding_step, name="api_onboarding_step"),

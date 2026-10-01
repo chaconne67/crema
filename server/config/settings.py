@@ -2,6 +2,7 @@
 (on main: /srv/consolidation/secrets/crema.env)."""
 
 import os
+from decimal import Decimal
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
@@ -136,3 +137,18 @@ CREMA_AI_MODELS = ["openai/gpt-6-luna", "openai/gpt-6-sol", "anthropic/claude-so
                    "google/gemini-3.8-flash", "deepseek/deepseek-v4.1-flash"]
 CREMA_AI_DEFAULT_MODEL = CREMA_AI_MODELS[0]
 CREMA_USD_KRW = int(os.environ.get("CREMA_USD_KRW", "1450"))
+
+# Thock voice input built into Crema (docs: Crema-이용권-권한-Thock방식-계획-2026-10-01.md): the company Soniox and
+# OpenRouter management keys Thock uses, with Crema's own monthly voice budget. Values as Thock's server.
+CREMA_SONIOX_API_KEY = os.environ.get("CREMA_SONIOX_API_KEY", "")
+CREMA_OPENROUTER_MANAGEMENT_KEY = os.environ.get("CREMA_OPENROUTER_MANAGEMENT_KEY", "")
+CREMA_VOICE_MONTH_BUDGET_KRW = Decimal(os.environ.get("CREMA_VOICE_MONTH_BUDGET_KRW", "100000"))
+CREMA_VOICE_USD_KRW = Decimal(CREMA_USD_KRW)
+CREMA_VOICE_SESSION_RESERVE_KRW = Decimal("100")
+CREMA_VOICE_SESSION_SECONDS = 300
+CREMA_VOICE_FINALIZE_SECONDS = 5
+CREMA_VOICE_KEY_DAYS = 30
+CREMA_VOICE_POLISH_MODEL = "openai/gpt-6-luna"
+CREMA_VOICE_REPORT_NOTICE = "2026-10-01"  # version of the error-report notice
+CREMA_VOICE_READY = bool(CREMA_SONIOX_API_KEY and CREMA_OPENROUTER_MANAGEMENT_KEY
+                         and 0 < CREMA_VOICE_MONTH_BUDGET_KRW <= 100000)

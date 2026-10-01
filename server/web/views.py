@@ -19,6 +19,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from . import voice
 from .models import AppToken, InviteCode, LoginCode, Membership, ModelUsage, Subscription, digest
 
 PENDING = "crema_app_login"
@@ -321,7 +322,7 @@ def api_me(request):
     now = timezone.now()
     return JsonResponse({"email": token.user.email, "name": token.user.get_full_name(),
                          "member": Membership.of(token.user).summary(now),
-                         "plan": Subscription.of(token.user).summary(now)})
+                         "plan": Subscription.of(token.user).summary(now), **voice.voice_me(token.user)})
 
 
 @csrf_exempt
@@ -356,7 +357,9 @@ def api_invite(request):
 def api_logout(request):
     token = bearer_token(request)
     if token:
+        hashes = voice.revoke_keys(token.provider_keys.all())
         token.delete()
+        voice.disable_keys(hashes)
     return HttpResponse(status=204)
 
 

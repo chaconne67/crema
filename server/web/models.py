@@ -1,5 +1,6 @@
 import hashlib
 import secrets
+import uuid
 from datetime import timedelta
 from decimal import Decimal
 
@@ -201,3 +202,87 @@ class ModelUsage(models.Model):
         usd = cls.objects.filter(user=user, at__gte=start).aggregate(total=models.Sum("cost_usd"))["total"] or 0
         return round(float(usd) * settings.CREMA_USD_KRW)
 
+
+
+# ── Thock voice input built into Crema: the ledger of Thock's server, with the Crema access as the access ──
+
+
+class SpendPeriod(models.Model):
+    """The company's voice cost a month (Soniox and correction keys), apart from Thock's own budget."""
+    month = models.CharField(max_length=7, unique=True)
+    spent_krw = models.DecimalField(max_digits=18, decimal_places=6, default=0)
+    reserved_krw = models.DecimalField(max_digits=18, decimal_places=6, default=0)
+
+    def __str__(self):
+        return self.month
+
+
+class VoiceSession(models.Model):
+    """One dictation: the time reserved for it, then what Soniox says it used. Never what was said."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    access = models.ForeignKey(Membership, null=True, on_delete=models.SET_NULL)
+    token = models.ForeignKey(AppToken, null=True, on_delete=models.SET_NULL)
+    budget = models.ForeignKey(SpendPeriod, on_delete=models.PROTECT)
+    request_id = models.UUIDField()
+    period_start = models.DateTimeField()
+    period_end = models.DateTimeField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    state = models.CharField(max_length=12, default="issuing",
+                             choices=[(s, s) for s in ["issuing", "issued", "reported", "settled", "failed"]])
+    authorized_ms = models.PositiveBigIntegerField()
+    reserved_ms = models.PositiveBigIntegerField()
+    charged_ms = models.PositiveBigIntegerField(null=True)
+    reported_ms = models.PositiveBigIntegerField(null=True)
+    audio_ms = models.PositiveBigIntegerField(null=True)
+    outcome = models.CharField(max_length=24, blank=True)
+    input_mode = models.CharField(max_length=12, blank=True)
+    stt_ms = models.PositiveIntegerField(null=True)
+    total_ms = models.PositiveIntegerField(null=True)
+    provider_id = models.CharField(max_length=160, blank=True)
+    cost_usd = models.DecimalField(max_digits=18, decimal_places=10, null=True)
+    reserve_krw = models.DecimalField(max_digits=18, decimal_places=6)
+    exchange_rate = models.DecimalField(max_digits=12, decimal_places=4)
+    input_tokens = models.PositiveBigIntegerField(default=0)
+    output_tokens = models.PositiveBigIntegerField(default=0)
+    settled_at = models.DateTimeField(null=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["access", "request_id"], name="unique_voice_request")]
+        indexes = [models.Index(fields=["state", "created_at"]), models.Index(fields=["access", "period_start"])]
+
+
+class ProviderKey(models.Model):
+    """A member device's own OpenRouter key for direct corrections. Only OpenRouter's key hash is kept."""
+    token = models.ForeignKey(AppToken, null=True, on_delete=models.SET_NULL, related_name="provider_keys")
+    access = models.ForeignKey(Membership, null=True, on_delete=models.SET_NULL)
+    key_hash = models.CharField(max_length=128, unique=True)
+    limit_usd = models.DecimalField(max_digits=8, decimal_places=2)
+    usage_usd = models.DecimalField(max_digits=18, decimal_places=10, default=0)
+    exchange_rate = models.DecimalField(max_digits=12, decimal_places=4)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    revoked = models.BooleanField(default=False)
+    disabled_at = models.DateTimeField(null=True, blank=True)
+    synced_at = models.DateTimeField(null=True, blank=True)
+
+
+class ReportConsent(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="voice_report_consent")
+    enabled = models.BooleanField(default=True)
+    notice = models.CharField(max_length=20)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class ErrorReport(models.Model):
+    """What failed and where in the voice input. Never what was said or typed."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="voice_errors")
+    session = models.ForeignKey(VoiceSession, null=True, blank=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)
+    fingerprint = models.CharField(max_length=16, db_index=True)
+    stage = models.CharField(max_length=32)
+    code = models.CharField(max_length=48)
+    app_version = models.CharField(max_length=24)
+    os = models.CharField(max_length=48, blank=True)
+    target_app = models.CharField(max_length=64, blank=True)
+    field_class = models.CharField(max_length=64, blank=True)
+    details = models.JSONField(default=dict, blank=True)

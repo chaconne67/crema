@@ -104,6 +104,9 @@ class AppSignInTests(TestCase):
         self.assertEqual(body["email"], "me@example.com")
         me = self.client.get("/api/me", HTTP_AUTHORIZATION=f"Bearer {body['token']}").json()
         until = me["member"].pop("until")
+        voice = me.pop("voice")
+        self.assertEqual((voice["allowed"], voice["remaining_seconds"]), (True, 7200))
+        self.assertEqual(me.pop("error_reports"), {"enabled": None, "notice": "2026-10-01"})
         self.assertEqual(me, {"email": "me@example.com", "name": "주인", "member": {
             "kind": "trial", "label": "무료 체험", "full": True, "voice": True, "models": False, "budget": 0}, "plan": {
             "status": "none", "days_left": None, "price": 4900, "card": "", "paid_until": None}})
