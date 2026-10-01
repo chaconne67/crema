@@ -374,6 +374,24 @@ describe("chat app", () => {
     expect(document.querySelector("[data-command-menu]").hidden).toBe(true);
   });
 
+  it("says how to connect a dictation service when the mic is pressed without one", () => {
+    const getUserMedia = vi.fn();
+    Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia } });
+    const app = createChatApp({
+      client: { async *streamReply() {} }, host: { openLink: vi.fn() },
+      canTranscribe: () => true, dictationReady: () => false,
+    });
+    app.mount(document.querySelector("#app"));
+    app.showConversation("chat-1");
+    app.setStatus("connected", "연결됨");
+
+    const mic = document.querySelector("[data-mic]");
+    expect(mic.hidden).toBe(false);
+    mic.click();
+    expect(getUserMedia).not.toHaveBeenCalled();
+    expect(document.querySelector(".notice-card").textContent).toContain("받아쓰기 서비스를 연결해야 합니다");
+  });
+
   it("opens a picker at once saying it is loading, and tells whether it is still open", () => {
     let stillOpen;
     const onCommand = vi.fn((id, arg, ui) => {

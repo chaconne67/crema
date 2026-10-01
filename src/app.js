@@ -119,6 +119,8 @@ export function createChatApp({
   onCommand = () => {},
   onContextMenu = () => {},
   canTranscribe = () => false,
+  // Whether a dictation service is connected; without one the mic says how to connect one.
+  dictationReady = () => true,
   suggestNext = null,
   answerApproval = null,
   onRenameChat = () => {},
@@ -651,6 +653,13 @@ export function createChatApp({
     const button = root.querySelector("[data-mic]");
     if (recorder) {
       recorder.stop();
+      return;
+    }
+    if (!dictationReady()) {
+      showNotice({
+        title: "음성 입력",
+        text: "음성 입력을 쓰려면 받아쓰기 서비스를 연결해야 합니다. 설정 › 고급 › Provider › Provider 추가에서 Groq(무료 키)를 연결하면 됩니다. OpenAI·xAI API 키로도 쓸 수 있습니다.",
+      });
       return;
     }
     let stream;

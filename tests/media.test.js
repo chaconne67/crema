@@ -31,7 +31,7 @@ describe("media backends from the connected Providers", () => {
       // Off OpenRouter the shared video model is cleared, so Grok uses its own default.
       video_gen: { provider: "xai", model: "" },
       tts: { provider: "xai" },
-      stt: { enabled: true, provider: "groq" },
+      stt: { enabled: true, provider: "groq", language: "ko" },
     });
     expect(mediaConfig(mediaPlan(new Set(["anthropic"])))).toEqual({ platform_toolsets: { api_server: ["hermes-api-server"] } });
   });

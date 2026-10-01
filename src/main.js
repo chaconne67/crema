@@ -978,6 +978,11 @@ const app = createChatApp({
   answerApproval: (request, allow) => host.answerApproval(request, allow),
   describeServed,
   canTranscribe: () => connected,
+  // The dictation route of the connected Providers; before they load it is unknown, so the engine is asked.
+  dictationReady: () => {
+    const listen = panel.mediaPlan().find((item) => item.kind.key === "listen");
+    return !listen || Boolean(listen.route);
+  },
   onContextMenu(kind, ui, project) {
     if (kind === "model") {
       commandHandlers.model("", { ...ui, quiet: true });

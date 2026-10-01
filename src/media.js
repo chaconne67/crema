@@ -45,7 +45,8 @@ export function mediaPlan(connected, choices = {}) {
 }
 
 /**
- * The engine config for a plan: each backend in use, and the run API's tools — its own set plus the
+ * The engine config for a plan: each backend in use (dictation in Korean: the engine's default hint is
+ * English, which turns Korean speech into English or nothing), and the run API's tools — its own set plus the
  * media tools that have a backend. A kind with none keeps its setting; its tool is simply not offered.
  * The OpenRouter image model goes under its own key (image_gen.openrouter.model), so the other image
  * services keep theirs; video has one shared model key, cleared ("" = default) off OpenRouter.
@@ -55,7 +56,7 @@ export function mediaConfig(plan) {
   for (const { kind, route, model } of plan) {
     if (!route) continue;
     config[kind.config] =
-      kind.key === "listen" ? { enabled: true, provider: route.provider }
+      kind.key === "listen" ? { enabled: true, provider: route.provider, language: "ko" }
       : kind.key === "image" && route.provider === "openrouter" ? { provider: route.provider, openrouter: { model } }
       : kind.key === "video" ? { provider: route.provider, model }
       : { provider: route.provider };
