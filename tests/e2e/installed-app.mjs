@@ -56,7 +56,7 @@ await until("app window", () => first.run("return Boolean(document.querySelector
 const family = await first.run("return getComputedStyle(document.querySelector('.sidebar')).fontFamily");
 check("default font is the bundled 나눔고딕", /^"?Nanum Gothic"?/.test(family), family);
 const gate = await until("sign-in screen", () => first.run(signInButton), 30_000).catch((error) => error.message);
-check("first launch asks for Google sign-in", gate === "구글로 시작하기", gate);
+check("first launch asks for Google sign-in", gate === "Google로 시작하기", gate);
 
 // The app's commands, called as its screens call them; results land on window.__e2e.
 const command = (name, args) => `
@@ -101,7 +101,7 @@ await first.close();
 
 const second = await session();
 const again = await until("sign-in screen after relaunch", () => second.run(signInButton), 60_000).catch((error) => error.message);
-check("still asks for sign-in after a relaunch without signing in", again === "구글로 시작하기", again);
+check("still asks for sign-in after a relaunch without signing in", again === "Google로 시작하기", again);
 await second.close();
 
 if (failures.length) {

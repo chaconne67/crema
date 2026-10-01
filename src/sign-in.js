@@ -15,8 +15,8 @@ export function createSignIn({ host }) {
         gate.innerHTML = `
           <img class="sign-in-logo" src="${logo}" alt="" />
           <h1>Crema</h1>
-          <p>구글 계정으로 시작합니다.</p>
-          <button class="primary-button" type="button" data-sign-in>구글로 시작하기</button>
+          <p>Google 계정으로 시작합니다.</p>
+          <button class="primary-button" type="button" data-sign-in>Google로 시작하기</button>
           <p class="sign-in-status" role="status" data-sign-in-status></p>`;
         document.body.append(gate);
         const button = gate.querySelector("[data-sign-in]");
@@ -24,7 +24,7 @@ export function createSignIn({ host }) {
         button.focus();
         button.addEventListener("click", async () => {
           button.disabled = true;
-          status.textContent = "브라우저에서 구글 로그인을 마쳐 주세요.";
+          status.textContent = "브라우저에서 Google 로그인을 완료해 주세요.";
           try {
             const account = await host.signIn();
             gate.remove();
