@@ -1,9 +1,0 @@
-{% extends "base.html" %}
-{% block title %}초대 링크 · Crema{% endblock %}
-{% block content %}
-  <div class="wrap page">
-    <h1>쓸 수 없는 초대 링크예요</h1>
-    <p class="lead">기한이 지났거나 정해진 인원이 모두 썼어요. 무료로 시작할 수는 있어요.</p>
-    <p style="margin-top:32px"><a class="button" href="{% url 'account_login' %}?next={% url 'start' %}">무료로 시작하기</a></p>
-  </div>
-{% endblock %}

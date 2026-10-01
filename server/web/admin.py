@@ -3,10 +3,10 @@ from django.shortcuts import redirect
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 
-from .models import AppToken, Invite, Membership, ModelUsage, Subscription
+from .models import AppToken, InviteCode, Membership, ModelUsage, Subscription
 
 admin.site.site_header = admin.site.site_title = "Crema 관리"
-admin.site.index_title = "회원·등급"
+admin.site.index_title = "회원·이용권"
 
 
 def google_login(request, extra_context=None):
@@ -24,8 +24,9 @@ admin.site.login = google_login
 
 @admin.register(Membership)
 class MembershipAdmin(admin.ModelAdmin):
-    list_display = ("user_email", "grade", "full_access", "models_provided", "model_budget_krw", "expires_at", "suspended_at")
-    list_filter = ("grade", "full_access", "models_provided")
+    list_display = ("user_email", "kind", "expires_at", "cycle", "voice_allowance_ms", "models_provided", "model_budget_krw",
+                    "suspended_at")
+    list_filter = ("kind", "models_provided")
     search_fields = ("user__email", "note")
     readonly_fields = ("user", "created_at")
     actions = ["suspend", "resume"]
@@ -35,11 +36,9 @@ class MembershipAdmin(admin.ModelAdmin):
         return obj.user.email
 
     def save_model(self, request, obj, form, change):
-        if "grade" in form.changed_data:
-            # A new grade brings its defaults unless the admin also changed them in the same save.
-            full, provided, budget = Membership.DEFAULTS[obj.grade]
-            if "full_access" not in form.changed_data:
-                obj.full_access = full
+        if "kind" in form.changed_data:
+            # A new kind brings its defaults unless the admin also changed them in the same save.
+            provided, budget = Membership.DEFAULTS[obj.kind]
             if "models_provided" not in form.changed_data:
                 obj.models_provided = provided
             if "model_budget_krw" not in form.changed_data:
@@ -66,24 +65,12 @@ class SubscriptionAdmin(admin.ModelAdmin):
     search_fields = ("user__email",)
 
 
-@admin.register(Invite)
-class InviteAdmin(admin.ModelAdmin):
-    list_display = ("link", "grade", "days", "used", "max_uses", "valid_until", "note", "created_at")
-    list_filter = ("grade",)
-    search_fields = ("code", "note", "uses__user__email")
-    readonly_fields = ("link", "used_by")
-
-    @admin.display(description="링크")
-    def link(self, obj):
-        return f"https://crema-agent.site/i/{obj.code}/" if obj.pk else "저장하면 만들어집니다"
-
-    @admin.display(description="쓴 사람 수")
-    def used(self, obj):
-        return obj.uses.count()
-
-    @admin.display(description="쓴 사람")
-    def used_by(self, obj):
-        return ", ".join(use.user.email for use in obj.uses.select_related("user")) or "—"
+@admin.register(InviteCode)
+class InviteCodeAdmin(admin.ModelAdmin):
+    list_display = ("code", "kind", "note", "days", "expires_at", "used_by", "used_at", "created_at")
+    list_filter = ("kind",)
+    search_fields = ("code", "note", "used_by__email")
+    readonly_fields = ("code", "used_by", "used_at")
 
 
 @admin.register(ModelUsage)

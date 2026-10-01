@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from .models import AppToken, Invite, LoginCode, Membership, ModelUsage, Subscription
+from .models import AppToken, InviteCode, LoginCode, Membership, ModelUsage, Subscription
 
 VERIFIER = "v" * 64
 CHALLENGE = base64.urlsafe_b64encode(hashlib.sha256(VERIFIER.encode()).digest()).rstrip(b"=").decode()
@@ -27,14 +27,15 @@ class PagesTests(TestCase):
         self.assertNotIn("releases/latest/download/Crema-setup-x64.exe", page)
         self.assertNotIn("/download/", page)
 
-    def test_installer_and_welcome_need_sign_in_then_give_the_latest_release(self):
-        for path in ("/start/", "/download/"):
-            self.assertTrue(self.client.get(path)["Location"].startswith("/accounts/login/"))
+    def test_installer_is_for_anyone_and_welcome_needs_sign_in(self):
+        self.assertEqual(self.client.get("/download/")["Location"],
+                         "https://github.com/chaconne67/crema/releases/latest/download/Crema-setup-x64.exe")
+        self.assertTrue(self.client.get("/start/")["Location"].startswith("/accounts/login/"))
         user = get_user_model().objects.create_user("new", email="new@example.com", first_name="새")
         self.client.force_login(user)
         page = self.client.get("/start/").content.decode()
         self.assertIn("새님, 가입됐어요", page)
-        self.assertIn("무료 회원", page)
+        self.assertIn("무료 체험", page)
         self.assertIn("/download/", page)
         self.assertEqual(self.client.get("/download/")["Location"],
                          "https://github.com/chaconne67/crema/releases/latest/download/Crema-setup-x64.exe")
@@ -101,10 +102,12 @@ class AppSignInTests(TestCase):
     def test_code_and_verifier_give_a_token_that_signs_the_app_in(self):
         body = self.exchange(self.signed_in_code()).json()
         self.assertEqual(body["email"], "me@example.com")
-        me = self.client.get("/api/me", HTTP_AUTHORIZATION=f"Bearer {body['token']}")
-        self.assertEqual(me.json(), {"email": "me@example.com", "name": "주인", "member": {
-            "grade": "free", "label": "무료 회원", "full": False, "models": False, "budget": 0, "until": None}, "plan": {
+        me = self.client.get("/api/me", HTTP_AUTHORIZATION=f"Bearer {body['token']}").json()
+        until = me["member"].pop("until")
+        self.assertEqual(me, {"email": "me@example.com", "name": "주인", "member": {
+            "kind": "trial", "label": "무료 체험", "full": True, "voice": True, "models": False, "budget": 0}, "plan": {
             "status": "none", "days_left": None, "price": 4900, "card": "", "paid_until": None}})
+        self.assertAlmostEqual((timezone.datetime.fromisoformat(until) - timezone.now()).days, 29, delta=1)
         self.assertNotEqual(AppToken.objects.get().token_hash, body["token"])
 
     def test_wrong_verifier_and_reused_code_are_refused(self):
@@ -243,26 +246,32 @@ class MembershipTests(TestCase):
     def member(self):
         return self.client.get("/api/me", **self.auth).json()["member"]
 
-    def test_a_new_account_is_a_free_member(self):
-        self.assertEqual(self.member(), {"grade": "free", "label": "무료 회원", "full": False, "models": False, "budget": 0, "until": None})
+    def test_a_new_account_gets_the_trial_with_voice_for_its_days(self):
+        member = self.member()
+        self.assertEqual((member["kind"], member["full"], member["voice"], member["models"]), ("trial", True, True, False))
+        self.assertAlmostEqual((Membership.of(self.user).expires_at - timezone.now()).days, 29, delta=1)
 
-    def test_grades_bring_their_use_and_models(self):
+    def test_kinds_bring_their_use_voice_and_models(self):
         membership = Membership.of(self.user)
-        for grade, full, models, budget in (("paid", True, False, 0), ("beta", True, False, 0), ("staff", True, True, 10000),
-                                            ("gift", True, True, 10000), ("admin", True, True, 10000)):
-            membership.apply_grade(grade)
+        membership.expires_at = None
+        for kind, full, voice, models, budget in (
+                ("free", False, False, False, 0), ("standard", True, False, False, 0), ("plus", True, True, False, 0),
+                ("beta", True, True, False, 0), ("partner", True, True, True, 10000), ("employee", True, True, True, 10000),
+                ("owner", True, True, True, 10000)):
+            membership.apply_kind(kind)
             membership.save()
             got = self.member()
-            self.assertEqual((got["grade"], got["full"], got["models"], got["budget"]), (grade, full, models, budget))
+            self.assertEqual((got["kind"], got["full"], got["voice"], got["models"], got["budget"]), (kind, full, voice, models, budget))
 
-    def test_an_expired_grade_is_a_free_member(self):
+    def test_an_ended_access_is_the_free_kind(self):
         membership = Membership.of(self.user)
-        membership.apply_grade("gift")
+        membership.apply_kind("partner")
         membership.expires_at = timezone.now() + timedelta(days=90)
         membership.save()
-        self.assertEqual((self.member()["grade"], self.member()["full"]), ("gift", True))
+        self.assertEqual((self.member()["kind"], self.member()["full"]), ("partner", True))
         Membership.objects.filter(user=self.user).update(expires_at=timezone.now() - timedelta(minutes=1))
-        self.assertEqual(self.member(), {"grade": "free", "label": "무료 회원", "full": False, "models": False, "budget": 0, "until": None})
+        self.assertEqual(self.member(), {"kind": "free", "label": "무료", "full": False, "voice": False, "models": False,
+                                         "budget": 0, "until": None})
 
     def test_a_suspended_account_is_signed_out_of_the_app(self):
         Membership.objects.create(user=self.user, suspended_at=timezone.now())
@@ -284,57 +293,63 @@ class AdminTests(TestCase):
         self.client.force_login(self.admin)
         self.assertEqual(self.client.get("/admin/").status_code, 200)
 
-    def test_changing_the_grade_brings_its_defaults_and_suspending_ends_app_sign_in(self):
+    def test_changing_the_kind_brings_its_defaults_and_suspending_ends_app_sign_in(self):
         self.client.force_login(self.admin)
         membership = Membership.of(self.member)
         url = f"/admin/web/membership/{membership.pk}/change/"
-        form = {"grade": "staff", "model_budget_krw": 0, "note": ""}
+        form = {"kind": "employee", "starts_at_0": "2026-10-01", "starts_at_1": "00:00:00", "cycle": "monthly",
+                "voice_allowance_ms": 7200000, "key_limit_usd": "1.00", "model_budget_krw": 0, "note": ""}
         self.assertEqual(self.client.post(url, form).status_code, 302)
         membership.refresh_from_db()
-        self.assertEqual((membership.full_access, membership.models_provided, membership.model_budget_krw), (True, True, 10000))
+        self.assertEqual((membership.kind, membership.models_provided, membership.model_budget_krw), ("employee", True, 10000))
         self.client.post("/admin/web/membership/", {"action": "suspend", "_selected_action": [membership.pk]})
         self.assertFalse(AppToken.objects.filter(user=self.member).exists())
         self.assertEqual(self.client.get("/api/me", HTTP_AUTHORIZATION=f"Bearer {self.token}").status_code, 401)
 
 
 @override_settings(SECURE_SSL_REDIRECT=False)
-class InviteTests(TestCase):
+class InviteCodeTests(TestCase):
     def setUp(self):
-        self.invite = Invite.objects.create(code="gift-ceo", grade="gift", days=90, max_uses=2, note="대표님 선물")
+        self.code = InviteCode.objects.create(kind="partner", note="대표님 선물", days=90,
+                                              expires_at=timezone.now() + timedelta(days=30))
 
-    def join(self, name):
-        user = get_user_model().objects.create_user(name, email=f"{name}@example.com")
-        self.client.force_login(user)
-        return user, self.client.get("/i/gift-ceo/")
+    def redeem(self, user, code=None):
+        return self.client.post("/api/app/invite", json.dumps({"code": code or self.code.code.lower()}),
+                                content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {AppToken.issue(user)}")
 
-    def test_signed_out_goes_to_google_and_comes_back_to_the_link(self):
-        self.assertEqual(self.client.get("/i/gift-ceo/")["Location"], "/accounts/login/?next=/i/gift-ceo/")
+    def user(self, name):
+        return get_user_model().objects.create_user(name, email=f"{name}@example.com")
 
-    def test_joining_gives_the_grade_for_its_days_and_counts_the_use(self):
-        user, response = self.join("a")
-        self.assertEqual(response["Location"], "/start/")
-        member = Membership.of(user).summary(timezone.now())
-        self.assertEqual((member["grade"], member["full"], member["models"], member["budget"]), ("gift", True, True, 10000))
-        self.assertAlmostEqual((Membership.of(user).expires_at - timezone.now()).days, 89, delta=1)
-        self.assertEqual(self.invite.uses.count(), 1)
-        self.client.get("/i/gift-ceo/")  # again: no second use
-        self.assertEqual(self.invite.uses.count(), 1)
+    def test_a_code_in_the_app_gives_its_kind_once(self):
+        self.assertRegex(self.code.code, r"^CRM-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$")
+        a = self.user("a")
+        response = self.redeem(a)
+        self.assertEqual((response.status_code, response.json()["member"]["kind"], response.json()["member"]["models"]),
+                         (200, "partner", True))
+        self.assertAlmostEqual((Membership.of(a).expires_at - timezone.now()).days, 89, delta=1)
+        self.code.refresh_from_db()
+        self.assertEqual(self.code.used_by, a)
+        self.assertEqual(self.redeem(self.user("b")).json()["error"], "code_used")
 
-    def test_a_full_or_expired_link_says_so_and_a_better_grade_stays(self):
-        self.join("a")
-        self.join("b")
-        self.assertEqual(self.join("c")[1].status_code, 410)
-        Invite.objects.create(code="old", grade="beta", valid_until=timezone.now() - timedelta(days=1))
-        self.assertEqual(self.client.get("/i/old/").status_code, 410)
-        self.assertEqual(self.client.get("/i/nothing/").status_code, 404)
-        staff = get_user_model().objects.create_user("s", email="s@example.com")
-        membership = Membership.of(staff)
-        membership.apply_grade("staff")
+    def test_unknown_expired_and_lower_codes_say_why_and_stay_unused(self):
+        a = self.user("a")
+        self.assertEqual(self.redeem(a, "CRM-NONE-NONE").status_code, 404)
+        old = InviteCode.objects.create(kind="beta", note="x", expires_at=timezone.now() - timedelta(minutes=1))
+        self.assertEqual(self.redeem(a, old.code).json()["error"], "code_expired")
+        owner = self.user("o")
+        membership = Membership.of(owner)
+        membership.apply_kind("owner")
         membership.save()
-        Invite.objects.create(code="beta-1", grade="beta", days=30)
-        self.client.force_login(staff)
-        self.client.get("/i/beta-1/")
-        self.assertEqual(Membership.of(staff).summary(timezone.now())["grade"], "staff")
+        self.assertEqual(self.redeem(owner).json()["error"], "access_exists")
+        self.code.refresh_from_db()
+        self.assertIsNone(self.code.used_at)
+        self.assertEqual(self.client.post("/api/app/invite", "{}", content_type="application/json").status_code, 401)
+
+    def test_ten_failed_tries_an_hour_are_enough(self):
+        a = self.user("a")
+        for _ in range(10):
+            self.redeem(a, "CRM-AAAA-AAAA")
+        self.assertEqual(self.redeem(a).status_code, 429)
 
 
 class Upstream(io.BytesIO):
@@ -351,7 +366,7 @@ class AiWindowTests(TestCase):
         self.user = get_user_model().objects.create_user("ai", email="ai@example.com")
         self.auth = {"HTTP_AUTHORIZATION": f"Bearer {AppToken.issue(self.user)}"}
         membership = Membership.of(self.user)
-        membership.apply_grade("gift")
+        membership.apply_kind("partner")
         membership.save()
 
     def chat(self, **body):
@@ -361,7 +376,7 @@ class AiWindowTests(TestCase):
     def test_only_members_with_models_provided_get_in(self):
         self.assertEqual(self.client.get("/ai/v1/models").status_code, 401)
         self.assertEqual([m["id"] for m in self.client.get("/ai/v1/models", **self.auth).json()["data"]][0], "openai/gpt-6-luna")
-        Membership.objects.filter(user=self.user).update(grade="free", full_access=False, models_provided=False)
+        Membership.objects.filter(user=self.user).update(kind="free", models_provided=False)
         self.assertEqual(self.client.get("/ai/v1/models", **self.auth).json()["error"]["type"], "not_provided")
 
     def test_a_reply_goes_through_crema_account_and_its_cost_is_counted(self):

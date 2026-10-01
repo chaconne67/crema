@@ -11,13 +11,15 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
+from django.db import transaction
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, JsonResponse, StreamingHttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from .models import AppToken, Invite, LoginCode, Membership, ModelUsage, Subscription, digest
+from .models import AppToken, InviteCode, LoginCode, Membership, ModelUsage, Subscription, digest
 
 PENDING = "crema_app_login"
 STATE = re.compile(r"[A-Za-z0-9_-]{16,128}")
@@ -219,21 +221,9 @@ def api_route(request):
 
 
 def member_context(user) -> dict:
-    """The signed-in account's grade for the site's pages; a suspended account gets no installer."""
+    """The signed-in account's access for the site's pages; a suspended account gets no installer."""
     membership = Membership.of(user)
     return {"member": membership.summary(timezone.now()), "suspended": membership.suspended_at is not None}
-
-
-def invite(request, code):
-    """An invite link: sign in with Google (the link comes back here), get its grade, then the installer."""
-    found = Invite.objects.filter(code=code).first()
-    if not found or not found.usable(timezone.now()) and not (
-            request.user.is_authenticated and found.uses.filter(user=request.user).exists()):
-        return render(request, "invite.html", {"invalid": True}, status=404 if not found else 410)
-    if not request.user.is_authenticated:
-        return redirect(f"{settings.LOGIN_URL}?next=/i/{code}/")
-    found.redeem(request.user, timezone.now())
-    return redirect("start")
 
 
 @login_required
@@ -242,10 +232,9 @@ def start(request):
     return render(request, "start.html", member_context(request.user))
 
 
-@login_required
 def download(request):
-    """The installer, for members only (the site shows it after sign-up; the app itself needs sign-in)."""
-    if Membership.objects.filter(user=request.user, suspended_at__isnull=False).exists():
+    """The installer, for anyone (as Thock's): signing in happens in the app. A suspended account gets none."""
+    if request.user.is_authenticated and Membership.objects.filter(user=request.user, suspended_at__isnull=False).exists():
         return HttpResponse("이용이 멈춘 계정입니다.", status=403)
     return HttpResponseRedirect(settings.CREMA_DOWNLOAD_URL)
 
@@ -333,6 +322,33 @@ def api_me(request):
     return JsonResponse({"email": token.user.email, "name": token.user.get_full_name(),
                          "member": Membership.of(token.user).summary(now),
                          "plan": Subscription.of(token.user).summary(now)})
+
+
+@csrf_exempt
+@require_POST
+def api_invite(request):
+    """An invite code entered in the app (as Thock's): gives this member its kind of access, or says why not.
+    Ten failed tries an hour per member, so codes cannot be guessed."""
+    token = bearer_token(request)
+    if not token:
+        return JsonResponse({"error": "signed_out"}, status=401)
+    try:
+        code = json.loads(request.body or b"{}")["code"]
+        if not isinstance(code, str) or len(code) > 32:
+            raise ValueError("code")
+    except (KeyError, TypeError, ValueError):
+        return JsonResponse({"error": "bad_request"}, status=400)
+    now = timezone.now()
+    tries = f"invite-fail:{token.user.pk}:{now:%Y%m%d%H}"
+    if cache.get(tries, 0) >= 10:
+        return JsonResponse({"error": "too_many_attempts"}, status=429)
+    with transaction.atomic():
+        found = InviteCode.objects.select_for_update().filter(code=code.strip().upper()).first()
+        failure = found.redeem(token.user, now) if found else "invalid_code"
+    if failure:
+        cache.set(tries, cache.get(tries, 0) + 1, 3600)
+        return JsonResponse({"error": failure}, status=404 if failure == "invalid_code" else 409)
+    return JsonResponse({"member": Membership.of(token.user).summary(now)})
 
 
 @csrf_exempt

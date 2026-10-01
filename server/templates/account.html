@@ -9,7 +9,7 @@
         <dd>{{ user.email }}</dd>
         <dt>이름</dt>
         <dd>{{ user.get_full_name|default:"—" }}</dd>
-        <dt>등급</dt>
+        <dt>이용권</dt>
         <dd>{{ member.label }}{% if member.until %} · {{ member.until|slice:":10" }}까지{% endif %}{% if suspended %} · 이용 정지{% endif %}</dd>
         <dt>로그인한 앱</dt>
         <dd>{{ apps }}대</dd>

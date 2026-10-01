@@ -17,7 +17,7 @@
         <a class="button" href="{% url 'download' %}" data-download>Windows용 설치 파일 받기</a>
         <p>받기가 곧 저절로 시작돼요. 시작되지 않으면 위 단추를 눌러 주세요.</p>
         <p>Windows 10, 11(64비트)용이고 크기는 약 140MB예요.</p>
-        <p>내 등급은 <strong>{{ member.label }}</strong>{% if member.until %}이고 {{ member.until|slice:":10" }}까지예요{% else %}이에요{% endif %}.</p>
+        <p>내 이용권은 <strong>{{ member.label }}</strong>{% if member.until %}이고 {{ member.until|slice:":10" }}까지예요{% else %}이에요{% endif %}.</p>
       </div>
       <h2>설치 순서</h2>
       <ol class="steps">

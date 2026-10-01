@@ -1,6 +1,7 @@
 import hashlib
 import secrets
 from datetime import timedelta
+from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
@@ -64,122 +65,118 @@ class Subscription(models.Model):
                 "card": self.card_label, "paid_until": self.paid_until.isoformat() if self.paid_until else None}
 
 
+INVITE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O or 1/I to misread
+
+
 def new_invite_code() -> str:
-    return secrets.token_urlsafe(9)
+    body = "".join(secrets.choice(INVITE_ALPHABET) for _ in range(8))
+    return f"CRM-{body[:4]}-{body[4:]}"
 
 
 class Membership(models.Model):
-    """The account's grade and what it may use (docs: Crema-회원등급-계획-2026-09-29.md): whether the app
-    is used in full or on the narrow free plan, whether Crema provides the AI models (with a monthly budget),
-    until when; admins manage everyone here. An expired grade counts as a free member; a suspended account
-    cannot use the app at all."""
+    """The account's Crema access, built like Thock's product access (docs: Crema-이용권-권한-Thock방식-계획-
+    2026-10-01.md): its kind decides what the app may use (the free kind is the narrow plan, 4,900원 is all of
+    Crema, 9,900원 and the kinds not sold add the built-in Thock voice input), until when, renewed how, with how
+    much voice time and correction cost a period, and whether Crema provides the AI models (with a monthly budget).
+    A new account starts on the trial; an ended access counts as free; a suspended account cannot use the app."""
 
-    FREE, PAID, BETA, STAFF, GIFT, ADMIN = "free", "paid", "beta", "staff", "gift", "admin"
-    GRADES = [(FREE, "무료 회원"), (PAID, "유료 회원"), (BETA, "베타 테스터"), (STAFF, "직원"),
-              (GIFT, "한 세트"), (ADMIN, "관리자")]
-    # grade -> (full use, models provided, monthly model budget in won); approved 2026-09-30.
-    DEFAULTS = {FREE: (False, False, 0), PAID: (True, False, 0), BETA: (True, False, 0),
-                STAFF: (True, True, 10000), GIFT: (True, True, 10000), ADMIN: (True, True, 10000)}
+    FREE, TRIAL, STANDARD, PLUS = "free", "trial", "standard", "plus"
+    BETA, PARTNER, EMPLOYEE, OWNER = "beta", "partner", "employee", "owner"
+    KINDS = [(FREE, "무료"), (TRIAL, "무료 체험"), (STANDARD, "4,900원 이용권"), (PLUS, "9,900원 이용권"),
+             (BETA, "무료 베타"), (PARTNER, "파트너 무료"), (EMPLOYEE, "직원 무료"), (OWNER, "소유자·관리자")]
+    # kind -> (Crema models provided, monthly model budget in won). Voice: every kind but free and 4,900원.
+    DEFAULTS = {FREE: (False, 0), TRIAL: (False, 0), STANDARD: (False, 0), PLUS: (False, 0), BETA: (False, 0),
+                PARTNER: (True, 10000), EMPLOYEE: (True, 10000), OWNER: (True, 10000)}
+    NO_VOICE = {FREE, STANDARD}
+    # Which kind is better, for invite codes that only raise one.
+    RANK = [FREE, TRIAL, STANDARD, BETA, PLUS, PARTNER, EMPLOYEE, OWNER]
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="membership")
-    grade = models.CharField("등급", max_length=8, choices=GRADES, default=FREE)
-    full_access = models.BooleanField("전체 기능", default=False)
+    kind = models.CharField("종류", max_length=8, choices=KINDS, default=TRIAL)
+    starts_at = models.DateTimeField("시작", default=timezone.now)
+    expires_at = models.DateTimeField("끝나는 때", null=True, blank=True, help_text="비우면 계속. 지나면 무료로 씁니다.")
+    cycle = models.CharField("갱신", max_length=8, choices=[("once", "전체 기간"), ("monthly", "시작일 기준 매월")],
+                             default="monthly")
+    voice_allowance_ms = models.PositiveBigIntegerField(
+        "기간당 음성 시간 (밀리초)", default=7200000, help_text="60분 = 3,600,000 / 120분 = 7,200,000")
+    key_limit_usd = models.DecimalField("월 교정 비용 한도 (USD)", max_digits=8, decimal_places=2, default=Decimal("1.00"))
     models_provided = models.BooleanField("Crema 모델 제공", default=False)
     model_budget_krw = models.PositiveIntegerField("월 모델 한도(원)", default=0)
-    expires_at = models.DateTimeField("끝나는 때", null=True, blank=True, help_text="비우면 계속. 지나면 무료 회원으로 씁니다.")
     suspended_at = models.DateTimeField("정지한 때", null=True, blank=True, help_text="정지하면 앱 로그인이 모두 끊깁니다.")
-    note = models.CharField("메모", max_length=200, blank=True)
+    note = models.CharField("부여·변경 사유", max_length=200, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = verbose_name_plural = "회원 등급"
+        verbose_name = verbose_name_plural = "Crema 이용권"
 
     def __str__(self):
-        return f"{self.user.email} · {self.get_grade_display()}"
+        return f"{self.user.email} · {self.get_kind_display()}"
 
     @classmethod
     def of(cls, user) -> "Membership":
-        return cls.objects.get_or_create(user=user)[0]
+        """The account's access; a new account gets the trial (all of Crema, voice included) for its days."""
+        return cls.objects.get_or_create(user=user, defaults={
+            "kind": cls.TRIAL, "expires_at": timezone.now() + timedelta(days=settings.CREMA_TRIAL_DAYS)})[0]
 
-    def apply_grade(self, grade: str) -> None:
-        """Set a grade with its default use, models and budget."""
-        self.grade = grade
-        self.full_access, self.models_provided, self.model_budget_krw = self.DEFAULTS[grade]
+    def apply_kind(self, kind: str) -> None:
+        """Set a kind with its default models and budget."""
+        self.kind = kind
+        self.models_provided, self.model_budget_krw = self.DEFAULTS[kind]
 
     def summary(self, now) -> dict:
-        """What the app follows: an expired grade is a free member (the app keeps working, narrowly)."""
-        expired = self.expires_at is not None and self.expires_at <= now
-        grade = self.FREE if expired else self.grade
-        if expired:
-            full, provided, budget = self.DEFAULTS[self.FREE]
-        else:
-            full, provided, budget = self.full_access, self.models_provided, self.model_budget_krw
-        return {"grade": grade, "label": dict(self.GRADES)[grade], "full": full, "models": provided,
-                "budget": budget if provided else 0,
-                "until": None if expired or not self.expires_at else self.expires_at.isoformat()}
+        """What the app follows: an ended access is the free kind (the app keeps working, narrowly)."""
+        ended = self.expires_at is not None and self.expires_at <= now
+        kind = self.FREE if ended else self.kind
+        provided, budget = self.DEFAULTS[self.FREE] if ended else (self.models_provided, self.model_budget_krw)
+        return {"kind": kind, "label": dict(self.KINDS)[kind], "full": kind != self.FREE,
+                "voice": kind not in self.NO_VOICE, "models": provided, "budget": budget if provided else 0,
+                "until": None if ended or not self.expires_at else self.expires_at.isoformat()}
 
 
-class Invite(models.Model):
-    """A link that gives whoever signs up with it a grade for some days (gifts, promotion, beta):
-    crema-agent.site/i/<code>/. It only raises a grade and lengthens its time, never lowers them."""
+class InviteCode(models.Model):
+    """A one-time code, entered in the app, that gives one member a kind of access (as Thock's invite codes)."""
 
-    code = models.SlugField("코드", max_length=40, unique=True, default=new_invite_code)
-    grade = models.CharField("줄 등급", max_length=8, choices=Membership.GRADES, default=Membership.GIFT)
-    days = models.PositiveIntegerField("기간(일)", null=True, blank=True, default=90, help_text="받은 날부터. 비우면 계속.")
-    models_provided = models.BooleanField("Crema 모델 제공", null=True, blank=True, help_text="비우면 등급 기본값")
-    model_budget_krw = models.PositiveIntegerField("월 모델 한도(원)", null=True, blank=True, help_text="비우면 등급 기본값")
-    max_uses = models.PositiveIntegerField("최대 인원", default=1)
-    valid_until = models.DateTimeField("링크 유효 기한", null=True, blank=True)
-    note = models.CharField("누구·어떤 홍보", max_length=200, blank=True)
+    code = models.CharField("코드", max_length=16, unique=True, default=new_invite_code, editable=False)
+    kind = models.CharField("종류", max_length=8, default=Membership.PARTNER, choices=[
+        (Membership.BETA, "무료 베타"), (Membership.PARTNER, "파트너 무료"), (Membership.EMPLOYEE, "직원 무료")])
+    days = models.PositiveIntegerField("기간(일)", null=True, blank=True, help_text="받은 날부터. 비우면 계속.")
+    models_provided = models.BooleanField("Crema 모델 제공", null=True, blank=True, help_text="비우면 종류 기본값")
+    model_budget_krw = models.PositiveIntegerField("월 모델 한도(원)", null=True, blank=True, help_text="비우면 종류 기본값")
+    note = models.CharField("받는 사람 메모", max_length=200)
+    expires_at = models.DateTimeField("사용 기한")
     created_at = models.DateTimeField(auto_now_add=True)
+    used_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                related_name="+", verbose_name="쓴 사람")
+    used_at = models.DateTimeField("쓴 때", null=True, blank=True)
 
     class Meta:
-        verbose_name = verbose_name_plural = "초대 링크"
+        verbose_name = verbose_name_plural = "초대 코드"
 
     def __str__(self):
-        return f"{self.code} · {self.get_grade_display()} · {self.note}"
+        return f"{self.code} · {self.get_kind_display()} · {self.note}"
 
-    def usable(self, now) -> bool:
-        return (self.valid_until is None or self.valid_until > now) and self.uses.count() < self.max_uses
-
-    def redeem(self, user, now) -> bool:
-        """Give the user this invite's grade unless theirs is already better; records the use once."""
-        if self.uses.filter(user=user).exists():
-            return True
-        if not self.usable(now):
-            return False
+    def redeem(self, user, now) -> str:
+        """Give the member this code's kind; "" when done, else why not (the code stays unused then)."""
+        if self.used_at:
+            return "code_used"
+        if self.expires_at <= now:
+            return "code_expired"
         membership = Membership.of(user)
-        current = membership.summary(now)["grade"]
-        if GRADE_RANK[current] <= GRADE_RANK[self.grade]:
-            until = now + timedelta(days=self.days) if self.days else None
-            if current == self.grade and membership.expires_at is None:
-                until = None  # already this grade for good
-            elif current == self.grade and until and membership.expires_at and membership.expires_at > until:
-                until = membership.expires_at
-            membership.apply_grade(self.grade)
-            if self.models_provided is not None:
-                membership.models_provided = self.models_provided
-            if self.model_budget_krw is not None:
-                membership.model_budget_krw = self.model_budget_krw
-            membership.expires_at = until
-            membership.note = (f"초대 {self.code}" + (f" · {self.note}" if self.note else ""))[:200]
-            membership.save()
-        InviteUse.objects.create(invite=self, user=user)
-        return True
-
-
-class InviteUse(models.Model):
-    invite = models.ForeignKey(Invite, on_delete=models.CASCADE, related_name="uses")
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="invite_uses")
-    used_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = [("invite", "user")]
-
-
-# Which grade is better, for invites that only raise a grade.
-GRADE_RANK = {Membership.FREE: 0, Membership.PAID: 1, Membership.BETA: 2, Membership.GIFT: 3,
-              Membership.STAFF: 4, Membership.ADMIN: 5}
+        current = membership.summary(now)["kind"]
+        if Membership.RANK.index(current) >= Membership.RANK.index(self.kind):
+            return "access_exists"
+        membership.apply_kind(self.kind)
+        if self.models_provided is not None:
+            membership.models_provided = self.models_provided
+        if self.model_budget_krw is not None:
+            membership.model_budget_krw = self.model_budget_krw
+        membership.starts_at, membership.cycle = now, "monthly"
+        membership.expires_at = now + timedelta(days=self.days) if self.days else None
+        membership.note = f"초대 코드 {self.code} ({self.note})"[:200]
+        membership.save()
+        self.used_by, self.used_at = user, now
+        self.save(update_fields=["used_by", "used_at"])
+        return ""
 
 
 class ModelUsage(models.Model):
