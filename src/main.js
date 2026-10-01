@@ -744,11 +744,10 @@ function renameChat(chat, title) {
   persistWorkspace();
 }
 
+/** The model list as each signed-in Provider offers it now, asked again at every open of the picker. */
 async function loadProviders() {
-  if (!providers.length) {
-    providers = usableProviders(await host.modelOptions());
-    panel.setProviders(providers);
-  }
+  providers = usableProviders(await host.modelOptions());
+  panel.setProviders(providers);
   return providers;
 }
 
