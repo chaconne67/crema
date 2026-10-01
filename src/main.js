@@ -762,12 +762,18 @@ const REASONING_WORDS = {
 /** Slash/menu commands that need Hermes or app-wide state; chat-local ones live in app.js. */
 const commandHandlers = {
   async model(arg, ui) {
+    // The picker opens at once and says it is loading; the live list (a few seconds at most) fills it,
+    // unless it was closed meanwhile. A message goes in the open picker, else in a notice.
+    const stillOpen = arg ? null : ui.picker({ title: "모델 선택", back: ui.back, items: [], note: "모델 목록을 불러오는 중…" });
+    const say = (text, tone) =>
+      stillOpen?.() ? ui.picker({ title: "모델 선택", back: ui.back, items: [], note: text }) : ui.notice({ title: "모델 선택", text, tone });
     try {
       await loadProviders();
     } catch (error) {
-      ui.notice({ title: "모델 선택", text: error.userMessage, tone: "error" });
+      say(error.userMessage, "error");
       return;
     }
+    if (stillOpen && !stillOpen()) return;
     const catalog = buildCatalog(providers, authChannels);
     const choose = (model, fast) => {
       const route = pickRoute(model, fast, connection.provider);
@@ -796,7 +802,7 @@ const commandHandlers = {
       return;
     }
     if (!catalog.length) {
-      ui.notice({ title: "모델 선택", text: "사용할 수 있는 모델이 없습니다. 설정의 Provider에서 Provider를 추가해 주세요.", tone: "error" });
+      say("사용할 수 있는 모델이 없습니다. 설정의 Provider에서 Provider를 추가해 주세요.", "error");
       return;
     }
     // The Providers folded, the current model's one open with that model highlighted (as in settings).

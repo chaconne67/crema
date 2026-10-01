@@ -518,14 +518,16 @@ export function createChatApp({
   }
 
   /** A chip-owned menu (project, branch, model) opens under its chip's side and marks that chip. */
+  /** Returns whether this menu is still the one shown (a picker filled in later must not reopen a closed one). */
   function openMenu(state) {
-    menuState = { active: 0, ...state };
+    const opened = (menuState = { active: 0, ...state });
     if (state.search) menuState.allItems = state.items;
     root.querySelectorAll("[data-menu-button], [data-menu-owner]").forEach((button) => button.setAttribute("aria-expanded", "false"));
     const owner = state.owner ? root.querySelector(`[data-menu-owner="${state.owner}"]`) : menuButton;
     owner?.setAttribute("aria-expanded", "true");
     menu.dataset.owner = state.owner || "";
     renderMenu();
+    return () => menuState === opened;
   }
 
   function commandItems(query) {

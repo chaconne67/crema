@@ -374,6 +374,25 @@ describe("chat app", () => {
     expect(document.querySelector("[data-command-menu]").hidden).toBe(true);
   });
 
+  it("opens a picker at once with a note while it loads, and tells whether it is still open", () => {
+    let stillOpen;
+    const onCommand = vi.fn((id, arg, ui) => {
+      stillOpen = ui.picker({ title: "모델 선택", items: [], note: "모델 목록을 불러오는 중…" });
+    });
+    const app = createChatApp({ client: { async *streamReply() {} }, host: { openLink: vi.fn() }, onCommand });
+    app.mount(document.querySelector("#app"));
+    app.showConversation("chat-1");
+
+    document.querySelector("[data-menu-button]").click();
+    [...document.querySelectorAll(".menu-item")].find((node) => node.textContent.includes("모델 선택")).click();
+    expect(document.querySelector("[data-command-menu]").hidden).toBe(false);
+    expect(document.querySelector(".menu-note").textContent).toBe("모델 목록을 불러오는 중…");
+    expect(stillOpen()).toBe(true);
+
+    document.querySelector("#prompt").dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(stillOpen()).toBe(false);
+  });
+
   it("keeps each chat's history separate and uses the chat id as the Hermes conversation", async () => {
     const conversations = [];
     const client = {
