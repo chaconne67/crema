@@ -764,9 +764,9 @@ const commandHandlers = {
   async model(arg, ui) {
     // The picker opens at once and says it is loading; the live list (a few seconds at most) fills it,
     // unless it was closed meanwhile. A message goes in the open picker, else in a notice.
-    const stillOpen = arg ? null : ui.picker({ title: "모델 선택", back: ui.back, items: [], note: "모델 목록을 불러오는 중…" });
+    const stillOpen = arg ? null : ui.picker({ title: "모델 선택", back: ui.back, items: [], empty: "모델 목록을 불러오는 중…" });
     const say = (text, tone) =>
-      stillOpen?.() ? ui.picker({ title: "모델 선택", back: ui.back, items: [], note: text }) : ui.notice({ title: "모델 선택", text, tone });
+      stillOpen?.() ? ui.picker({ title: "모델 선택", back: ui.back, items: [], empty: text }) : ui.notice({ title: "모델 선택", text, tone });
     try {
       await loadProviders();
     } catch (error) {
