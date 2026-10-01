@@ -599,6 +599,13 @@ const panel = createSettingsPanel({
     const chat = workspace.chats.find((item) => item.id === sessionId || chatSessions(item).includes(sessionId));
     if (chat) openChat(chat.id);
   },
+  async onRedeemInvite(code) {
+    await host.redeemInvite(code);
+    const status = await host.accountStatus().catch(() => null);
+    if (status?.state === "signed_in") saveAccount(status);
+    panel.setAccount(loadAccount());
+    await syncPlan();
+  },
   async onSignOut() {
     const message = "Crema에서 로그아웃할까요?\n다시 쓰려면 Google 계정으로 다시 로그인해야 합니다. 대화 기록은 이 PC에 그대로 남습니다.";
     if (!(await host.confirm(message, "로그아웃"))) return;

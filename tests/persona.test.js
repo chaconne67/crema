@@ -109,3 +109,47 @@ describe("Settings → 페르소나", () => {
     expect(host.writeSoul).toHaveBeenCalledWith("당신은 JUDY입니다.");
   });
 });
+
+describe("Settings → 내 플랜", () => {
+  it("shows the voice time left and takes an invite code", async () => {
+    document.body.innerHTML = "";
+    window.matchMedia = vi.fn(() => ({ matches: false, addEventListener() {} }));
+    const { createSettingsPanel, voiceLabel } = await import("../src/settings-panel.js");
+    const { loadAppearance } = await import("../src/settings.js");
+    expect(voiceLabel({ voice: true }, { remaining_seconds: 5430, allowance_seconds: 7200 })).toBe("음성 입력 · 90분 남음 (기간마다 120분)");
+    expect(voiceLabel({ voice: false }, { remaining_seconds: 5430, allowance_seconds: 7200 })).toBe("");
+    const onRedeemInvite = vi.fn()
+      .mockRejectedValueOnce(Object.assign(new Error("code_used"), { userMessage: "이미 사용한 초대 코드입니다." }))
+      .mockResolvedValueOnce(undefined);
+    const panel = createSettingsPanel({
+      appearance: loadAppearance(),
+      connection: {},
+      host: { readSoul: vi.fn(async () => "") },
+      onAppearanceChange() {},
+      onConnectionChange() {},
+      onConnect: async () => ({ state: "connected", message: "" }),
+      onProvidersChanged: async () => {},
+      onSignOut() {},
+      onRedeemInvite,
+    });
+    const shell = document.createElement("div");
+    document.body.append(shell);
+    panel.mount(shell);
+    panel.setAccount({ email: "a@example.com", member: { label: "9,900원 이용권", voice: true },
+      voice: { remaining_seconds: 600, allowance_seconds: 7200 } });
+    expect(document.querySelector("[data-plan-voice]").textContent).toBe("음성 입력 · 10분 남음 (기간마다 120분)");
+    panel.setAccount({ email: "a@example.com", member: { label: "4,900원 이용권", voice: false } });
+    expect(document.querySelector("[data-plan-voice]").hidden).toBe(true);
+
+    const input = document.querySelector("#invite-code");
+    const status = document.querySelector("[data-invite-status]");
+    input.value = " CRM-AAAA-BBBB ";
+    document.querySelector("[data-redeem-invite]").click();
+    await vi.waitFor(() => expect(status.textContent).toBe("이미 사용한 초대 코드입니다."));
+    expect(onRedeemInvite).toHaveBeenCalledWith("CRM-AAAA-BBBB");
+    expect(input.value).toBe(" CRM-AAAA-BBBB ");
+    document.querySelector("[data-redeem-invite]").click();
+    await vi.waitFor(() => expect(status.textContent).toBe("초대 코드를 적용했습니다."));
+    expect(input.value).toBe("");
+  });
+});

@@ -279,7 +279,9 @@ async fn account_status() -> Result<serde_json::Value, String> {
   match response.status().as_u16() {
     200 => {
       let me: serde_json::Value = response.json().await.unwrap_or_default();
-      Ok(serde_json::json!({ "state": "signed_in", "email": me["email"], "name": me["name"], "member": me["member"], "plan": me["plan"] }))
+      Ok(serde_json::json!({
+        "state": "signed_in", "email": me["email"], "name": me["name"], "member": me["member"], "plan": me["plan"], "voice": me["voice"]
+      }))
     }
     401 => {
       let _ = account_entry()?.delete_credential();
@@ -300,11 +302,12 @@ async fn sign_out() -> Result<(), String> {
   }
 }
 
-// What the signed-in app asks crema-agent.site to judge with Jev: how hard an automatic free-AI request
-// is, and the AI setup guide's next step and what stops the user.
-const SITE_POSTS: [&str; 3] = ["/api/route", "/api/onboarding/step", "/api/onboarding/help"];
+// What the signed-in app asks crema-agent.site: to judge with Jev how hard an automatic free-AI request is
+// and the AI setup guide's next step and what stops the user, and to take an invite code.
+const SITE_POSTS: [&str; 4] = ["/api/route", "/api/onboarding/step", "/api/onboarding/help", "/api/app/invite"];
 
-/// Posts to one of SITE_POSTS on crema-agent.site with this app's sign-in.
+/// Posts to one of SITE_POSTS on crema-agent.site with this app's sign-in. A refusal the site names
+/// (`{"error": "code_used"}`) comes back as that code.
 #[tauri::command]
 async fn site_post(path: String, body: serde_json::Value) -> Result<serde_json::Value, String> {
   if !SITE_POSTS.contains(&path.as_str()) {
@@ -319,8 +322,13 @@ async fn site_post(path: String, body: serde_json::Value) -> Result<serde_json::
     .send()
     .await
     .map_err(|_| "account_unreachable".to_string())?;
-  if !response.status().is_success() {
-    return Err(status_error(response.status()));
+  let status = response.status();
+  if !status.is_success() {
+    let named = response.json::<serde_json::Value>().await.ok().and_then(|body| body["error"].as_str().map(String::from));
+    return Err(match status.as_u16() {
+      401 | 403 => status_error(status),
+      _ => named.unwrap_or_else(|| status_error(status)),
+    });
   }
   response.json().await.map_err(|_| "server".to_string())
 }

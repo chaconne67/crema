@@ -125,6 +125,13 @@ export function planLabel(plan, member) {
   return "무료";
 }
 
+/** The plan card's voice line: time left this period when the access includes Thock voice input. */
+export function voiceLabel(member, voice) {
+  if (!member?.voice || !voice) return "";
+  const minutes = (seconds) => Math.floor((seconds || 0) / 60);
+  return `음성 입력 · ${minutes(voice.remaining_seconds)}분 남음 (기간마다 ${minutes(voice.allowance_seconds)}분)`;
+}
+
 export function createSettingsPanel({
   appearance,
   connection,
@@ -136,6 +143,7 @@ export function createSettingsPanel({
   // (plan) → media backends to use (media.js), after a choice in 미디어.
   onMediaChange = () => {},
   onSignOut,
+  onRedeemInvite = async () => {},
   onGuide = () => {},
   // (open) → the panel opened or closed; the sign-up guide's page must not cover it.
   onOpenChange = () => {},
@@ -402,6 +410,9 @@ export function createSettingsPanel({
     setAccount(next) {
       account = next;
       panel.querySelector(".plan-name").textContent = planLabel(account?.plan, account?.member);
+      const voiceLine = panel.querySelector("[data-plan-voice]");
+      voiceLine.textContent = voiceLabel(account?.member, account?.voice);
+      voiceLine.hidden = !voiceLine.textContent;
       panel.querySelector("[data-account-line]").textContent = account
         ? [account.email, account.name].filter(Boolean).join(" · ")
         : "로그인하지 않았습니다.";
@@ -452,9 +463,14 @@ export function createSettingsPanel({
             <h3 id="plan-title">내 플랜</h3>
             <div class="plan-card">
               <span class="plan-name">무료</span>
+              <span class="plan-account" data-plan-voice hidden></span>
               <span class="plan-account" data-account-line></span>
             </div>
             <button class="text-button" type="button" data-sign-out>로그아웃</button>
+            <label for="invite-code">초대 코드</label>
+            <input id="invite-code" type="text" autocomplete="off" spellcheck="false" maxlength="32" placeholder="CRM-XXXX-XXXX" />
+            <button class="secondary-button" type="button" data-redeem-invite>코드 확인</button>
+            <p class="provider-status" data-invite-status role="status"></p>
           </section>
 
           <section class="settings-section" aria-labelledby="media-title">
@@ -702,6 +718,23 @@ export function createSettingsPanel({
 
       panel.querySelector("[data-check]").addEventListener("click", connect);
       panel.querySelector("[data-sign-out]").addEventListener("click", () => onSignOut());
+      panel.querySelector("[data-redeem-invite]").addEventListener("click", async (event) => {
+        const button = event.currentTarget;
+        const input = panel.querySelector("#invite-code");
+        const status = panel.querySelector("[data-invite-status]");
+        if (!input.value.trim()) return;
+        button.disabled = true;
+        status.textContent = "확인하는 중…";
+        try {
+          await onRedeemInvite(input.value.trim());
+          input.value = "";
+          status.textContent = "초대 코드를 적용했습니다.";
+        } catch (error) {
+          status.textContent = error?.userMessage || "초대 코드를 확인하지 못했습니다.";
+        } finally {
+          button.disabled = false;
+        }
+      });
       panel.querySelector("[data-save-persona]").addEventListener("click", savePersona);
       personaText().addEventListener("input", () => {
         if (!savingPersona) personaStatus("");
