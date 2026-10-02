@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use futures_util::StreamExt;
 use tauri::ipc::Channel;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Manager, State};
 use tokio::sync::Notify;
 
 const KEYRING_SERVICE: &str = "agent-client";
@@ -374,59 +374,25 @@ fn thock_local(app: &AppHandle) -> Result<(u64, String), String> {
     .ok_or_else(|| "thock_unavailable".to_string())
 }
 
-// What Crema's settings under 음성 입력 ask the running Thock: the calls Thock's own settings page makes.
-const THOCK_GETS: [&str; 1] = ["/api/settings"];
-const THOCK_POSTS: [&str; 5] = ["/api/settings", "/api/notes", "/api/profile", "/api/forget-learning", "/api/window"];
-
-/// Reads (no body) or changes the running Thock's settings. A refusal Thock words (`{"message": …}`) comes back
-/// as that sentence.
+/// 음성 입력 설정 열기 (and the built-in Thock's pill): the running Thock's own settings page in a window of its
+/// own, brought forward when it is open already. Async: a window made in a sync command deadlocks on Windows.
 #[tauri::command]
-async fn thock_api(app: AppHandle, path: String, body: Option<serde_json::Value>) -> Result<serde_json::Value, String> {
-  let allowed = if body.is_some() { THOCK_POSTS.contains(&path.as_str()) } else { THOCK_GETS.contains(&path.as_str()) };
-  if !allowed {
-    return Err("thock_unavailable".into());
+async fn thock_settings(app: AppHandle) -> Result<(), String> {
+  if let Some(window) = app.get_webview_window(THOCK_SETTINGS) {
+    let _ = window.unminimize();
+    return window.set_focus().map_err(|_| "thock_unavailable".to_string());
   }
   let (port, token) = thock_local(&app)?;
-  let url = format!("http://127.0.0.1:{port}{path}");
-  let request = match &body {
-    Some(body) => http_client()?.post(url).json(body),
-    None => http_client()?.get(url),
-  };
-  let response = request
-    .header("X-Token", token)
-    .timeout(Duration::from_secs(10))
-    .send()
-    .await
-    .map_err(|_| "thock_unavailable".to_string())?;
-  let ok = response.status().is_success();
-  let value: serde_json::Value = response.json().await.map_err(|_| "thock_unavailable".to_string())?;
-  if ok {
-    Ok(value)
-  } else {
-    Err(value["message"].as_str().unwrap_or("thock_unavailable").to_string())
-  }
+  let url: tauri::Url = format!("http://127.0.0.1:{port}/?t={token}&w=0").parse().map_err(|_| "thock_unavailable".to_string())?;
+  tauri::WebviewWindowBuilder::new(&app, THOCK_SETTINGS, tauri::WebviewUrl::External(url))
+    .title("음성 입력 설정")
+    .inner_size(540.0, 860.0)
+    .build()
+    .map(|_| ())
+    .map_err(|_| "thock_unavailable".to_string())
 }
 
-/// A keyboard's typing sound (WAV) for 미리듣기 under 음성 입력.
-#[tauri::command]
-async fn thock_sound(app: AppHandle, keyboard: String) -> Result<tauri::ipc::Response, String> {
-  if keyboard.is_empty() || !keyboard.chars().all(|c| c.is_ascii_alphanumeric()) {
-    return Err("thock_unavailable".into());
-  }
-  let (port, token) = thock_local(&app)?;
-  let response = http_client()?
-    .get(format!("http://127.0.0.1:{port}/api/sound-preview?keyboard={keyboard}"))
-    .header("X-Token", token)
-    .timeout(Duration::from_secs(10))
-    .send()
-    .await
-    .map_err(|_| "thock_unavailable".to_string())?;
-  if !response.status().is_success() {
-    return Err("thock_unavailable".into());
-  }
-  let sound = response.bytes().await.map_err(|_| "thock_unavailable".to_string())?;
-  Ok(tauri::ipc::Response::new(sound.to_vec()))
-}
+const THOCK_SETTINGS: &str = "thock-settings";
 
 /// The mic button: Thock starts a dictation into the field Crema has focused (the next press stops it).
 #[tauri::command]
@@ -1017,9 +983,9 @@ pub fn run() {
         let _ = window.unminimize();
         let _ = window.set_focus();
       }
-      // The built-in Thock's pill asks for its settings: Crema shows them under 음성 입력.
+      // The built-in Thock's pill asks for its settings: its own settings window.
       if args.iter().any(|arg| arg == "--voice-settings") {
-        let _ = app.emit("voice-settings", ());
+        tauri::async_runtime::spawn(thock_settings(app.clone()));
       }
     }))
     .plugin(tauri_plugin_opener::init())
@@ -1042,8 +1008,7 @@ pub fn run() {
       site_post,
       thock_start,
       thock_stop,
-      thock_api,
-      thock_sound,
+      thock_settings,
       thock_dictate,
       guide_open,
       guide_bounds,

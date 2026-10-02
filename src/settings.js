@@ -69,6 +69,8 @@ export const DEFAULT_APPEARANCE = {
   theme: "light",
   spellcheck: true,
   suggest: true,
+  // 입력 → 음성 입력 사용: the built-in Thock runs (for an access with voice).
+  voice: true,
 };
 
 function clamp(value, { min, max }) {
@@ -125,6 +127,7 @@ export function normalizeAppearance(value = {}) {
     theme: ["light", "dark", "system"].includes(value.theme) ? value.theme : DEFAULT_APPEARANCE.theme,
     spellcheck: value.spellcheck !== false,
     suggest: value.suggest !== false,
+    voice: value.voice !== false,
     ...modes[preset],
     modes,
   };

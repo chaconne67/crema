@@ -1,5 +1,4 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { confirm as confirmDialog, message as messageDialog, open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -169,21 +168,11 @@ export function createDesktopHost() {
     guideStep: (body) => call("site_post", { path: "/api/onboarding/step", body }),
     /** "막혔어요": what stops the user on a page ({ cause }), from crema-agent.site with Jev. */
     guideHelp: (body) => call("site_post", { path: "/api/onboarding/help", body }),
-    /** Thock built in (9,900원 plan): start or stop it, its settings page, a dictation into the focused field. */
+    /** Thock built in (9,900원 plan): start or stop it, its own settings window, a dictation into the focused field. */
     thockStart: () => call("thock_start"),
     thockStop: () => call("thock_stop").catch(() => {}),
-    // Thock's own sentence for a refusal is shown as it is.
-    thockApi: (path, body) =>
-      call("thock_api", { path, body }).catch((error) => {
-        if (!(error.code in ERROR_MESSAGES)) error.userMessage = error.code;
-        throw error;
-      }),
-    thockSound: (keyboard) => call("thock_sound", { keyboard }),
+    thockSettings: () => call("thock_settings"),
     thockDictate: () => call("thock_dictate"),
-    /** Thock's pill asks for its settings. */
-    onVoiceSettings(callback) {
-      listen("voice-settings", () => callback()).catch(() => {});
-    },
     /** An invite code (as Thock's): the access it gives, or the site's reason it does not. */
     redeemInvite: (code) => call("site_post", { path: "/api/app/invite", body: { code } }),
 

@@ -221,14 +221,6 @@ button {
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
-.text-button.danger {
-  color: var(--error);
-}
-
-.text-button.danger:hover {
-  background: color-mix(in srgb, var(--error) 9%, transparent);
-}
-
 .conversation-scroll {
   min-height: 0;
   overflow-x: hidden;
@@ -2901,31 +2893,6 @@ html[data-pointer] :focus-visible {
   margin-block: 10px;
 }
 
-/* Model picker button: model (with ⚡ for fast) on the left, sign-in on the right. */
-.model-picker .dropdown-button {
-  gap: 8px;
-}
-
-.model-name {
-  display: inline-flex;
-  min-width: 0;
-  align-items: center;
-  gap: 4px;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.model-provider {
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
-  color: var(--soft-muted);
-  font-size: 0.75rem;
-  text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* Model menu: Provider rows fold; their models sit indented under them. */
 .menu-item.menu-parent .menu-label {
   font-weight: 700;
@@ -3276,54 +3243,6 @@ svg.zap {
   font-weight: 400;
 }
 
-/* Lists in settings (음성 입력's typo notes): each item as plain text with its actions under it. */
-.memory-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.memory-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.memory-text {
-  margin: 0;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.memory-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.memory-search {
-  display: flex;
-  gap: 8px;
-}
-
-.memory-search input {
-  flex: 1;
-  min-width: 0;
-}
-
-.memory-badge {
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--ink) 8%, var(--surface));
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
 /* In the chat: what a quiet chat left in the notebook, with an undo; this chat's turn with a shared file. */
 .notice-card.remembered,
 .notice-card.turn-card {
@@ -3334,7 +3253,7 @@ svg.zap {
   gap: 8px;
 }
 
-/* Settings → 내 플랜. */
+/* Settings → 계정. */
 .plan-card {
   display: flex;
   flex-direction: column;
@@ -3360,21 +3279,15 @@ svg.zap {
   align-self: flex-start;
 }
 
-/* Settings → 음성 입력: the built-in Thock's own settings page. */
-/* Settings → 음성 입력 (voice.js): the words Thock knows the user often says, as badges that wrap. */
-.voice-terms {
+/* Settings → 입력 → 음성 입력: on or off, and Thock's own settings window. */
+.voice-controls {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin: 0;
+  flex-direction: column;
+  gap: 8px;
 }
 
-/* 고급: what most people never need to open. */
-.settings-divider {
-  margin: 14px 4px 0;
-  color: var(--soft-muted);
-  font-size: 0.75rem;
-  font-weight: 700;
+.voice-controls .secondary-button {
+  align-self: flex-start;
 }
 
 .media-image figcaption {

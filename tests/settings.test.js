@@ -22,7 +22,7 @@ describe("appearance settings", () => {
     const { label: codeLabel, ...coding } = PRESETS.code;
     expect(loadAppearance()).toEqual({
       preset: "read", ...reading, systemFont: "nanum", systemSize: 16, colors: { light: {}, dark: {} }, theme: "light",
-      spellcheck: true, suggest: true, modes: { read: reading, code: coding },
+      spellcheck: true, suggest: true, voice: true, modes: { read: reading, code: coding },
     });
   });
 

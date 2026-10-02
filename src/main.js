@@ -535,8 +535,14 @@ const sidebar = createSidebar({
   },
 });
 
-/** The access includes Thock voice input (the 9,900원 plan and the kinds not sold). */
-const voiceIncluded = () => loadAccount()?.member?.voice === true;
+/** The access includes Thock voice input (the 9,900원 plan and the kinds not sold) and 음성 입력 사용 is on. */
+const voiceIncluded = () => loadAccount()?.member?.voice === true && appearance.voice;
+
+/** The built-in Thock runs while voice input is included and on. */
+function syncVoice() {
+  if (voiceIncluded()) host.thockStart().catch(() => {});
+  else host.thockStop();
+}
 
 /** The account uses the narrow free plan: its grade is not full use (crema-agent.site /api/me member). */
 const planFree = () => loadAccount()?.member?.full === false;
@@ -555,9 +561,7 @@ async function syncPlan() {
   if (change.put) await host.hermesAdmin("PUT", "/api/config", { config: change.put }).catch(() => {});
   if (change.remove) await host.hermesAdmin("DELETE", `/api/providers/custom-endpoints/${change.remove}`).catch(() => {});
   if (change.put || change.remove) await refreshModels().catch(() => {});
-  // The built-in Thock runs while the access includes voice.
-  if (voiceIncluded()) host.thockStart().catch(() => {});
-  else host.thockStop();
+  syncVoice();
 }
 
 async function connect() {
@@ -585,7 +589,9 @@ const panel = createSettingsPanel({
   connection,
   host,
   onAppearanceChange(next) {
+    const voiceChanged = next.voice !== appearance.voice;
     appearance = next;
+    if (voiceChanged) syncVoice();
     describeSuggestModel();
     applyAppearance(appearance);
     saveAppearance(appearance);
@@ -597,6 +603,7 @@ const panel = createSettingsPanel({
     syncModelChip();
   },
   onProvidersChanged: () => refreshModels().catch(() => {}),
+  onOpenVoiceSettings: () => host.thockSettings(),
   onMediaChange: (plan) => applyMedia(plan).catch(() => {}),
   onGuide: (providerId) => guide.start(providerId),
   onOpenChange: (open) => guide.setCovered(open),
@@ -1143,11 +1150,6 @@ if (activeChat()) {
   newChat(null);
 }
 const signIn = createSignIn({ host });
-// The built-in Thock's pill opens Crema's settings at 음성 입력.
-host.onVoiceSettings(() => {
-  panel.open();
-  panel.showVoice();
-});
 
 /**
  * Crema starts signed in to crema-agent.site: first run (or after signing out) asks for Google first.

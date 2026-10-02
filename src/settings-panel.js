@@ -1,9 +1,8 @@
 import { REASONING_LEVELS } from "./desktop.js";
 import { closeColorPicker, openColorPicker } from "./color-picker.js";
 import { enhanceSelect } from "./dropdown.js";
-import { AUTO_LABEL, AUTO_NOTE, createModelPicker } from "./model-picker.js";
+import { AUTO_LABEL, AUTO_NOTE } from "./model-picker.js";
 import { createMediaSection } from "./media.js";
-import { createVoiceSection } from "./voice.js";
 import { createProviderSection } from "./provider-panel.js";
 import { buildCatalog, freeChain, locate, pickRoute, providerStatus } from "./providers.js";
 import {
@@ -41,7 +40,7 @@ const THEMES = [
 ];
 
 const SECTIONS_KEY = "agent-client:settings-sections:v1";
-// 모양's 시스템/본문 groups left open (closed at first: the section has many settings).
+// Groups left open (closed at first): AI 연결's Provider/모델 선택, 모양's 폰트 및 배경 (with 시스템/본문)/테마.
 const GROUPS_KEY = "agent-client:settings-groups:v1";
 
 const DEFAULT_OPEN_SECTIONS = ["plan", "media"];
@@ -53,8 +52,7 @@ const SETTINGS_ICON = icon('<path d="M14 17H5"/><path d="M19 7h-9"/><circle cx="
 const SECTION_ICONS = {
   // Lucide (ISC) "circle-user".
   plan: icon('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/>'),
-  providers: icon('<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>'),
-  model: icon('<path d="M12 20v2"/><path d="M12 2v2"/><path d="M17 20v2"/><path d="M17 2v2"/><path d="M2 12h2"/><path d="M2 17h2"/><path d="M2 7h2"/><path d="M20 12h2"/><path d="M20 17h2"/><path d="M20 7h2"/><path d="M7 20v2"/><path d="M7 2v2"/><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/>'),
+  ai: icon('<path d="M12 20v2"/><path d="M12 2v2"/><path d="M17 20v2"/><path d="M17 2v2"/><path d="M2 12h2"/><path d="M2 17h2"/><path d="M2 7h2"/><path d="M20 12h2"/><path d="M20 17h2"/><path d="M20 7h2"/><path d="M7 20v2"/><path d="M7 2v2"/><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/>'),
   // Lucide (ISC) "image".
   media: icon('<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>'),
   // Lucide (ISC) "brain".
@@ -62,9 +60,6 @@ const SECTION_ICONS = {
   // Lucide (ISC) "smile".
   persona: icon('<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/>'),
   appearance: icon('<path d="M12 4v16"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 20h6"/>'),
-  theme: icon('<path d="M12 2v2"/><path d="M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715"/><path d="M16 12a4 4 0 0 0-4-4"/><path d="m19 5-1.256 1.256"/><path d="M20 12h2"/>'),
-  // Lucide (ISC) "mic".
-  voice: icon('<path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/>'),
   input: icon('<path d="M10 8h.01"/><path d="M12 12h.01"/><path d="M14 8h.01"/><path d="M16 12h.01"/><path d="M18 8h.01"/><path d="M6 8h.01"/><path d="M7 16h10"/><path d="M8 12h.01"/><rect width="20" height="16" x="2" y="4" rx="2"/>'),
 };
 
@@ -143,6 +138,8 @@ export function createSettingsPanel({
   onSignOut,
   onRedeemInvite = async () => {},
   onGuide = () => {},
+  // 음성 입력 설정 열기: Thock's own settings window.
+  onOpenVoiceSettings = async () => {},
   // (open) → the panel opened or closed; the sign-up guide's page must not cover it.
   onOpenChange = () => {},
 }) {
@@ -153,10 +150,10 @@ export function createSettingsPanel({
   let shell;
   let opener = null;
   let dropdowns = [];
-  let modelPicker = null;
+  // 모델 선택's rows for the chosen Provider: { model, fast }, by option index.
+  let modelChoices = [];
   let providerSection = null;
   let mediaSection = null;
-  let voiceSection = null;
   let authKinds = {};
   let catalog = [];
 
@@ -187,6 +184,8 @@ export function createSettingsPanel({
     refreshDropdowns();
     panel.querySelector("#spellcheck-toggle").checked = current.spellcheck;
     panel.querySelector("#suggest-toggle").checked = current.suggest;
+    panel.querySelector("#voice-toggle").checked = current.voice;
+    panel.querySelector("[data-voice-settings]").disabled = !current.voice;
     for (const { name, decimals } of ALL_SLIDERS) {
       const range = panel.querySelector(`#range-${name}`);
       const { min, max, step } = rangeOf(name);
@@ -242,9 +241,39 @@ export function createSettingsPanel({
     onAppearanceChange(current);
   }
 
+  /**
+   * AI 연결: the Provider in use (or 자동), and 모델 선택 listing only that Provider's models — each
+   * fast-capable one also as its 빠른 속도 variant.
+   */
+  function renderModelChoices() {
+    const chosen = selection();
+    const providerSelect = panel.querySelector("#provider-select");
+    const auto = Boolean(connection.auto) || freeChain(providers).length > 0;
+    providerSelect.replaceChildren(
+      ...(auto ? [new Option(AUTO_LABEL, "auto")] : []),
+      ...catalog.map((group) => new Option(group.provider, group.key)),
+    );
+    providerSelect.value = chosen.auto ? "auto" : chosen.key || "";
+    const group = chosen.auto ? null : catalog.find((item) => item.key === chosen.key);
+    modelChoices = (group?.models || []).flatMap((model) => [false, ...(model.fast ? [true] : [])].map((fast) => ({ model, fast })));
+    const modelSelect = panel.querySelector("#model-select");
+    modelSelect.replaceChildren(...modelChoices.map(({ model, fast }, index) => new Option(fast ? `${model.name} · 빠른 속도` : model.name, String(index))));
+    modelSelect.value = String(modelChoices.findIndex(({ model, fast }) => model.name === chosen.name && fast === Boolean(chosen.fast)));
+    modelSelect.disabled = !group;
+  }
+
+  /** Uses a model of the chosen Provider (its own route kept when it serves it). */
+  function chooseModel({ model, fast }) {
+    const route = pickRoute(model, fast, connection.provider);
+    if (!route) return;
+    Object.assign(connection, { auto: false, provider: route.providerId, model: route.modelId, fast });
+    renderModelOptions();
+    notifyConnection({ reconnect: false });
+  }
+
   function renderModelOptions() {
     queueMicrotask(updateSummaries);
-    modelPicker?.refresh();
+    renderModelChoices();
     providerSection?.render();
     mediaSection?.render();
     panel.querySelector("#reasoning-select").value = connection.reasoning || "";
@@ -258,15 +287,14 @@ export function createSettingsPanel({
 
   function updateSummaries() {
     const reasoning = REASONING_LEVELS.find((level) => level.value === (connection.reasoning || ""));
+    const voiceShown = account?.member?.voice === true;
     const summaries = {
       plan: [planLabel(account?.plan, account?.member), account?.email].filter(Boolean).join(" · "),
-      providers: catalog.length ? `${catalog.length}개 연결됨` : "",
+      ai: [connection.auto ? AUTO_LABEL : connection.model, connection.fast && "빠른 속도", connection.reasoning && reasoning?.label].filter(Boolean).join(" · "),
       media: mediaSection?.summary() || "",
-      voice: voiceLabel(account?.member, account?.voice).replace("음성 입력 · ", ""),
-      model: [connection.auto ? AUTO_LABEL : connection.model, connection.fast && "빠른 속도", connection.reasoning && reasoning?.label].filter(Boolean).join(" · "),
-      appearance: `시스템 ${current.systemSize}px · 본문 ${current.size}px`,
-      theme: THEMES.find(([value]) => value === current.theme)?.[1] || "",
-      input: [current.spellcheck && "맞춤법 검사", current.suggest && "다음 입력 예상"].filter(Boolean).join(" · ") || "꺼짐",
+      appearance: [`본문 ${current.size}px`, THEMES.find(([value]) => value === current.theme)?.[1]].filter(Boolean).join(" · "),
+      input:
+        [current.spellcheck && "맞춤법 검사", current.suggest && "다음 입력 예상", voiceShown && current.voice && "음성 입력"].filter(Boolean).join(" · ") || "꺼짐",
     };
     for (const [id, text] of Object.entries(summaries)) {
       const target = panel?.querySelector(`[data-section="${id}"] .section-summary`);
@@ -317,11 +345,6 @@ export function createSettingsPanel({
       toggle.setAttribute("aria-expanded", String(openIds.includes(id)));
       body.hidden = !openIds.includes(id);
     }
-  }
-
-  /** The running Thock's settings, for an access with voice. */
-  function loadVoice() {
-    if (!panel.querySelector("[data-voice-section]").hidden) voiceSection?.load();
   }
 
   const personaStatus = (text, tone = "") => {
@@ -381,17 +404,7 @@ export function createSettingsPanel({
       shell.classList.add("settings-open");
       onOpenChange(true);
       loadPersona();
-      loadVoice();
       panel.querySelector("[data-close-settings]").focus();
-    },
-
-    /** Opened from the built-in Thock's pill: 음성 입력, unfolded. */
-    showVoice() {
-      const section = panel.querySelector('[data-section="voice"]');
-      if (section.hidden) return;
-      setSectionOpen(section, true);
-      section.scrollIntoView?.({ block: "start" });
-      loadVoice();
     },
 
     /** The signed-in Crema account ({ email, name }). */
@@ -401,7 +414,7 @@ export function createSettingsPanel({
       const voiceLine = panel.querySelector("[data-plan-voice]");
       voiceLine.textContent = voiceLabel(account?.member, account?.voice);
       voiceLine.hidden = !voiceLine.textContent;
-      panel.querySelector("[data-voice-section]").hidden = account?.member?.voice !== true;
+      panel.querySelector("[data-voice-controls]").hidden = account?.member?.voice !== true;
       panel.querySelector("[data-account-line]").textContent = account
         ? [account.email, account.name].filter(Boolean).join(" · ")
         : "로그인하지 않았습니다.";
@@ -449,7 +462,7 @@ export function createSettingsPanel({
         </div>
         <div class="settings-body">
           <section class="settings-section" aria-labelledby="plan-title">
-            <h3 id="plan-title">내 플랜</h3>
+            <h3 id="plan-title">계정</h3>
             <div class="plan-card">
               <span class="plan-name">무료</span>
               <span class="plan-account" data-plan-voice hidden></span>
@@ -466,13 +479,32 @@ export function createSettingsPanel({
             <p class="provider-status" data-backup-status role="status"></p>
           </section>
 
-          <section class="settings-section" aria-labelledby="voice-title" data-voice-section hidden>
-            <h3 id="voice-title">음성 입력</h3>
-            <div data-voice-settings></div>
+          <section class="settings-section" aria-labelledby="ai-title">
+            <h3 id="ai-title">AI 연결</h3>
+            <details class="settings-group" data-group="provider">
+              <summary>Provider</summary>
+              <div class="settings-group-body">
+                <label for="provider-select">사용할 Provider</label>
+                <select id="provider-select"></select>
+                <div data-provider-section></div>
+              </div>
+            </details>
+            <details class="settings-group" data-group="model">
+              <summary>모델 선택</summary>
+              <div class="settings-group-body">
+                <label for="model-select">모델</label>
+                <select id="model-select"></select>
+                <label for="reasoning-select">추론 강도</label>
+                <select id="reasoning-select">
+                  ${REASONING_LEVELS.map((level) => `<option value="${level.value}">${level.label}</option>`).join("")}
+                </select>
+                <p class="field-note" data-model-note></p>
+              </div>
+            </details>
           </section>
 
           <section class="settings-section" aria-labelledby="media-title">
-            <h3 id="media-title">서비스 연동</h3>
+            <h3 id="media-title">부가 기능 연동</h3>
             <div data-media-section></div>
           </section>
 
@@ -486,6 +518,9 @@ export function createSettingsPanel({
 
           <section class="settings-section" aria-labelledby="appearance-title">
             <h3 id="appearance-title">모양</h3>
+            <details class="settings-group" data-group="fonts">
+              <summary>폰트 및 배경</summary>
+              <div class="settings-group-body">
             <p class="field-note" data-color-note></p>
             <details class="settings-group" data-group="system">
               <summary>시스템</summary>
@@ -514,11 +549,14 @@ export function createSettingsPanel({
                 <button class="text-button" type="button" data-reset-appearance>기본값으로</button>
               </div>
             </details>
-          </section>
-
-          <section class="settings-section" aria-labelledby="theme-title">
-            <h3 id="theme-title">테마</h3>
-            ${segmented("theme", "테마", THEMES)}
+              </div>
+            </details>
+            <details class="settings-group" data-group="theme">
+              <summary>테마</summary>
+              <div class="settings-group-body">
+                ${segmented("theme", "테마", THEMES)}
+              </div>
+            </details>
           </section>
 
           <section class="settings-section" aria-labelledby="input-title">
@@ -526,48 +564,32 @@ export function createSettingsPanel({
             <label class="check-row"><input id="spellcheck-toggle" type="checkbox" /> 입력할 때 맞춤법 검사</label>
             <label class="check-row"><input id="suggest-toggle" type="checkbox" /> 다음 입력 예상</label>
             <p class="field-note" data-suggest-note></p>
-          </section>
-
-          <p class="settings-divider">고급</p>
-
-          <section class="settings-section" aria-labelledby="model-title">
-            <h3 id="model-title">AI</h3>
-            <label for="model-picker-button">모델</label>
-            <div data-model-picker></div>
-            <label for="reasoning-select">추론 강도</label>
-            <select id="reasoning-select">
-              ${REASONING_LEVELS.map((level) => `<option value="${level.value}">${level.label}</option>`).join("")}
-            </select>
-            <p class="field-note" data-model-note></p>
-          </section>
-
-          <section class="settings-section" aria-labelledby="providers-title">
-            <h3 id="providers-title">Provider</h3>
-            <div data-provider-section></div>
+            <div class="voice-controls" data-voice-controls hidden>
+              <label class="check-row"><input id="voice-toggle" type="checkbox" /> 음성 입력 사용</label>
+              <button class="secondary-button" type="button" data-voice-settings>음성 입력 설정 열기</button>
+              <p class="provider-status" data-voice-status role="status"></p>
+            </div>
           </section>
 
         </div>`;
       shell.append(panel);
       dropdowns = [...panel.querySelectorAll("select")].map(enhanceSelect);
-      modelPicker = createModelPicker({
-        getCatalog: () => catalog,
-        getSelection: selection,
-        offerAuto: () => Boolean(connection.auto) || freeChain(providers).length > 0,
-        onChoose({ model, fast, auto }) {
-          if (auto) {
-            Object.assign(connection, { auto: true, provider: "", model: "", fast: false });
-            renderModelOptions();
-            notifyConnection({ reconnect: false });
-            return;
-          }
-          const route = pickRoute(model, fast, connection.provider);
-          if (!route) return;
-          Object.assign(connection, { auto: false, provider: route.providerId, model: route.modelId, fast });
+      panel.querySelector("#provider-select").addEventListener("change", (event) => {
+        if (event.target.value === "auto") {
+          Object.assign(connection, { auto: true, provider: "", model: "", fast: false });
           renderModelOptions();
           notifyConnection({ reconnect: false });
-        },
+          return;
+        }
+        // Another Provider: its model of the same name when it has one, else its first.
+        const group = catalog.find((item) => item.key === event.target.value);
+        const model = group?.models.find((item) => item.name === connection.model) || group?.models[0];
+        if (model) chooseModel({ model, fast: false });
       });
-      panel.querySelector("[data-model-picker]").replaceWith(modelPicker.element);
+      panel.querySelector("#model-select").addEventListener("change", (event) => {
+        const choice = modelChoices[Number(event.target.value)];
+        if (choice) chooseModel(choice);
+      });
       providerSection = createProviderSection({
         host,
         getStatus: () => providerStatus(providers, authKinds),
@@ -596,8 +618,6 @@ export function createSettingsPanel({
         },
       });
       panel.querySelector("[data-media-section]").replaceWith(mediaSection.element);
-      voiceSection = createVoiceSection({ host });
-      panel.querySelector("[data-voice-settings]").replaceWith(voiceSection.element);
       makeSectionsCollapsible();
       updateSummaries();
 
@@ -690,6 +710,19 @@ export function createSettingsPanel({
       });
       panel.querySelector("#spellcheck-toggle").addEventListener("change", (event) => {
         updateAppearance({ ...current, spellcheck: event.target.checked });
+      });
+      panel.querySelector("#voice-toggle").addEventListener("change", (event) => {
+        updateAppearance({ ...current, voice: event.target.checked });
+      });
+      // Thock's own settings, in a window of their own.
+      panel.querySelector("[data-voice-settings]").addEventListener("click", async () => {
+        const status = panel.querySelector("[data-voice-status]");
+        status.textContent = "";
+        try {
+          await onOpenVoiceSettings();
+        } catch (error) {
+          status.textContent = error?.userMessage || "음성 입력 설정을 열지 못했습니다.";
+        }
       });
       panel.querySelector("[data-reset-appearance]").addEventListener("click", () =>
         // Resets only the current mode's type; the other mode, theme and input settings stay.

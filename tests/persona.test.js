@@ -177,39 +177,45 @@ describe("Settings → 내 플랜", () => {
   });
 });
 
-describe("Settings → 음성 입력", () => {
-  it("shows the running Thock's settings for an access with voice", async () => {
+describe("Settings → 입력 → 음성 입력", () => {
+  it("turns voice input on or off and opens Thock's own settings window, for an access with voice", async () => {
     document.body.innerHTML = "";
     window.matchMedia = vi.fn(() => ({ matches: false, addEventListener() {} }));
     const { createSettingsPanel } = await import("../src/settings-panel.js");
     const { loadAppearance } = await import("../src/settings.js");
-    const thockApi = vi.fn(async () => ({
-      hotkey: "capslock", input_mode: "hold", input_modes: { hold: "누르고 있는 동안 녹음" }, polish: true,
-      polish_level: "clean", polish_levels: { clean: "군더더기만 빼기" }, style: "none", styles: { none: "바꾸지 않음" },
-      style_custom: "", terms: [], learn: true, sound_processing: true, keep_audio: false, microphone: null, microphones: [],
-      sound_keyboard: "hhkb", sound_keyboards: { hhkb: "HHKB" }, notes: [], profile: {}, personal_ready: true,
-      personal_key: "pk", embedded: true, account: { state: "signed_in" }, version: "0.5.1",
-    }));
+    const onAppearanceChange = vi.fn();
+    const onOpenVoiceSettings = vi.fn()
+      .mockRejectedValueOnce(Object.assign(new Error("thock_unavailable"), { userMessage: "음성 입력을 시작하지 못했습니다." }))
+      .mockResolvedValueOnce(undefined);
     const panel = createSettingsPanel({
-      appearance: loadAppearance(), connection: {}, host: { readSoul: vi.fn(async () => ""), thockApi },
-      onAppearanceChange() {}, onConnectionChange() {}, onConnect: async () => ({ state: "connected", message: "" }),
-      onProvidersChanged: async () => {}, onSignOut() {},
+      appearance: loadAppearance(), connection: {}, host: { readSoul: vi.fn(async () => "") },
+      onAppearanceChange, onConnectionChange() {}, onProvidersChanged: async () => {}, onSignOut() {}, onOpenVoiceSettings,
     });
     const shell = document.createElement("div");
     document.body.append(shell);
     panel.mount(shell);
-    const section = document.querySelector('[data-section="voice"]');
+    const controls = document.querySelector("[data-voice-controls]");
+    expect(controls.closest('[data-section="input"]')).not.toBeNull();
+    expect(document.querySelector('[data-section="voice"]')).toBeNull();
     panel.setAccount({ email: "a@example.com", member: { label: "4,900원 이용권", voice: false } });
-    panel.open();
-    expect(section.hidden).toBe(true);
-    expect(thockApi).not.toHaveBeenCalled();
+    expect(controls.hidden).toBe(true);
     panel.setAccount({ email: "a@example.com", member: { label: "9,900원 이용권", voice: true },
       voice: { remaining_seconds: 600, allowance_seconds: 7200 } });
-    panel.showVoice();
-    await vi.waitFor(() => expect(section.querySelector('[data-voice-group="dictation"]')).not.toBeNull());
-    expect(thockApi).toHaveBeenCalledWith("/api/settings");
-    expect(section.hidden).toBe(false);
-    expect(section.querySelector(".section-body").hidden).toBe(false);
-    expect(section.querySelector(".section-summary").textContent).toBe("10분 남음 (기간마다 120분)");
+    expect(controls.hidden).toBe(false);
+    const toggle = document.querySelector("#voice-toggle");
+    const open = document.querySelector("[data-voice-settings]");
+    expect(toggle.checked).toBe(true);
+
+    open.click();
+    await vi.waitFor(() => expect(document.querySelector("[data-voice-status]").textContent).toBe("음성 입력을 시작하지 못했습니다."));
+    open.click();
+    await vi.waitFor(() => expect(onOpenVoiceSettings).toHaveBeenCalledTimes(2));
+    expect(document.querySelector("[data-voice-status]").textContent).toBe("");
+
+    toggle.checked = false;
+    toggle.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(onAppearanceChange).toHaveBeenLastCalledWith(expect.objectContaining({ voice: false }));
+    // Off: Thock does not run, so its settings window cannot open.
+    expect(open.disabled).toBe(true);
   });
 });
