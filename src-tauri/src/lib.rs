@@ -384,15 +384,33 @@ async fn thock_settings(app: AppHandle) -> Result<(), String> {
   }
   let (port, token) = thock_local(&app)?;
   let url: tauri::Url = format!("http://127.0.0.1:{port}/?t={token}&w=0").parse().map_err(|_| "thock_unavailable".to_string())?;
+  // Thock's 닫기 calls window.close(), which in a window of its own only empties the page: it is sent here
+  // as a navigation to THOCK_CLOSE instead, and the window is closed.
+  let script = format!("window.close = () => location.assign({THOCK_CLOSE:?});");
+  let handle = app.clone();
   tauri::WebviewWindowBuilder::new(&app, THOCK_SETTINGS, tauri::WebviewUrl::External(url))
     .title("음성 입력 설정")
     .inner_size(540.0, 860.0)
+    .initialization_script(&script)
+    .on_navigation(move |url| {
+      if url.as_str() != THOCK_CLOSE {
+        return true;
+      }
+      let handle = handle.clone();
+      tauri::async_runtime::spawn(async move {
+        if let Some(window) = handle.get_webview_window(THOCK_SETTINGS) {
+          let _ = window.close();
+        }
+      });
+      false
+    })
     .build()
     .map(|_| ())
     .map_err(|_| "thock_unavailable".to_string())
 }
 
 const THOCK_SETTINGS: &str = "thock-settings";
+const THOCK_CLOSE: &str = "https://thock.close/";
 
 /// The mic button: Thock starts a dictation into the field Crema has focused (the next press stops it).
 #[tauri::command]
