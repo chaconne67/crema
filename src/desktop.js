@@ -27,7 +27,7 @@ const ERROR_MESSAGES = {
   code_expired: "사용 기한이 지난 초대 코드입니다. 새 코드를 요청해 주세요.",
   access_exists: "지금 이용권이 이 초대 코드와 같거나 더 넓어서 바꾸지 않았습니다.",
   too_many_attempts: "초대 코드를 여러 번 잘못 넣었습니다. 한 시간 뒤에 다시 시도해 주세요.",
-  thock_unavailable: "음성 입력을 시작하지 못했습니다. 따로 설치한 Thock이 켜져 있으면 CapsLock으로 쓰거나, 그 Thock을 끄고 Crema를 다시 시작해 주세요.",
+  thock_unavailable: "음성 입력을 시작하지 못했습니다. 따로 설치한 Thock이 켜져 있으면 최신 판으로 업데이트해 주세요(그동안은 CapsLock으로 쓸 수 있습니다). 아니면 Crema를 다시 시작해 주세요.",
   file_read: "파일을 읽지 못했습니다.",
   file_too_large: "20MB보다 큰 이미지는 첨부할 수 없습니다.",
   file_write: "파일을 저장하지 못했습니다.",

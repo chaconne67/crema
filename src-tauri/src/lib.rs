@@ -305,8 +305,9 @@ async fn sign_out() -> Result<(), String> {
 
 // Thock built in (the 9,900원 plan, docs: Crema-이용권-권한-Thock방식-계획-2026-10-01.md): the installer's Thock.exe
 // runs with Crema's server and sign-in (read by name from Windows Credential Manager) and its own data folder.
-// It writes its settings page's port and token to embedded.json; a Thock already running on its own keeps
-// CapsLock and this one ends at once (its single-instance lock), so there is no embedded.json then.
+// It writes its settings page's port and token to embedded.json. A Thock already running on its own keeps
+// CapsLock and this one ends at once (its single-instance lock); Crema then uses that Thock, which writes the
+// same to ~/.voicetype/control.json (Thock 0.5.1.dev2 and later).
 
 fn thock_home(app: &AppHandle) -> Result<PathBuf, String> {
   app.path().app_local_data_dir().map(|dir| dir.join("thock")).map_err(|_| "thock_unavailable".to_string())
@@ -354,14 +355,23 @@ fn thock_stop(app: AppHandle, state: State<'_, AppState>) {
   }
 }
 
-/// The running Thock's settings page port and token (embedded.json).
+/// The running Thock's settings page port and token: the built-in one's (embedded.json), else a Thock running
+/// on its own (~/.voicetype/control.json). A file whose port nothing answers on was left by a Thock that crashed.
 fn thock_local(app: &AppHandle) -> Result<(u64, String), String> {
-  let text = std::fs::read_to_string(thock_home(app)?.join("embedded.json")).map_err(|_| "thock_unavailable".to_string())?;
-  let value: serde_json::Value = serde_json::from_str(&text).map_err(|_| "thock_unavailable".to_string())?;
-  match (value["port"].as_u64(), value["token"].as_str()) {
-    (Some(port), Some(token)) => Ok((port, token.to_string())),
-    _ => Err("thock_unavailable".into()),
+  let mut files = vec![thock_home(app)?.join("embedded.json")];
+  if let Ok(home) = app.path().home_dir() {
+    files.push(home.join(".voicetype").join("control.json"));
   }
+  files
+    .iter()
+    .find_map(|file| {
+      let value: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(file).ok()?).ok()?;
+      let (port, token) = (value["port"].as_u64()?, value["token"].as_str()?.to_string());
+      let address = std::net::SocketAddr::from(([127, 0, 0, 1], u16::try_from(port).ok()?));
+      std::net::TcpStream::connect_timeout(&address, Duration::from_millis(300)).ok()?;
+      Some((port, token))
+    })
+    .ok_or_else(|| "thock_unavailable".to_string())
 }
 
 /// Thock's settings page, shown in Crema's settings under 음성 입력.
