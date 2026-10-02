@@ -715,9 +715,18 @@ export function createChatApp({
     }
     if (onVoice) {
       textarea.focus();
+      const listening = button.dataset.state === "listening";
       try {
-        if (await onVoice()) return;
+        if (await onVoice()) {
+          // Thock took the press: the mic blinks orange until the next press stops it.
+          if (listening) delete button.dataset.state;
+          else button.dataset.state = "listening";
+          button.setAttribute("aria-label", listening ? "음성 입력" : "음성 입력 끝내기");
+          return;
+        }
       } catch (error) {
+        delete button.dataset.state;
+        button.setAttribute("aria-label", "음성 입력");
         showNotice({ title: "음성 입력", text: error?.userMessage || "음성 입력을 시작하지 못했습니다.", tone: "error" });
         return;
       }

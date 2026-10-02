@@ -403,6 +403,11 @@ describe("chat app", () => {
     expect(focused).toBe(document.querySelector("#prompt"));
     expect(getUserMedia).not.toHaveBeenCalled();
     expect(document.querySelector(".notice-card")).toBeNull();
+    const mic = document.querySelector("[data-mic]");
+    await vi.waitFor(() => expect(mic.dataset.state).toBe("listening"));
+    mic.click();
+    await vi.waitFor(() => expect(mic.dataset.state).toBeUndefined());
+    expect(onVoice).toHaveBeenCalledTimes(2);
   });
 
   it("opens a picker at once saying it is loading, and tells whether it is still open", () => {
