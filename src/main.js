@@ -605,7 +605,6 @@ const panel = createSettingsPanel({
     const chat = workspace.chats.find((item) => item.id === sessionId || chatSessions(item).includes(sessionId));
     if (chat) openChat(chat.id);
   },
-  loadVoicePage: () => host.thockPage(),
   async onRedeemInvite(code) {
     await host.redeemInvite(code);
     const status = await host.accountStatus().catch(() => null);

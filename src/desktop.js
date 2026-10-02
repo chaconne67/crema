@@ -172,7 +172,13 @@ export function createDesktopHost() {
     /** Thock built in (9,900원 plan): start or stop it, its settings page, a dictation into the focused field. */
     thockStart: () => call("thock_start"),
     thockStop: () => call("thock_stop").catch(() => {}),
-    thockPage: () => call("thock_page"),
+    // Thock's own sentence for a refusal is shown as it is.
+    thockApi: (path, body) =>
+      call("thock_api", { path, body }).catch((error) => {
+        if (!(error.code in ERROR_MESSAGES)) error.userMessage = error.code;
+        throw error;
+      }),
+    thockSound: (keyboard) => call("thock_sound", { keyboard }),
     thockDictate: () => call("thock_dictate"),
     /** Thock's pill asks for its settings. */
     onVoiceSettings(callback) {

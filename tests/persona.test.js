@@ -155,16 +155,22 @@ describe("Settings → 내 플랜", () => {
 });
 
 describe("Settings → 음성 입력", () => {
-  it("shows the built-in Thock's settings page for an access with voice", async () => {
+  it("shows the running Thock's settings for an access with voice", async () => {
     document.body.innerHTML = "";
     window.matchMedia = vi.fn(() => ({ matches: false, addEventListener() {} }));
     const { createSettingsPanel } = await import("../src/settings-panel.js");
     const { loadAppearance } = await import("../src/settings.js");
-    const loadVoicePage = vi.fn(async () => "http://127.0.0.1:50123/?t=tok&w=0");
+    const thockApi = vi.fn(async () => ({
+      hotkey: "capslock", input_mode: "hold", input_modes: { hold: "누르고 있는 동안 녹음" }, polish: true,
+      polish_level: "clean", polish_levels: { clean: "군더더기만 빼기" }, style: "none", styles: { none: "바꾸지 않음" },
+      style_custom: "", terms: [], learn: true, sound_processing: true, keep_audio: false, microphone: null, microphones: [],
+      sound_keyboard: "hhkb", sound_keyboards: { hhkb: "HHKB" }, notes: [], profile: {}, personal_ready: true,
+      personal_key: "pk", embedded: true, account: { state: "signed_in" }, version: "0.5.1",
+    }));
     const panel = createSettingsPanel({
-      appearance: loadAppearance(), connection: {}, host: { readSoul: vi.fn(async () => "") },
+      appearance: loadAppearance(), connection: {}, host: { readSoul: vi.fn(async () => ""), thockApi },
       onAppearanceChange() {}, onConnectionChange() {}, onConnect: async () => ({ state: "connected", message: "" }),
-      onProvidersChanged: async () => {}, onSignOut() {}, loadVoicePage,
+      onProvidersChanged: async () => {}, onSignOut() {},
     });
     const shell = document.createElement("div");
     document.body.append(shell);
@@ -173,11 +179,12 @@ describe("Settings → 음성 입력", () => {
     panel.setAccount({ email: "a@example.com", member: { label: "4,900원 이용권", voice: false } });
     panel.open();
     expect(section.hidden).toBe(true);
-    expect(loadVoicePage).not.toHaveBeenCalled();
+    expect(thockApi).not.toHaveBeenCalled();
     panel.setAccount({ email: "a@example.com", member: { label: "9,900원 이용권", voice: true },
       voice: { remaining_seconds: 600, allowance_seconds: 7200 } });
     panel.showVoice();
-    await vi.waitFor(() => expect(document.querySelector("[data-voice-frame]").src).toBe("http://127.0.0.1:50123/?t=tok&w=0"));
+    await vi.waitFor(() => expect(section.querySelector('[data-voice-group="dictation"]')).not.toBeNull());
+    expect(thockApi).toHaveBeenCalledWith("/api/settings");
     expect(section.hidden).toBe(false);
     expect(section.querySelector(".section-body").hidden).toBe(false);
     expect(section.querySelector(".section-summary").textContent).toBe("10분 남음 (기간마다 120분)");

@@ -4,6 +4,7 @@ import { enhanceSelect } from "./dropdown.js";
 import { AUTO_LABEL, AUTO_NOTE, createModelPicker } from "./model-picker.js";
 import { createMediaSection } from "./media.js";
 import { createMemorySection } from "./memory.js";
+import { createVoiceSection } from "./voice.js";
 import { createProviderSection } from "./provider-panel.js";
 import { buildCatalog, freeChain, locate, pickRoute, providerStatus } from "./providers.js";
 import {
@@ -146,7 +147,6 @@ export function createSettingsPanel({
   onMediaChange = () => {},
   onSignOut,
   onRedeemInvite = async () => {},
-  loadVoicePage = async () => "",
   onGuide = () => {},
   // (open) → the panel opened or closed; the sign-up guide's page must not cover it.
   onOpenChange = () => {},
@@ -165,6 +165,7 @@ export function createSettingsPanel({
   let providerSection = null;
   let mediaSection = null;
   let memorySection = null;
+  let voiceSection = null;
   let authKinds = {};
   let catalog = [];
 
@@ -329,18 +330,9 @@ export function createSettingsPanel({
     }
   }
 
-  /** The built-in Thock's settings page, for an access with voice. */
-  async function loadVoice() {
-    if (panel.querySelector("[data-voice-section]").hidden) return;
-    const frame = panel.querySelector("[data-voice-frame]");
-    const status = panel.querySelector("[data-voice-status]");
-    try {
-      const url = await loadVoicePage();
-      if (frame.src !== url) frame.src = url;
-      status.textContent = "";
-    } catch (error) {
-      status.textContent = error?.userMessage || "음성 입력 설정을 불러오지 못했습니다.";
-    }
+  /** The running Thock's settings, for an access with voice. */
+  function loadVoice() {
+    if (!panel.querySelector("[data-voice-section]").hidden) voiceSection?.load();
   }
 
   function showConnectionMessage(result) {
@@ -504,8 +496,7 @@ export function createSettingsPanel({
 
           <section class="settings-section" aria-labelledby="voice-title" data-voice-section hidden>
             <h3 id="voice-title">음성 입력</h3>
-            <iframe class="voice-frame" data-voice-frame title="음성 입력 설정"></iframe>
-            <p class="provider-status" data-voice-status role="status"></p>
+            <div data-voice-settings></div>
           </section>
 
           <section class="settings-section" aria-labelledby="media-title">
@@ -653,6 +644,8 @@ export function createSettingsPanel({
         },
       });
       panel.querySelector("[data-memory-section]").replaceWith(memorySection.element);
+      voiceSection = createVoiceSection({ host });
+      panel.querySelector("[data-voice-settings]").replaceWith(voiceSection.element);
       makeSectionsCollapsible();
       updateSummaries();
 

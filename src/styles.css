@@ -3405,11 +3405,12 @@ svg.zap {
 }
 
 /* Settings → 음성 입력: the built-in Thock's own settings page. */
-.voice-frame {
-  width: 100%;
-  height: 720px;
-  border: 1px solid var(--hairline);
-  border-radius: 12px;
+/* Settings → 음성 입력 (voice.js): the words Thock knows the user often says, as badges that wrap. */
+.voice-terms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
 }
 
 /* 고급: what most people never need to open. */
