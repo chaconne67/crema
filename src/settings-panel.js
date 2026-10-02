@@ -55,7 +55,6 @@ const SECTION_ICONS = {
   // Lucide (ISC) "circle-user".
   plan: icon('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/>'),
   providers: icon('<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>'),
-  connection: icon('<path d="M12 22v-5"/><path d="M15 8V2"/><path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z"/><path d="M9 8V2"/>'),
   model: icon('<path d="M12 20v2"/><path d="M12 2v2"/><path d="M17 20v2"/><path d="M17 2v2"/><path d="M2 12h2"/><path d="M2 17h2"/><path d="M2 7h2"/><path d="M20 12h2"/><path d="M20 17h2"/><path d="M20 7h2"/><path d="M7 20v2"/><path d="M7 2v2"/><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/>'),
   // Lucide (ISC) "image".
   media: icon('<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>'),
@@ -69,8 +68,6 @@ const SECTION_ICONS = {
   voice: icon('<path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/>'),
   input: icon('<path d="M10 8h.01"/><path d="M12 12h.01"/><path d="M14 8h.01"/><path d="M16 12h.01"/><path d="M18 8h.01"/><path d="M6 8h.01"/><path d="M7 16h10"/><path d="M8 12h.01"/><rect width="20" height="16" x="2" y="4" rx="2"/>'),
 };
-
-const CONNECTION_STATES = { connected: "연결됨", error: "연결 안 됨", checking: "확인 중", offline: "연결 전" };
 
 const ALL_SLIDERS = [...SYSTEM_SLIDERS, WEIGHT_SLIDER, ...SLIDERS];
 const ALL_RANGES = { ...RANGES, ...SYSTEM_RANGES, weight: { min: 100, max: 900, step: 100 } };
@@ -141,7 +138,6 @@ export function createSettingsPanel({
   host,
   onAppearanceChange,
   onConnectionChange,
-  onConnect,
   onProvidersChanged,
   // (plan) → media backends to use (media.js), after a choice in 미디어.
   onMediaChange = () => {},
@@ -160,7 +156,6 @@ export function createSettingsPanel({
   let shell;
   let opener = null;
   let dropdowns = [];
-  let connectionState = "checking";
   let modelPicker = null;
   let providerSection = null;
   let mediaSection = null;
@@ -269,7 +264,6 @@ export function createSettingsPanel({
     const reasoning = REASONING_LEVELS.find((level) => level.value === (connection.reasoning || ""));
     const summaries = {
       plan: [planLabel(account?.plan, account?.member), account?.email].filter(Boolean).join(" · "),
-      connection: CONNECTION_STATES[connectionState] || "",
       providers: catalog.length ? `${catalog.length}개 연결됨` : "",
       media: mediaSection?.summary() || "",
       memory: memorySection?.summary() || "",
@@ -333,22 +327,6 @@ export function createSettingsPanel({
   /** The running Thock's settings, for an access with voice. */
   function loadVoice() {
     if (!panel.querySelector("[data-voice-section]").hidden) voiceSection?.load();
-  }
-
-  function showConnectionMessage(result) {
-    // Problems need the fix button in view.
-    const connectionSection = panel.querySelector('[data-section="connection"]');
-    if (result.state === "error" && connectionSection) setSectionOpen(connectionSection, true);
-    const line = panel.querySelector("[data-connection-line]");
-    line.dataset.state = result.state;
-    line.textContent = result.message;
-    connectionState = result.state;
-    updateSummaries();
-  }
-
-  async function connect() {
-    showConnectionMessage({ state: "checking", message: "연결을 확인하고 있습니다…" });
-    showConnectionMessage(await onConnect());
   }
 
   const personaStatus = (text, tone = "") => {
@@ -420,10 +398,6 @@ export function createSettingsPanel({
       setSectionOpen(section, true);
       section.scrollIntoView?.({ block: "start" });
       loadVoice();
-    },
-
-    showConnection(result) {
-      showConnectionMessage(result);
     },
 
     /** The signed-in Crema account ({ email, name }). */
@@ -579,11 +553,6 @@ export function createSettingsPanel({
             <div data-provider-section></div>
           </section>
 
-          <section class="settings-section" aria-labelledby="connection-title">
-            <h3 id="connection-title">연결</h3>
-            <p class="connection-line" data-connection-line role="status"></p>
-            <button class="secondary-button" type="button" data-check>연결 다시 확인</button>
-          </section>
         </div>`;
       shell.append(panel);
       dropdowns = [...panel.querySelectorAll("select")].map(enhanceSelect);
@@ -744,7 +713,6 @@ export function createSettingsPanel({
         updateAppearance({ ...current, ...PRESETS[current.preset] }),
       );
 
-      panel.querySelector("[data-check]").addEventListener("click", connect);
       panel.querySelector("[data-sign-out]").addEventListener("click", () => onSignOut());
       panel.querySelector("[data-redeem-invite]").addEventListener("click", async (event) => {
         const button = event.currentTarget;

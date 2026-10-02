@@ -248,28 +248,19 @@ describe("chat app", () => {
     expect(document.execCommand).toHaveBeenCalledWith("copy");
   });
 
-  it("asks for a new chat and offers connection only while disconnected", async () => {
+  it("asks for a new chat only once the chat has a turn", async () => {
     const client = {
       async *streamReply() {
         yield "답변";
       },
     };
-    const onOpenSettings = vi.fn();
     const onNewChat = vi.fn();
-    const app = createChatApp({ client, host: { openLink: vi.fn() }, onOpenSettings, onNewChat });
+    const app = createChatApp({ client, host: { openLink: vi.fn() }, onNewChat });
     app.mount(document.querySelector("#app"));
     app.showConversation("chat-1");
 
     const newChat = document.querySelector("[data-new-chat]");
-    const connect = document.querySelector("[data-connect]");
     expect(newChat.disabled).toBe(true);
-
-    app.setStatus("offline", "연결 전 · 예시 응답");
-    expect(connect.hidden).toBe(false);
-    connect.click();
-    expect(onOpenSettings).toHaveBeenCalled();
-    app.setStatus("connected", "Hermes 연결됨");
-    expect(connect.hidden).toBe(true);
 
     submit("질문");
     await vi.waitFor(() => expect(newChat.disabled).toBe(false));

@@ -147,7 +147,6 @@ export function createChatApp({
   let statusLabel;
   let statusDot;
   let newChatButton;
-  let connectButton;
   let projectChip;
   let emptyTitle;
   let project = null;
@@ -1192,7 +1191,6 @@ export function createChatApp({
     setStatus(state, label) {
       root.dataset.connection = state;
       statusLabel.textContent = label;
-      connectButton.hidden = state === "connected" || state === "checking";
       root.querySelector("[data-mic]").hidden = !canTranscribe();
     },
 
@@ -1238,14 +1236,13 @@ export function createChatApp({
             <div class="conversation-content" data-conversation></div>
             <div class="empty-state" data-empty-state>
               <p data-empty-title>무엇을 도와드릴까요?</p>
-              <button class="text-button" type="button" data-connect hidden>Crema 엔진 연결하기</button>
             </div>
           </main>
           <footer class="composer-shell">
             <div class="command-menu" data-command-menu role="listbox" aria-label="명령" hidden></div>
             <div class="composer-context">
               <button class="context-chip" type="button" data-project-chip data-menu-owner="project" aria-label="프로젝트 바꾸기" title="프로젝트 바꾸기">${FOLDER_ICON}<span data-project-name>프로젝트 없음</span>${CHEVRON_DOWN}</button>
-              <button class="context-chip" type="button" data-connection-chip data-menu-owner="location" aria-label="연결 설정" title="연결 설정"><span class="chip-icon">${LAPTOP_ICON}</span><span data-status-label>연결 확인 중</span><span class="status-dot" aria-hidden="true"></span>${CHEVRON_DOWN}</button>
+              <button class="context-chip" type="button" data-connection-chip data-menu-owner="location" aria-label="다시 연결" title="다시 연결"><span class="chip-icon">${LAPTOP_ICON}</span><span data-status-label>연결 확인 중</span><span class="status-dot" aria-hidden="true"></span></button>
               <button class="context-chip" type="button" data-branch-chip data-menu-owner="branch" aria-label="브랜치 바꾸기" title="브랜치 바꾸기" hidden>${BRANCH_ICON}<span data-branch-name></span>${CHEVRON_DOWN}</button>
             </div>
             <form class="composer" data-composer>
@@ -1305,7 +1302,6 @@ export function createChatApp({
       liveRegion = root.querySelector("[data-live-region]");
       statusLabel = root.querySelector("[data-status-label]");
       newChatButton = root.querySelector("[data-new-chat]");
-      connectButton = root.querySelector("[data-connect]");
 
       projectChip = root.querySelector("[data-project-chip]");
       emptyTitle = root.querySelector("[data-empty-title]");
@@ -1335,7 +1331,6 @@ export function createChatApp({
         if (title && title !== titleButton.textContent) onRenameChat(title);
       });
       root.querySelector("[data-open-settings]").addEventListener("click", onOpenSettings);
-      connectButton.addEventListener("click", onOpenSettings);
       // Buttons that own a menu toggle it; it opens just above the button.
       for (const chip of root.querySelectorAll("[data-menu-owner]")) {
         chip.addEventListener("click", () => {

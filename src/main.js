@@ -596,7 +596,6 @@ const panel = createSettingsPanel({
     else if (connected) app.setStatus("connected", connectedLabel());
     syncModelChip();
   },
-  onConnect: connect,
   onProvidersChanged: () => refreshModels().catch(() => {}),
   onMediaChange: (plan) => applyMedia(plan).catch(() => {}),
   onGuide: (providerId) => guide.start(providerId),
@@ -1007,8 +1006,11 @@ const app = createChatApp({
       commandHandlers.model("", { ...ui, quiet: true });
       return;
     }
+    // The connection chip connects again; a failure says why in the conversation.
     if (kind === "location") {
-      panel.open();
+      connect().then((result) => {
+        if (result.state === "error") ui.notice({ title: "연결", text: result.message, tone: "error" });
+      });
       return;
     }
     if (kind === "access") {
@@ -1172,7 +1174,6 @@ const personaSetup = createPersonaSetup({ host });
 ensureSignedIn()
   .then(connect)
   .then((result) => {
-    panel.showConnection(result);
     readTurns();
     setInterval(readTurns, TURNS_EVERY_MS);
     // First run: who the agent is, into SOUL.md (needs the engine, so after connecting).
