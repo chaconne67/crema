@@ -1689,17 +1689,6 @@ html[data-pointer] :focus-visible {
   gap: 8px;
 }
 
-/* A line under each category (not over it, as .settings-group draws), so none sits right under the
-   search box. */
-.settings-group.provider-group {
-  border-top: 0;
-  border-bottom: 1px solid var(--hairline);
-}
-
-.settings-group.provider-group:last-of-type {
-  border-bottom: 0;
-}
-
 .provider-group > summary {
   justify-content: flex-start;
   gap: 8px;
@@ -3730,9 +3719,14 @@ svg.zap {
   color: var(--body-ink, var(--ink));
 }
 
-/* 모양: 시스템 and 본문 fold open and shut. */
+/* Folding groups (모양's 시스템 and 본문, 기억, 서비스 연동, 음성 입력, Provider): a line between groups
+   only, under each but the last (주인님 2026-10-02). */
 .settings-group {
-  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.settings-group:last-of-type {
+  border-bottom: 0;
 }
 
 .settings-group > summary {
