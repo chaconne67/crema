@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createChatApp, listContinuation } from "../src/app.js";
+import { createChatApp, listContinuation, renumberList } from "../src/app.js";
 import { documentNote, requestContent } from "../src/attachments.js";
 
 function submit(text) {
@@ -113,6 +113,23 @@ describe("composer", () => {
     prompt.value = "";
     prompt.dispatchEvent(new Event("input", { bubbles: true }));
     expect(mirror.textContent).toBe("");
+  });
+
+  it("renumbers the items below one put in the middle of a numbered list", () => {
+    // Sub-items are passed over; a blank line ends the list.
+    expect(renumberList("3. 가\n3. 나\n   - 아래\n4. 다\n\n4. 다른 목록", 0)).toBe("3. 가\n4. 나\n   - 아래\n5. 다\n\n4. 다른 목록");
+    expect(renumberList("1) 가\n5. 다른 표기", 0)).toBe("1) 가\n5. 다른 표기");
+    expect(renumberList("그냥 글\n1. 가", 0)).toBe("그냥 글\n1. 가");
+
+    mount();
+    const prompt = document.querySelector("#prompt");
+    prompt.value = "할 일\n1. 장보기\n2. 빨래\n3. 청소";
+    const caret = "할 일\n1. 장보기".length;
+    prompt.setSelectionRange(caret, caret);
+    prompt.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true, cancelable: true }));
+    expect(prompt.value).toBe("할 일\n1. 장보기\n2. \n3. 빨래\n4. 청소");
+    // The caret waits on the new item.
+    expect(prompt.selectionStart).toBe("할 일\n1. 장보기\n2. ".length);
   });
 
   it("queues a turn typed during a reply and sends it when the reply ends", async () => {

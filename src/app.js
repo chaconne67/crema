@@ -107,6 +107,30 @@ export function listContinuation(line) {
   return `${indent}${bullet ? `${bullet} ` : `${Number(number) + 1}${delimiter} `}`;
 }
 
+/**
+ * The numbered items after the one starting at `from`, numbered on from it, so an item put in the
+ * middle pushes the rest down. Deeper lines (sub-items) are passed over; the list ends at the first
+ * line that is neither (a blank line, plain text, an item of another list).
+ */
+export function renumberList(value, from) {
+  const lines = value.slice(from).split("\n");
+  const head = /^(\s*)(\d{1,4})([.)])\s/.exec(lines[0]);
+  if (!head) return value;
+  const [, indent, start, delimiter] = head;
+  let number = Number(start);
+  for (let index = 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    const item = /^(\s*)\d{1,4}([.)])(\s.*)$/.exec(line);
+    if (item && item[1] === indent && item[2] === delimiter) {
+      number += 1;
+      lines[index] = `${indent}${number}${delimiter}${item[3]}`;
+    } else if (!line.trim() || /^\s*/.exec(line)[0].length <= indent.length) {
+      break;
+    }
+  }
+  return value.slice(0, from) + lines.join("\n");
+}
+
 export function createChatApp({
   client,
   host,
@@ -403,7 +427,8 @@ export function createChatApp({
 
   /**
    * Shift+Enter on a list item: the next item's marker on the new line, or on an item still empty, the
-   * marker taken away (the list ends). False when the caret is not on a list item: a plain new line.
+   * marker taken away (the list ends). A numbered item put in the middle renumbers the items below it.
+   * False when the caret is not on a list item: a plain new line.
    */
   function continueList() {
     const { selectionStart: start, selectionEnd: end, value } = textarea;
@@ -417,6 +442,9 @@ export function createChatApp({
       textarea.setRangeText("", lineStart, lineEnd, "end");
     } else {
       textarea.setRangeText(`\n${next}`, start, start, "end");
+      // The lines below the new item, renumbered; the caret stays on the new item.
+      const below = textarea.value.indexOf("\n", start + 1) + 1;
+      if (below) textarea.setRangeText(renumberList(textarea.value, start + 1).slice(below), below, textarea.value.length, "preserve");
     }
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
     return true;
