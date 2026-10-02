@@ -1159,7 +1159,12 @@ host.onVoiceSettings(() => {
 async function ensureSignedIn() {
   const status = await host.accountStatus().catch(() => ({ state: "offline" }));
   if (status.state === "signed_in") saveAccount(status);
-  if (status.state === "signed_out") saveAccount(await signIn.show());
+  if (status.state === "signed_out") {
+    const account = await signIn.show();
+    // The sign-in gives only who signed in; the grade (plan card, voice, Crema AI) comes from /api/me.
+    const signedIn = await host.accountStatus().catch(() => null);
+    saveAccount(signedIn?.state === "signed_in" ? signedIn : account);
+  }
   panel.setAccount(loadAccount());
 }
 
