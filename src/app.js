@@ -434,7 +434,7 @@ export function createChatApp({
   }
 
   /**
-   * The draft as seen: drawn behind the textarea, whose own text is clear, with list markers shown as
+   * The draft as seen: drawn over the textarea, whose own text is clear, with list markers shown as
    * lists — "- " and "* " as a bullet, "1. " in the accent. Same characters in the same places, so the
    * caret and what is sent stay plain Markdown.
    */

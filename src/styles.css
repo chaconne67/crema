@@ -1067,7 +1067,8 @@ button {
     0 6px 24px color-mix(in srgb, #000 7%, transparent);
 }
 
-/* The draft is drawn by the mirror behind a clear textarea; both lay text out the same way. */
+/* The draft is drawn by the mirror over a clear textarea, which keeps the caret and the selection (so
+   selected text shows on the highlight); both lay text out the same way. */
 .composer textarea,
 .composer-mirror {
   margin: 0;
@@ -1082,10 +1083,11 @@ button {
 
 .composer-draft {
   position: relative;
+  /* The mirror's stacking stays inside the draft (menus open over it). */
+  isolation: isolate;
 }
 
 .composer textarea {
-  position: relative;
   display: block;
   width: 100%;
   min-height: 30px;
@@ -1102,6 +1104,7 @@ button {
 .composer-mirror {
   position: absolute;
   inset: 0;
+  z-index: 1;
   overflow: hidden;
   color: var(--ink);
   pointer-events: none;
