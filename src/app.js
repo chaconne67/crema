@@ -137,6 +137,7 @@ export function createChatApp({
   let scrollArea;
   let composer;
   let textarea;
+  let draftMirror;
   let sendButton;
   let stopButton;
   let emptyState;
@@ -429,6 +430,34 @@ export function createChatApp({
     textarea.style.overflowY = textarea.scrollHeight > 168 ? "auto" : "hidden";
     // Muted send button until there is something to send.
     composer.classList.toggle("is-empty", !textarea.value.trim());
+    drawDraft();
+  }
+
+  /**
+   * The draft as seen: drawn behind the textarea, whose own text is clear, with list markers shown as
+   * lists — "- " and "* " as a bullet, "1. " in the accent. Same characters in the same places, so the
+   * caret and what is sent stay plain Markdown.
+   */
+  function drawDraft() {
+    const parts = textarea.value.split("\n").flatMap((line, index) => {
+      const match = /^(\s*)(?:[-*•]|\d{1,4}[.)])\s/.exec(line);
+      const drawn = match ? [match[1], listMarker(match[0].slice(match[1].length)), line.slice(match[0].length)] : [line];
+      return index ? ["\n", ...drawn] : drawn;
+    });
+    // A closing new line takes a line in the textarea but not in a div.
+    if (textarea.value.endsWith("\n")) parts.push(" ");
+    draftMirror.replaceChildren(...parts);
+    // Clear of the textarea's scrollbar, so lines wrap at the same place at any width.
+    const scrollbar = textarea.style.overflowY === "auto" ? textarea.offsetWidth - textarea.clientWidth : 0;
+    draftMirror.style.right = `${scrollbar}px`;
+    draftMirror.scrollTop = textarea.scrollTop;
+  }
+
+  function listMarker(text) {
+    const marker = document.createElement("span");
+    marker.className = /^[-*]/.test(text) ? "draft-marker is-bullet" : "draft-marker";
+    marker.textContent = text;
+    return marker;
   }
 
   function escapeHtml(value) {
@@ -1223,14 +1252,17 @@ export function createChatApp({
               <div class="composer-attachments" data-attachments hidden></div>
               <div class="composer-queue" data-queue hidden></div>
               <label class="sr-only" for="prompt">메시지 입력</label>
-              <textarea
-                id="prompt"
-                name="prompt"
-                rows="1"
-                maxlength="12000"
-                placeholder="무엇이든 요청하세요"
-                autocomplete="off"
-              ></textarea>
+              <div class="composer-draft">
+                <div class="composer-mirror" data-draft-mirror aria-hidden="true"></div>
+                <textarea
+                  id="prompt"
+                  name="prompt"
+                  rows="1"
+                  maxlength="12000"
+                  placeholder="무엇이든 요청하세요"
+                  autocomplete="off"
+                ></textarea>
+              </div>
               <div class="composer-toolbar">
                 <button class="tool-button" type="button" data-menu-button aria-label="명령 메뉴" title="명령 메뉴 (/)" aria-expanded="false">${MENU_ICON}</button>
                 <button class="tool-button" type="button" data-attach data-menu-owner="attach" aria-label="파일 추가" title="파일 추가">${PLUS_ICON}</button>
@@ -1266,6 +1298,7 @@ export function createChatApp({
       scrollArea = root.querySelector(".conversation-scroll");
       composer = root.querySelector("[data-composer]");
       textarea = root.querySelector("#prompt");
+      draftMirror = root.querySelector("[data-draft-mirror]");
       sendButton = root.querySelector(".send-button");
       stopButton = root.querySelector(".stop-button");
       emptyState = root.querySelector("[data-empty-state]");
@@ -1387,6 +1420,7 @@ export function createChatApp({
         const row = event.target.closest("[data-menu-index]");
         if (row) selectMenuItem(Number(row.dataset.menuIndex));
       });
+      textarea.addEventListener("scroll", () => (draftMirror.scrollTop = textarea.scrollTop));
       textarea.addEventListener("input", () => {
         if (suggestion) clearSuggestion();
         resizeComposer();

@@ -1067,23 +1067,61 @@ button {
     0 6px 24px color-mix(in srgb, #000 7%, transparent);
 }
 
-.composer textarea {
-  width: 100%;
-  min-height: 30px;
-  max-height: 168px;
+/* The draft is drawn by the mirror behind a clear textarea; both lay text out the same way. */
+.composer textarea,
+.composer-mirror {
   margin: 0;
   padding: 4px 6px 6px;
-  resize: none;
-  overflow-y: auto;
-  color: var(--ink);
-  caret-color: var(--accent);
-  background: transparent;
-  border: 0;
-  outline: 0;
   font-family: var(--font-body);
   font-size: var(--body-size);
   line-height: 1.55;
   letter-spacing: var(--body-tracking);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.composer-draft {
+  position: relative;
+}
+
+.composer textarea {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 30px;
+  max-height: 168px;
+  resize: none;
+  overflow-y: auto;
+  color: transparent;
+  caret-color: var(--accent);
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+
+.composer-mirror {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  color: var(--ink);
+  pointer-events: none;
+}
+
+.draft-marker {
+  color: var(--accent);
+}
+
+/* "- " keeps its width; a bullet is drawn over it, a little to the left so it does not touch the text. */
+.draft-marker.is-bullet {
+  position: relative;
+  color: transparent;
+}
+
+.draft-marker.is-bullet::before {
+  content: "•";
+  position: absolute;
+  left: -0.18em;
+  color: var(--accent);
 }
 
 .composer textarea::placeholder {
@@ -3715,7 +3753,7 @@ svg.zap {
   --surface: var(--system-bg, var(--theme-surface));
 }
 
-.composer textarea {
+.composer-mirror {
   color: var(--body-ink, var(--ink));
 }
 

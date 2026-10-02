@@ -99,6 +99,26 @@ describe("composer", () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
+  it("draws list markers in the draft as lists while the text stays Markdown", () => {
+    mount();
+    const prompt = document.querySelector("#prompt");
+    const mirror = document.querySelector("[data-draft-mirror]");
+    prompt.value = "할 일\n- 장보기 <b>꼭</b>\n  * 우유\n12. 빨래\n1.5배\n";
+    prompt.dispatchEvent(new Event("input", { bubbles: true }));
+    // Same characters in the same places as the textarea, so the caret lines up.
+    expect(mirror.textContent).toBe(`${prompt.value} `);
+    expect([...mirror.querySelectorAll(".draft-marker")].map((node) => [node.textContent, node.classList.contains("is-bullet")])).toEqual([
+      ["- ", true],
+      ["* ", true],
+      ["12. ", false],
+    ]);
+    // Typed text is text, never markup.
+    expect(mirror.querySelector("b")).toBeNull();
+    prompt.value = "";
+    prompt.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(mirror.textContent).toBe("");
+  });
+
   it("queues a turn typed during a reply and sends it when the reply ends", async () => {
     const app = mount();
     app.showConversation("chat-1");
