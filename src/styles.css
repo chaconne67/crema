@@ -1110,21 +1110,18 @@ button {
   pointer-events: none;
 }
 
-.draft-marker {
-  color: var(--accent);
-}
-
-/* "- " keeps its width; a bullet is drawn over it, a little to the left so it does not touch the text. */
-.draft-marker.is-bullet {
+/* "- " keeps its width but not its glyph; a bullet in the text's colour is drawn over it, a little to
+   the left so it does not touch the text. */
+.draft-bullet {
   position: relative;
-  color: transparent;
+  -webkit-text-fill-color: transparent;
 }
 
-.draft-marker.is-bullet::before {
+.draft-bullet::before {
   content: "•";
   position: absolute;
   left: -0.18em;
-  color: var(--accent);
+  -webkit-text-fill-color: currentcolor;
 }
 
 .composer textarea::placeholder {

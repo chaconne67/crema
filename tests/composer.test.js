@@ -99,7 +99,7 @@ describe("composer", () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
-  it("draws list markers in the draft as lists while the text stays Markdown", () => {
+  it("draws - and * items in the draft with a bullet while the text stays Markdown", () => {
     mount();
     const prompt = document.querySelector("#prompt");
     const mirror = document.querySelector("[data-draft-mirror]");
@@ -107,11 +107,7 @@ describe("composer", () => {
     prompt.dispatchEvent(new Event("input", { bubbles: true }));
     // Same characters in the same places as the textarea, so the caret lines up.
     expect(mirror.textContent).toBe(`${prompt.value} `);
-    expect([...mirror.querySelectorAll(".draft-marker")].map((node) => [node.textContent, node.classList.contains("is-bullet")])).toEqual([
-      ["- ", true],
-      ["* ", true],
-      ["12. ", false],
-    ]);
+    expect([...mirror.querySelectorAll(".draft-bullet")].map((node) => node.textContent)).toEqual(["- ", "* "]);
     // Typed text is text, never markup.
     expect(mirror.querySelector("b")).toBeNull();
     prompt.value = "";

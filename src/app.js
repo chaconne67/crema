@@ -434,14 +434,14 @@ export function createChatApp({
   }
 
   /**
-   * The draft as seen: drawn over the textarea, whose own text is clear, with list markers shown as
-   * lists — "- " and "* " as a bullet, "1. " in the accent. Same characters in the same places, so the
-   * caret and what is sent stay plain Markdown.
+   * The draft as seen: drawn over the textarea, whose own text is clear, with "- " and "* " list items
+   * shown with a bullet. Same characters in the same places, so the caret and what is sent stay plain
+   * Markdown.
    */
   function drawDraft() {
     const parts = textarea.value.split("\n").flatMap((line, index) => {
-      const match = /^(\s*)(?:[-*•]|\d{1,4}[.)])\s/.exec(line);
-      const drawn = match ? [match[1], listMarker(match[0].slice(match[1].length)), line.slice(match[0].length)] : [line];
+      const match = /^(\s*)[-*]\s/.exec(line);
+      const drawn = match ? [match[1], bullet(match[0].slice(match[1].length)), line.slice(match[0].length)] : [line];
       return index ? ["\n", ...drawn] : drawn;
     });
     // A closing new line takes a line in the textarea but not in a div.
@@ -453,9 +453,9 @@ export function createChatApp({
     draftMirror.scrollTop = textarea.scrollTop;
   }
 
-  function listMarker(text) {
+  function bullet(text) {
     const marker = document.createElement("span");
-    marker.className = /^[-*]/.test(text) ? "draft-marker is-bullet" : "draft-marker";
+    marker.className = "draft-bullet";
     marker.textContent = text;
     return marker;
   }
