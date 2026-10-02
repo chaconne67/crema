@@ -152,6 +152,29 @@ describe("Settings → 내 플랜", () => {
     await vi.waitFor(() => expect(status.textContent).toBe("초대 코드를 적용했습니다."));
     expect(input.value).toBe("");
   });
+
+  it("has no 기억 section; the backup is made from 내 플랜", async () => {
+    document.body.innerHTML = "";
+    window.matchMedia = vi.fn(() => ({ matches: false, addEventListener() {} }));
+    const { createSettingsPanel } = await import("../src/settings-panel.js");
+    const { loadAppearance } = await import("../src/settings.js");
+    const hermesAdmin = vi.fn(async (method, path, body) => ({ ok: true, path: body?.output }));
+    const panel = createSettingsPanel({
+      appearance: loadAppearance(), connection: {},
+      host: { readSoul: vi.fn(async () => ""), hermesAdmin, pickFolder: vi.fn(async () => "C:\\Users\\me\\Backups") },
+      onAppearanceChange() {}, onConnectionChange() {}, onProvidersChanged: async () => {}, onSignOut() {},
+    });
+    const shell = document.createElement("div");
+    document.body.append(shell);
+    panel.mount(shell);
+    expect(document.querySelector('[data-section="memory"]')).toBeNull();
+    expect(document.body.textContent).not.toContain("하루 한 번 정리하기");
+    document.querySelector("[data-backup]").click();
+    await vi.waitFor(() => expect(document.querySelector("[data-backup-status]").textContent).toContain("백업했습니다"));
+    const [, path, body] = hermesAdmin.mock.calls.find(([, called]) => called === "/api/crema/backup");
+    expect(path).toBe("/api/crema/backup");
+    expect(body.output).toMatch(/^C:\\Users\\me\\Backups\\crema-backup-\d{12}\.zip$/);
+  });
 });
 
 describe("Settings → 음성 입력", () => {

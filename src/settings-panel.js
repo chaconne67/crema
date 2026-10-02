@@ -3,7 +3,6 @@ import { closeColorPicker, openColorPicker } from "./color-picker.js";
 import { enhanceSelect } from "./dropdown.js";
 import { AUTO_LABEL, AUTO_NOTE, createModelPicker } from "./model-picker.js";
 import { createMediaSection } from "./media.js";
-import { createMemorySection } from "./memory.js";
 import { createVoiceSection } from "./voice.js";
 import { createProviderSection } from "./provider-panel.js";
 import { buildCatalog, freeChain, locate, pickRoute, providerStatus } from "./providers.js";
@@ -146,8 +145,6 @@ export function createSettingsPanel({
   onGuide = () => {},
   // (open) → the panel opened or closed; the sign-up guide's page must not cover it.
   onOpenChange = () => {},
-  // (chatId) → open a chat found in 기억's past-chat search.
-  onOpenChat = () => {},
 }) {
   let current = appearance;
   let account = null;
@@ -159,7 +156,6 @@ export function createSettingsPanel({
   let modelPicker = null;
   let providerSection = null;
   let mediaSection = null;
-  let memorySection = null;
   let voiceSection = null;
   let authKinds = {};
   let catalog = [];
@@ -266,7 +262,6 @@ export function createSettingsPanel({
       plan: [planLabel(account?.plan, account?.member), account?.email].filter(Boolean).join(" · "),
       providers: catalog.length ? `${catalog.length}개 연결됨` : "",
       media: mediaSection?.summary() || "",
-      memory: memorySection?.summary() || "",
       voice: voiceLabel(account?.member, account?.voice).replace("음성 입력 · ", ""),
       model: [connection.auto ? AUTO_LABEL : connection.model, connection.fast && "빠른 속도", connection.reasoning && reasoning?.label].filter(Boolean).join(" · "),
       appearance: `시스템 ${current.systemSize}px · 본문 ${current.size}px`,
@@ -386,7 +381,6 @@ export function createSettingsPanel({
       shell.classList.add("settings-open");
       onOpenChange(true);
       loadPersona();
-      memorySection?.load();
       loadVoice();
       panel.querySelector("[data-close-settings]").focus();
     },
@@ -466,6 +460,10 @@ export function createSettingsPanel({
             <input id="invite-code" type="text" autocomplete="off" spellcheck="false" maxlength="32" placeholder="CRM-XXXX-XXXX" />
             <button class="secondary-button" type="button" data-redeem-invite>코드 확인</button>
             <p class="provider-status" data-invite-status role="status"></p>
+            <span class="field-label">백업</span>
+            <p class="field-note">대화, 기억, 배운 방법, 설정을 고른 폴더에 파일 하나로 저장합니다. API 키와 로그인 정보는 넣지 않습니다.</p>
+            <button class="secondary-button" type="button" data-backup>백업 파일 만들기</button>
+            <p class="provider-status" data-backup-status role="status"></p>
           </section>
 
           <section class="settings-section" aria-labelledby="voice-title" data-voice-section hidden>
@@ -476,11 +474,6 @@ export function createSettingsPanel({
           <section class="settings-section" aria-labelledby="media-title">
             <h3 id="media-title">서비스 연동</h3>
             <div data-media-section></div>
-          </section>
-
-          <section class="settings-section" aria-labelledby="memory-title">
-            <h3 id="memory-title">기억</h3>
-            <div data-memory-section></div>
           </section>
 
           <section class="settings-section" aria-labelledby="persona-title">
@@ -603,16 +596,6 @@ export function createSettingsPanel({
         },
       });
       panel.querySelector("[data-media-section]").replaceWith(mediaSection.element);
-      memorySection = createMemorySection({
-        host,
-        onUpdate: () => updateSummaries(),
-        // A found chat opens in the chat area, so settings step aside.
-        onOpenChat(chatId) {
-          close();
-          onOpenChat(chatId);
-        },
-      });
-      panel.querySelector("[data-memory-section]").replaceWith(memorySection.element);
       voiceSection = createVoiceSection({ host });
       panel.querySelector("[data-voice-settings]").replaceWith(voiceSection.element);
       makeSectionsCollapsible();
@@ -727,6 +710,26 @@ export function createSettingsPanel({
           status.textContent = "초대 코드를 적용했습니다.";
         } catch (error) {
           status.textContent = error?.userMessage || "초대 코드를 확인하지 못했습니다.";
+        } finally {
+          button.disabled = false;
+        }
+      });
+      // Memory itself is handled in the chat ("이거 기억해", "뭐 기억하고 있어?", "잊어 줘"); the backup stays here.
+      panel.querySelector("[data-backup]").addEventListener("click", async (event) => {
+        const button = event.currentTarget;
+        const status = panel.querySelector("[data-backup-status]");
+        const folder = await host.pickFolder("백업을 저장할 폴더");
+        if (!folder) return;
+        const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "");
+        const output = `${folder}${folder.includes("/") ? "/" : "\\"}crema-backup-${stamp}.zip`;
+        button.disabled = true;
+        status.textContent = "백업하고 있습니다…";
+        try {
+          const result = await host.hermesAdmin("POST", "/api/crema/backup", { output });
+          if (!result?.ok) throw new Error();
+          status.textContent = `백업했습니다: ${output}`;
+        } catch {
+          status.textContent = "백업하지 못했습니다.";
         } finally {
           button.disabled = false;
         }

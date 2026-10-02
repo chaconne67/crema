@@ -3256,20 +3256,14 @@ svg.zap {
   font-size: 0.8125rem;
 }
 
-/* Settings → 기억: each remembered thing as plain text with 고치기·지우기; found chats as buttons. */
-.memory-section {
-  display: flex;
-  flex-direction: column;
-}
-
 .settings-group > summary .feature-hint {
   margin-left: auto;
   margin-right: 12px;
   font-weight: 400;
 }
 
-.memory-list,
-.memory-hits {
+/* Lists in settings (음성 입력's typo notes): each item as plain text with its actions under it. */
+.memory-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -3307,62 +3301,6 @@ svg.zap {
   min-width: 0;
 }
 
-.memory-hit {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--hairline);
-  border-radius: 8px;
-  background: none;
-  color: var(--ink);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.memory-hit:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--ink) 5%, var(--surface));
-}
-
-.memory-hit:disabled {
-  cursor: default;
-}
-
-.memory-hit-title {
-  font-size: 0.8125rem;
-  font-weight: 700;
-}
-
-.memory-hit-snippet {
-  color: var(--muted);
-  font-size: 0.8125rem;
-  overflow-wrap: anywhere;
-}
-
-.memory-hit mark {
-  background: color-mix(in srgb, var(--accent-strong) 22%, transparent);
-  color: inherit;
-}
-
-/* Settings → 기억 → 일하며 배운 지식: a page title opens its body, timeline and actions in place. */
-.memory-page-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--ink);
-  font: inherit;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  text-align: left;
-  cursor: pointer;
-}
-
 .memory-badge {
   padding: 1px 7px;
   border-radius: 999px;
@@ -3370,16 +3308,6 @@ svg.zap {
   color: var(--muted);
   font-size: 0.75rem;
   font-weight: 700;
-}
-
-.memory-timeline {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 0.8125rem;
 }
 
 /* In the chat: what a quiet chat left in the notebook, with an undo; this chat's turn with a shared file. */

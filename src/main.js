@@ -600,10 +600,6 @@ const panel = createSettingsPanel({
   onMediaChange: (plan) => applyMedia(plan).catch(() => {}),
   onGuide: (providerId) => guide.start(providerId),
   onOpenChange: (open) => guide.setCovered(open),
-  onOpenChat: (sessionId) => {
-    const chat = workspace.chats.find((item) => item.id === sessionId || chatSessions(item).includes(sessionId));
-    if (chat) openChat(chat.id);
-  },
   async onRedeemInvite(code) {
     await host.redeemInvite(code);
     const status = await host.accountStatus().catch(() => null);
