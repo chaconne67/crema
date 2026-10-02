@@ -412,6 +412,141 @@ async fn thock_settings(app: AppHandle) -> Result<(), String> {
 const THOCK_SETTINGS: &str = "thock-settings";
 const THOCK_CLOSE: &str = "https://thock.close/";
 
+// Updating itself (주인님 2026-10-02, as Thock does): a newer Crema from the latest GitHub release is fetched in
+// the background and checked against the SHA-256 GitHub gives for it; the page installs it once Crema has
+// rested, and Crema starts again on the new one.
+const RELEASES: &str = "https://api.github.com/repos/chaconne67/crema/releases/latest";
+const SETUP_ASSET: &str = "Crema-setup-x64.exe";
+
+/// "0.2.7" (or "v0.2.7") as numbers, for "only ever forward".
+fn version_numbers(version: &str) -> Option<(u64, u64, u64)> {
+  let mut parts = version.trim_start_matches('v').split('.').map(|part| part.parse::<u64>().ok());
+  let numbers = (parts.next()??, parts.next()??, parts.next()??);
+  parts.next().is_none().then_some(numbers)
+}
+
+fn update_folder() -> PathBuf {
+  std::env::temp_dir().join("CremaUpdate")
+}
+
+fn update_mark(app: &AppHandle) -> Result<PathBuf, String> {
+  app.path().app_local_data_dir().map(|dir| dir.join("updated.json")).map_err(|_| "update".to_string())
+}
+
+/// The installer of a newer Crema, downloaded and matching its SHA-256: its version, or None when this one is the newest.
+#[tauri::command]
+async fn update_download(app: AppHandle) -> Result<Option<String>, String> {
+  use sha2::Digest;
+  fn fail<E>(_: E) -> String {
+    "update".to_string()
+  }
+  let current = app.package_info().version.to_string();
+  let release: serde_json::Value = http_client()?
+    .get(RELEASES)
+    .header("User-Agent", format!("Crema/{current}"))
+    .timeout(Duration::from_secs(15))
+    .send()
+    .await
+    .map_err(fail)?
+    .error_for_status()
+    .map_err(fail)?
+    .json()
+    .await
+    .map_err(fail)?;
+  let version = release["tag_name"].as_str().unwrap_or_default().trim_start_matches('v').to_string();
+  match (version_numbers(&version), version_numbers(&current)) {
+    (Some(offered), Some(running)) if offered > running => {}
+    _ => return Ok(None),
+  }
+  let asset = release["assets"].as_array().and_then(|assets| assets.iter().find(|asset| asset["name"] == SETUP_ASSET));
+  let url = asset.and_then(|asset| asset["browser_download_url"].as_str()).ok_or_else(|| "update".to_string())?;
+  let digest = asset
+    .and_then(|asset| asset["digest"].as_str())
+    .and_then(|digest| digest.strip_prefix("sha256:"))
+    .filter(|digest| digest.len() == 64)
+    .ok_or_else(|| "update".to_string())?
+    .to_lowercase();
+  let folder = update_folder();
+  std::fs::create_dir_all(&folder).map_err(fail)?;
+  let path = folder.join(format!("Crema-setup-{version}.exe"));
+  let hex = |bytes: &[u8]| bytes.iter().map(|byte| format!("{byte:02x}")).collect::<String>();
+  if std::fs::read(&path).map(|bytes| hex(&sha2::Sha256::digest(&bytes)) == digest).unwrap_or(false) {
+    return Ok(Some(version));
+  }
+  let partial = path.with_extension("part");
+  let response = http_client()?
+    .get(url)
+    .header("User-Agent", format!("Crema/{current}"))
+    .timeout(Duration::from_secs(600))
+    .send()
+    .await
+    .map_err(fail)?
+    .error_for_status()
+    .map_err(fail)?;
+  let mut file = std::fs::File::create(&partial).map_err(fail)?;
+  let mut hasher = sha2::Sha256::new();
+  let mut stream = response.bytes_stream();
+  while let Some(chunk) = stream.next().await {
+    let chunk = chunk.map_err(fail)?;
+    hasher.update(&chunk);
+    std::io::Write::write_all(&mut file, &chunk).map_err(fail)?;
+  }
+  drop(file);
+  if hex(&hasher.finalize()) != digest {
+    let _ = std::fs::remove_file(&partial);
+    return Err("update".into());
+  }
+  std::fs::rename(&partial, &path).map_err(fail)?;
+  Ok(Some(version))
+}
+
+/// Installs the downloaded `version` and starts Crema again on it: a separate PowerShell waits for Crema to end,
+/// stops what is left under the install folder (an engine or Thock holding a file keeps the old one), runs the
+/// installer silently and starts the new Crema.
+#[tauri::command]
+fn update_install(app: AppHandle, version: String) -> Result<(), String> {
+  fn fail<E>(_: E) -> String {
+    "update".to_string()
+  }
+  if version_numbers(&version).is_none() {
+    return Err("update".into());
+  }
+  let setup = update_folder().join(format!("Crema-setup-{version}.exe"));
+  let exe = std::env::current_exe().map_err(fail)?;
+  let folder = exe.parent().ok_or_else(|| "update".to_string())?;
+  if !setup.exists() {
+    return Err("update".into());
+  }
+  std::fs::write(update_mark(&app)?, serde_json::json!({ "to": version }).to_string()).map_err(fail)?;
+  let quote = |path: &std::path::Path| format!("'{}'", path.display().to_string().replace('\'', "''"));
+  let script = format!(
+    "Wait-Process -Id {pid} -Timeout 60 -ErrorAction SilentlyContinue; \
+     Get-Process | Where-Object {{ $_.Path -like ({folder} + '\\*') }} | Stop-Process -Force; Start-Sleep 5; \
+     Start-Process -Wait {setup} -ArgumentList '/S'; Start-Process {exe}",
+    pid = std::process::id(),
+    folder = quote(folder),
+    setup = quote(&setup),
+    exe = quote(&exe),
+  );
+  let mut command = Command::new("powershell");
+  command.args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", &script]);
+  hide_window(&mut command);
+  command.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn().map_err(fail)?;
+  app.exit(0);
+  Ok(())
+}
+
+/// Once after an update: this version, when the update went to it; the downloaded installers are cleared.
+#[tauri::command]
+fn update_done(app: AppHandle) -> Option<String> {
+  let mark = update_mark(&app).ok()?;
+  let to: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&mark).ok()?).ok()?;
+  let _ = std::fs::remove_file(&mark);
+  let _ = std::fs::remove_dir_all(update_folder());
+  let current = app.package_info().version.to_string();
+  (to["to"].as_str() == Some(current.as_str())).then_some(current)
+}
+
 /// The mic button: Thock starts a dictation into the field Crema has focused (the next press stops it).
 #[tauri::command]
 async fn thock_dictate(app: AppHandle) -> Result<(), String> {
@@ -1027,6 +1162,9 @@ pub fn run() {
       thock_start,
       thock_stop,
       thock_settings,
+      update_download,
+      update_install,
+      update_done,
       thock_dictate,
       guide_open,
       guide_bounds,

@@ -1210,6 +1210,16 @@ export function createChatApp({
       return messages.length > 0;
     },
 
+    /** A reply runs or waits in any chat, or a draft is being written: not a moment to restart for an update. */
+    busy() {
+      return runs.size > 0 || [...queues.values()].some((queue) => queue.length > 0) || Boolean(textarea.value.trim()) || attachments.length > 0;
+    },
+
+    /** A short result card in the open chat (not saved with it). */
+    notice(options) {
+      showNotice(options);
+    },
+
     /** The open chat's name, shown at the top left (click or Ctrl+Alt+R renames it). */
     setTitle(title) {
       root.querySelector("[data-chat-title]").textContent = title;

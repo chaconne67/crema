@@ -173,6 +173,10 @@ export function createDesktopHost() {
     thockStop: () => call("thock_stop").catch(() => {}),
     thockSettings: () => call("thock_settings"),
     thockDictate: () => call("thock_dictate"),
+    /** Updating itself: the newer version downloaded and checked (null when none), its install, the one just updated to. */
+    updateDownload: () => call("update_download"),
+    updateInstall: (version) => call("update_install", { version }),
+    updateDone: () => call("update_done").catch(() => null),
     /** An invite code (as Thock's): the access it gives, or the site's reason it does not. */
     redeemInvite: (code) => call("site_post", { path: "/api/app/invite", body: { code } }),
 

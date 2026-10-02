@@ -132,6 +132,19 @@ describe("composer", () => {
     expect(prompt.selectionStart).toBe("할 일\n1. 장보기\n2. ".length);
   });
 
+  it("is busy for an update while a reply runs or a draft is written", async () => {
+    const app = mount();
+    app.showConversation("chat-1");
+    expect(app.busy()).toBe(false);
+    document.querySelector("#prompt").value = "쓰는 중";
+    expect(app.busy()).toBe(true);
+    submit("질문");
+    await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+    expect(app.busy()).toBe(true);
+    release();
+    await vi.waitFor(() => expect(app.busy()).toBe(false));
+  });
+
   it("queues a turn typed during a reply and sends it when the reply ends", async () => {
     const app = mount();
     app.showConversation("chat-1");

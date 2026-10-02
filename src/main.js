@@ -1169,6 +1169,24 @@ async function ensureSignedIn() {
 
 const personaSetup = createPersonaSetup({ host });
 
+// Updating itself, as Thock does: a newer Crema is fetched and checked in the background every few hours,
+// then installed (Crema restarts on it) once nothing has been done in Crema for five minutes and nothing runs.
+const UPDATE_EVERY_MS = 6 * 3600 * 1000;
+const UPDATE_REST_MS = 5 * 60 * 1000;
+let updateReady = null;
+let lastUse = Date.now();
+for (const type of ["keydown", "pointerdown", "wheel"]) window.addEventListener(type, () => (lastUse = Date.now()), { capture: true, passive: true });
+const fetchUpdate = () => host.updateDownload().then((version) => (updateReady = version || updateReady)).catch(() => {});
+function installUpdate() {
+  if (updateReady && Date.now() - lastUse >= UPDATE_REST_MS && !app.busy()) host.updateInstall(updateReady).catch(() => {});
+}
+host.updateDone().then((version) => {
+  if (version) app.notice({ title: "업데이트", text: `Crema ${version}로 업데이트했습니다.` });
+});
+setTimeout(fetchUpdate, 60 * 1000);
+setInterval(fetchUpdate, UPDATE_EVERY_MS);
+setInterval(installUpdate, 60 * 1000);
+
 ensureSignedIn()
   .then(connect)
   .then((result) => {
