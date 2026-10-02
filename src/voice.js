@@ -20,10 +20,10 @@ function hotkeyHint(hotkey, mode) {
   return message + (key === "CapsLock" ? " 대문자 고정은 Shift+CapsLock입니다." : "");
 }
 
-function segmented(name, label, options, value, disabled = false) {
+function segmented(name, label, options, value) {
   return `
     <div class="segmented" role="group" aria-label="${label}" data-voice-segment="${name}">
-      ${options.map(([key, text]) => `<button type="button" data-value="${escapeHtml(key)}" aria-pressed="${key === value}"${disabled ? " disabled" : ""}>${escapeHtml(text)}</button>`).join("")}
+      ${options.map(([key, text]) => `<button type="button" data-value="${escapeHtml(key)}" aria-pressed="${key === value}">${escapeHtml(text)}</button>`).join("")}
     </div>`;
 }
 
@@ -109,8 +109,8 @@ export function createVoiceSection({ host, onUpdate = () => {} }) {
     if (s.microphone && !s.microphones.includes(s.microphone)) mics.push([s.microphone, `${s.microphone} (연결 안 됨)`]);
     const style = customStyle ? "custom" : s.style;
     return group("dictation", "받아쓰기", `
-      <span class="field-label">입력 방식</span>
-      ${segmented("input_mode", "입력 방식", Object.entries(s.input_modes), s.input_mode)}
+      <label for="voice-input-mode">입력 방식</label>
+      <select id="voice-input-mode" data-voice-setting="input_mode">${options(Object.entries(s.input_modes), s.input_mode)}</select>
       <span class="field-label">단축키</span>
       ${segmented("hotkey", "단축키", HOTKEYS, s.hotkey)}
       <p class="feature-hint">${hotkeyHint(s.hotkey, s.input_mode)}</p>
@@ -119,8 +119,8 @@ export function createVoiceSection({ host, onUpdate = () => {} }) {
       <p class="feature-hint">자동은 Windows 기본 마이크를 씁니다. 다음 받아쓰기부터 바뀝니다.</p>
       <label class="check-row"><input type="checkbox" data-voice-flag="polish"${s.polish ? " checked" : ""} /> 문장 다듬기</label>
       <p class="feature-hint">문맥을 보고 문장부호와 띄어쓰기를 고치고, 고른 정도만큼 말을 다듬습니다. 끄면 들린 그대로 문장부호 없이 넣습니다.</p>
-      <span class="field-label">다듬는 정도</span>
-      ${segmented("polish_level", "다듬는 정도", Object.entries(s.polish_levels), s.polish_level, off)}
+      <label for="voice-polish-level">다듬는 정도</label>
+      <select id="voice-polish-level" data-voice-setting="polish_level"${off ? " disabled" : ""}>${options(Object.entries(s.polish_levels), s.polish_level)}</select>
       <p class="feature-hint">${POLISH_HINTS[s.polish_level] || ""}</p>
       <label for="voice-style">문체 바꾸기 (고급)</label>
       <select id="voice-style" data-voice-setting="style"${off ? " disabled" : ""}>${options(Object.entries(s.styles), style)}</select>

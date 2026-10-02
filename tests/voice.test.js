@@ -44,8 +44,9 @@ describe("Settings → 음성 입력 (voice.js)", () => {
     expect(groups.map((group) => group.querySelector("summary").textContent)).toEqual(["받아쓰기", "타건음", "용어 사전과 배우기", "기타"]);
     expect(groups.map((group) => group.open)).toEqual([true, false, false, false]);
     expect(element.querySelector("iframe")).toBeNull();
-    const mode = element.querySelector('[data-voice-segment="input_mode"] [aria-pressed="true"]');
-    expect(mode.textContent).toBe("눌러서 녹음 켜고 끄기");
+    const mode = element.querySelector("#voice-input-mode");
+    expect(mode.options[mode.selectedIndex].textContent).toBe("눌러서 녹음 켜고 끄기");
+    expect(element.querySelector('[data-voice-segment="hotkey"] [aria-pressed="true"]').textContent).toBe("CapsLock");
     expect(element.textContent).toContain("CapsLock을 한 번 눌러 시작하고, 다시 누르면 끝납니다.");
     expect(element.textContent).toContain("음·어 같은 망설임 말과 끊긴 말 조각을 빼고");
     expect(element.querySelector(".dropdown")).not.toBeNull(); // Crema's own dropdowns
@@ -65,7 +66,7 @@ describe("Settings → 음성 입력 (voice.js)", () => {
     polish.checked = false;
     polish.dispatchEvent(new Event("change", { bubbles: true }));
     await vi.waitFor(() => expect(calls.at(-1)[1]).toMatchObject({ polish: false }));
-    await vi.waitFor(() => expect(element.querySelector('[data-voice-segment="polish_level"] button').disabled).toBe(true));
+    await vi.waitFor(() => expect(element.querySelector("#voice-polish-level").disabled).toBe(true));
   });
 
   it("saves the term list with its button and adds a typo note", async () => {
