@@ -1,0 +1,78 @@
+# Crema follows Thock (주인님 2026-10-03): when a newer Thock release (a "Thock X.Y.Z" commit on
+# chaconne67/thock main) is out than the one built in, the pin in scripts/build-thock.ps1 moves to it,
+# Crema's patch version goes up, and that version is built, verified and released on the installer
+# workflow. Crema's own updater then brings it to users' PCs.
+name: Follow Thock
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: follow-thock
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.bump.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - id: bump
+        run: |
+          git clone -q --filter=blob:none --no-checkout --single-branch -b main https://github.com/chaconne67/thock.git "$RUNNER_TEMP/thock"
+          release=$(git -C "$RUNNER_TEMP/thock" log --format='%H %s' -300 | grep -m1 -E '^[0-9a-f]{40} Thock [0-9]+\.[0-9]+\.[0-9]+(:|$)' || true)
+          commit=${release%% *}
+          thock=$(echo "$release" | grep -oE 'Thock [0-9]+\.[0-9]+\.[0-9]+' | cut -d' ' -f2)
+          pinned=$(grep -oE '^\$thockCommit = "[0-9a-f]{40}"' scripts/build-thock.ps1 | grep -oE '[0-9a-f]{40}')
+          # Only ever forward: the release has to come after the Thock built in.
+          if [ -z "$commit" ] || [ "$commit" = "$pinned" ] || ! git -C "$RUNNER_TEMP/thock" merge-base --is-ancestor "$pinned" "$commit"; then
+            echo "Thock built in ($pinned) is the latest release"
+            exit 0
+          fi
+          version=$(node -p 'const [a, b, c] = require("./package.json").version.split(".").map(Number); `${a}.${b}.${c + 1}`')
+          current=$(node -p 'require("./package.json").version')
+          sed -i "s/^\$thockCommit = \"$pinned\"/\$thockCommit = \"$commit\"/" scripts/build-thock.ps1
+          node -e '
+            const fs = require("fs");
+            const [from, to] = process.argv.slice(1);
+            // Only the version lines change: the files keep their own layout.
+            const once = (file, pattern, times = 1) => {
+              let text = fs.readFileSync(file, "utf8");
+              for (let i = 0; i < times; i += 1) {
+                if (!pattern.test(text)) throw new Error(`no version in ${file}`);
+                text = text.replace(pattern, (line) => line.replace(from, to));
+              }
+              fs.writeFileSync(file, text);
+            };
+            once("package.json", new RegExp(`"version": "${from}"`));
+            once("src-tauri/tauri.conf.json", new RegExp(`"version": "${from}"`));
+            once("package-lock.json", new RegExp(`"version": "${from}"`), 2);
+            for (const [file, pattern] of [["src-tauri/Cargo.toml", /^version = "[^"]+"/m], ["src-tauri/Cargo.lock", /name = "app"\nversion = "[^"]+"/]]) {
+              const text = fs.readFileSync(file, "utf8");
+              if (!pattern.test(text)) throw new Error(`no version in ${file}`);
+              fs.writeFileSync(file, text.replace(pattern, (line) => line.replace(from, to)));
+            }
+          ' "$current" "$version"
+          git diff --stat
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -qam "Crema $version: Thock $thock built in" -m "Follow Thock: chaconne67/thock $commit ($(echo "$release" | cut -d' ' -f2-))."
+          git tag -a "v$version" -m "Crema $version: Thock $thock built in"
+          git push -q origin HEAD:main
+          git push -q origin "v$version"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: bump
+    if: needs.bump.outputs.tag != ''
+    uses: ./.github/workflows/windows-installer.yml
+    with:
+      tag: ${{ needs.bump.outputs.tag }}
+    secrets: inherit

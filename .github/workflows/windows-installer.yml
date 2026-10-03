@@ -8,6 +8,12 @@ on:
     tags: ["v*"]
     paths-ignore: ["server/**", ".github/workflows/server.yml", "scripts/engine-tests/**", ".github/workflows/engine-tests.yml"]
   workflow_dispatch:
+  # Follow Thock (thock-follow.yml) releases the tag it made: a tag pushed by a workflow starts no other workflow.
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
 
 permissions:
   contents: write
@@ -20,6 +26,8 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/setup-node@v4
         with:
@@ -146,15 +154,16 @@ jobs:
           path: src-tauri/target/release/bundle/nsis/*-setup.exe
 
       - name: Release (tags only)
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: inputs.tag || startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           $version = (Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json).version
-          if ("v$version" -ne $env:GITHUB_REF_NAME) { throw "tag $env:GITHUB_REF_NAME does not match app version $version" }
+          if ("v$version" -ne $env:TAG) { throw "tag $env:TAG does not match app version $version" }
           $setup = Get-ChildItem src-tauri/target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
           Copy-Item $setup.FullName Crema-setup-x64.exe
           $sha = (Get-FileHash Crema-setup-x64.exe -Algorithm SHA256).Hash.ToLower()
           $notes = "Built and verified on a clean Windows runner.`n`nSHA-256: ``$sha``"
-          gh release create $env:GITHUB_REF_NAME Crema-setup-x64.exe --title "Crema $version" --notes $notes
+          gh release create $env:TAG Crema-setup-x64.exe --title "Crema $version" --notes $notes
