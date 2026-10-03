@@ -1,7 +1,10 @@
-# Crema follows Thock (주인님 2026-10-03): when a newer Thock release (a "Thock X.Y.Z" commit on
-# chaconne67/thock main) is out than the one built in, the pin in scripts/build-thock.ps1 moves to it,
-# Crema's patch version goes up, and that version is built, verified and released on the installer
-# workflow. Crema's own updater then brings it to users' PCs.
+# Crema follows Thock (주인님 2026-10-03): when the Thock published at thock.cloud (/api/thock/latest) is newer
+# than the one built in, the pin in scripts/build-thock.ps1 moves to that version's "Thock X.Y.Z" commit on
+# chaconne67/thock main, Crema's patch version goes up, and that version is built, verified and released on
+# the installer workflow. Crema's own updater then brings it to users' PCs.
+# Started when Thock is published (the last step of publishing runs
+# `gh workflow run thock-follow.yml -R chaconne67/crema`), and every hour as a fallback. A "Thock X.Y.Z"
+# commit that was not published (0.5.7 and 0.5.8 were held back) is not followed.
 name: Follow Thock
 
 on:
@@ -27,9 +30,11 @@ jobs:
       - id: bump
         run: |
           git clone -q --filter=blob:none --no-checkout --single-branch -b main https://github.com/chaconne67/thock.git "$RUNNER_TEMP/thock"
-          release=$(git -C "$RUNNER_TEMP/thock" log --format='%H %s' -300 | grep -m1 -E '^[0-9a-f]{40} Thock [0-9]+\.[0-9]+\.[0-9]+(:|$)' || true)
+          thock=$(curl -fsS https://thock.cloud/api/thock/latest | node -e 'let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", () => console.log(/^\d+\.\d+\.\d+$/.test(JSON.parse(s).version) ? JSON.parse(s).version : ""))')
+          [ -n "$thock" ] || { echo "no published Thock version at thock.cloud"; exit 0; }
+          # The published version's release commit: the latest "Thock X.Y.Z" or "Thock X.Y.Z: …" on main.
+          release=$(git -C "$RUNNER_TEMP/thock" log --format='%H %s' -300 | grep -m1 -E "^[0-9a-f]{40} Thock ${thock//./\\.}(:|$)" || true)
           commit=${release%% *}
-          thock=$(echo "$release" | grep -oE 'Thock [0-9]+\.[0-9]+\.[0-9]+' | cut -d' ' -f2)
           pinned=$(grep -oE '^\$thockCommit = "[0-9a-f]{40}"' scripts/build-thock.ps1 | grep -oE '[0-9a-f]{40}')
           # Only ever forward: the release has to come after the Thock built in.
           if [ -z "$commit" ] || [ "$commit" = "$pinned" ] || ! git -C "$RUNNER_TEMP/thock" merge-base --is-ancestor "$pinned" "$commit"; then
