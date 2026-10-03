@@ -7,7 +7,7 @@ function runEventText(event, { onActivity, onApproval }) {
       onActivity?.({ status: "running", tool: event.tool });
       return "";
     case "tool.completed":
-      onActivity?.({ status: "done", tool: event.tool });
+      onActivity?.({ status: "done", tool: event.tool, failed: Boolean(event.error) });
       return "";
     case "approval.request":
       onApproval?.(event);

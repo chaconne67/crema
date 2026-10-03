@@ -118,6 +118,26 @@ describe("chat app", () => {
     expect(document.querySelector(".assistant-notes .auto-note-action")).toBeNull();
   });
 
+  it("says under a reply what the agent wrote itself, once and without an undo", async () => {
+    const client = {
+      async *streamReply({ onActivity }) {
+        onActivity({ status: "running", tool: "memory" });
+        onActivity({ status: "done", tool: "memory" });
+        onActivity({ status: "done", tool: "memory" });
+        onActivity({ status: "done", tool: "skill_manage", failed: true });
+        yield "기억했습니다.";
+      },
+    };
+    const app = createChatApp({ client, host: { openLink: vi.fn() } });
+    app.mount(document.querySelector("#app"));
+    app.showConversation("chat-a");
+    submit("이거 기억해");
+    await vi.waitFor(() => expect(document.querySelector(".assistant-notes .auto-note")).not.toBeNull());
+    const lines = [...document.querySelectorAll(".assistant-notes .auto-note")];
+    expect(lines.map((line) => line.textContent)).toEqual(["기록해뒀어요대화 중에 기억함"]);
+    expect(lines[0].querySelector(".auto-note-action")).toBeNull();
+  });
+
   it("notes under an answer which Provider answered instead, and keeps the note", async () => {
     const client = {
       async *streamReply({ onServed }) {

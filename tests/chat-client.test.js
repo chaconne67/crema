@@ -48,7 +48,7 @@ describe("chat client streams", () => {
       readResponseBody(response, { onActivity: (item) => activity.push(item), onApproval: (item) => approvals.push(item) }),
     );
     expect(text).toBe("확인했습니다");
-    expect(activity).toEqual([{ status: "running", tool: "terminal" }, { status: "done", tool: "terminal" }]);
+    expect(activity).toEqual([{ status: "running", tool: "terminal" }, { status: "done", tool: "terminal", failed: false }]);
     expect(approvals.map((item) => item.request_id)).toEqual(["req_1"]);
   });
 

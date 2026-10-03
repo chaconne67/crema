@@ -154,6 +154,14 @@ const NOTE_KINDS = {
   updated: { icon: "refresh", label: "업데이트했어요" },
 };
 
+// What the agent wrote itself during a reply (memory, notebook, skills): said under that reply. Nothing was kept
+// from before the write, so there is no undo (principle 4).
+const WRITE_NOTES = {
+  memory: { kind: "remembered", what: "대화 중에 기억함" },
+  knowledge_write: { kind: "remembered", what: "대화 중에 노트에 기록함" },
+  skill_manage: { kind: "learned", what: "대화 중에 일하는 방법을 고침" },
+};
+
 /** "제목" or "제목 외 N개" for the things a note is about. */
 function noteWhat(note) {
   const titles = (note.items || []).map((item) => item.title).filter(Boolean);
@@ -1133,6 +1141,10 @@ export function createChatApp({
         onActivity(activity) {
           settleApproval();
           activeTool = activity.status === "running" ? activity.tool || "도구" : null;
+          const wrote = activity.status === "done" && !activity.failed && WRITE_NOTES[activity.tool];
+          if (wrote && !assistantMessage.notes?.some((note) => note.kind === wrote.kind && note.what === wrote.what)) {
+            (assistantMessage.notes ||= []).push({ ...wrote });
+          }
           showWork();
         },
         onServed(runtime) {
