@@ -263,9 +263,34 @@ async function distill(chatId) {
   const result = await host
     .hermesAdmin("POST", "/api/crema/distill", { session_id: hermesSessionId(chatSessions(chat).at(-1)), ...route })
     .catch(() => null);
-  if (result?.written?.length) {
-    app.addNote(chat.id, { kind: "remembered", items: result.written.map(({ title, slug }) => ({ title, slug })) });
+  const items = (list) => (list || []).map(({ title, slug }) => ({ title, slug }));
+  // Notebook pages and memory files it wrote; skills it made or changed (the engine's quiet-chat review).
+  if (result?.written?.length) app.addNote(chat.id, { kind: "remembered", items: items(result.written) });
+  if (result?.learned?.length) app.addNote(chat.id, { kind: "learned", items: items(result.learned) });
+}
+
+// The engine's daily pass over the notebook (crema_engine.daily_once), said once in the open chat when it
+// changed something. The first reading after an install only marks where Crema starts from.
+const DAILY_SEEN_KEY = "agent-client:daily-seen";
+const DAILY_EVERY_MS = 3600 * 1000;
+async function sayDailyPass() {
+  const daily = (await host.hermesAdmin("GET", "/api/crema/knowledge").catch(() => null))?.last_daily;
+  if (!daily?.at) return;
+  let seen = null;
+  try {
+    seen = Number(window.localStorage.getItem(DAILY_SEEN_KEY)) || null;
+    window.localStorage.setItem(DAILY_SEEN_KEY, String(daily.at));
+  } catch {
+    return;
   }
+  if (seen === null || daily.at <= seen) return;
+  const count = (value) => (Array.isArray(value) ? value.length : Number(value) || 0);
+  const what = [
+    count(daily.distilled) && `대화 ${count(daily.distilled)}개 정리`,
+    count(daily.needs_review) && `${count(daily.needs_review)}쪽 확인 필요로 표시`,
+    count(daily.purged) && `지운 쪽 ${count(daily.purged)}개 비움`,
+  ].filter(Boolean).join(" · ");
+  if (what) app.addNote(workspace.activeChatId, { kind: "tidied", what });
 }
 
 // Chats that change the same file take turns (the engine's agent/crema_file_turns.py). Every few seconds the
@@ -974,9 +999,9 @@ const app = createChatApp({
   },
   answerApproval: (request, allow) => host.answerApproval(request, allow),
   describeServed,
-  // Undoing what a line under a reply says Crema did by itself.
+  // Undoing what a line under a reply says Crema did by itself: notebook pages, memory files, skills.
   async onNoteAction(note) {
-    if (note.kind !== "remembered") return;
+    if (note.kind !== "remembered" && note.kind !== "learned") return;
     const undone = await Promise.all(
       note.items.map((item) => host.hermesAdmin("POST", "/api/crema/knowledge/undo", { slug: item.slug }).catch(() => null)),
     );
@@ -1181,6 +1206,8 @@ ensureSignedIn()
   .then((result) => {
     readTurns();
     setInterval(readTurns, TURNS_EVERY_MS);
+    sayDailyPass();
+    setInterval(sayDailyPass, DAILY_EVERY_MS);
     // First run: who the agent is, into SOUL.md (needs the engine, so after connecting).
     if (result.state === "connected") return personaSetup.show();
   });
