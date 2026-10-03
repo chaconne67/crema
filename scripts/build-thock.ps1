@@ -3,7 +3,7 @@
 # with its own Python). Every installer build runs it (Tauri's beforeBuildCommand); it does nothing when the pinned
 # Thock is already there. Needs git and uv.
 $ErrorActionPreference = "Stop"
-$thockCommit = "aefea9b22d2a6823299e9c5a0d01871cb305f5ca"
+$thockCommit = "4f894dbd06ecd909dce8b0069c5d530d09ee00a8"
 
 $root = Split-Path $PSScriptRoot
 $out = Join-Path $root "src-tauri\thock"
