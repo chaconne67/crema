@@ -3,6 +3,7 @@ import { renderMarkdown } from "./markdown.js";
 import { ZAP_ICON } from "./model-picker.js";
 import { BACK_ICON, CHECK_ICON, COMMAND_GROUPS, MENU_ICON, filterCommands, parseCommand } from "./commands.js";
 import { loadMessages, saveMessages } from "./storage.js";
+import { noteLine } from "./note-line.js";
 
 const COPY_ICON = `
   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -131,6 +132,35 @@ export function renumberList(value, from) {
   return value.slice(0, from) + lines.join("\n");
 }
 
+// The work line's words for the engine's tools: what the reply is doing, not the tool's name.
+const TOOL_WORDS = {
+  terminal: "명령 실행 중", process_manage: "명령 실행 중", read_terminal: "명령 결과 읽는 중", close_terminal: "명령 실행 중",
+  execute_code: "코드 실행 중", read_file: "파일 읽는 중", search_files: "파일 찾는 중", write_file: "파일 고치는 중", patch: "파일 고치는 중",
+  web_search: "웹 검색 중", x_search: "웹 검색 중", web_extract: "웹 페이지 읽는 중",
+  browser_cdp: "브라우저 쓰는 중", browser_exec: "브라우저 쓰는 중", browser_dialog: "브라우저 쓰는 중", computer_use: "화면 다루는 중",
+  vision_analyze: "그림 보는 중", video_analyze: "영상 보는 중", image_generate: "그림 만드는 중", video_generate: "영상 만드는 중", text_to_speech: "음성 만드는 중",
+  memory: "기억하는 중", knowledge_search: "노트에서 찾는 중", knowledge_get: "노트 읽는 중", knowledge_think: "노트 살펴보는 중", knowledge_write: "노트에 기록하는 중",
+  session_search: "지난 대화 찾는 중", skills_list: "일하는 방법 찾는 중", skill_view: "일하는 방법 읽는 중", skill_manage: "일하는 방법 고치는 중",
+  todo_list: "할 일 정리 중", delegate_task: "다른 에이전트에 맡기는 중", clarify: "물어볼 것 정리 중", cronjob_manage: "예약 작업 다루는 중",
+};
+
+// What Crema did by itself, kept with the reply it followed (docs/Crema-자동작업-알림-원칙-2026-10-03.md):
+// `kind` → its icon, its words, what to say it was about, and the undo when there is one.
+const NOTE_KINDS = {
+  remembered: { icon: "pencil", label: "기록해뒀어요", undo: { title: "기억 저장 취소", done: "기록을 취소했어요" } },
+  learned: { icon: "tool", label: "일하는 방법을 익혔어요", undo: { title: "익힌 방법 취소", done: "익힌 방법을 취소했어요" } },
+  tidied: { icon: "tidy", label: "노트를 정리했어요" },
+  settings: { icon: "adjust", label: "설정을 맞췄어요" },
+  updated: { icon: "refresh", label: "업데이트했어요" },
+};
+
+/** "제목" or "제목 외 N개" for the things a note is about. */
+function noteWhat(note) {
+  const titles = (note.items || []).map((item) => item.title).filter(Boolean);
+  if (!titles.length) return note.what || "";
+  return titles.length > 1 ? `${titles[0]} 외 ${titles.length - 1}개` : titles[0];
+}
+
 export function createChatApp({
   client,
   host,
@@ -138,6 +168,8 @@ export function createChatApp({
   onNewChat = () => {},
   onToggleSidebar = () => {},
   onConversationUpdate = () => {},
+  // (note) → undoes what a note says Crema did (its `kind` and `items`); throws when it could not.
+  onNoteAction = async () => {},
   onNewSession = () => {},
   sessionFor = (id) => id,
   onCommand = () => {},
@@ -219,14 +251,18 @@ export function createChatApp({
     const turn = document.createElement("section");
     turn.className = "turn turn-user";
     turn.dataset.messageId = message.id;
+    if (message.origin === "crema") {
+      turn.className = "turn turn-crema";
+      turn.append(noteLine({ icon: "play", label: "이어서 해요", what: message.content.replace(/^\[Crema\]\s*/, "") }));
+      return turn;
+    }
 
     const stack = document.createElement("div");
     stack.className = "user-message-stack";
 
     const bubble = document.createElement("article");
-    // Crema's own words (a chat started again when its turn with a shared file came) look apart from the user's.
-    bubble.className = message.origin === "crema" ? "user-message markdown from-crema" : "user-message markdown";
-    bubble.setAttribute("aria-label", message.origin === "crema" ? "Crema 안내" : "내 질문");
+    bubble.className = "user-message markdown";
+    bubble.setAttribute("aria-label", "내 질문");
     renderMarkdown(bubble, message.content);
     bubble.hidden = !message.content;
 
@@ -347,36 +383,57 @@ export function createChatApp({
     const footer = document.createElement("div");
     footer.className = "assistant-footer";
     footer.hidden = message.status === "streaming" || !message.content;
-    const note = document.createElement("span");
-    note.className = "assistant-note";
-    note.textContent = message.note || "";
-    footer.append(createCopyButton(message.id, "답변 복사"), note);
+    footer.append(createCopyButton(message.id, "답변 복사"));
 
-    article.append(status, content, error, footer);
+    const notes = document.createElement("div");
+    notes.className = "assistant-notes";
+
+    article.append(status, content, error, footer, notes);
     turn.append(article);
-    elements.set(message.id, { turn, status, content, error, footer, note });
+    elements.set(message.id, { turn, status, content, error, footer, notes });
+    renderNotes(message);
     return turn;
+  }
+
+  /** The lines under a reply: which AI answered when it was not the one asked, then what Crema did by itself. */
+  function renderNotes(message) {
+    const refs = elements.get(message.id);
+    if (!refs) return;
+    const lines = [];
+    if (message.note) {
+      const automatic = message.note.startsWith("자동 선택");
+      lines.push(noteLine({ icon: "swap", label: automatic ? "자동으로 골랐어요" : "다른 AI가 답했어요", what: message.note.replace(/^[^:]+:\s*/, "") }));
+    }
+    for (const note of message.notes || []) lines.push(noteFor(note));
+    refs.notes.replaceChildren(...lines);
+  }
+
+  function noteFor(note) {
+    const kind = NOTE_KINDS[note.kind] || { icon: "info", label: "" };
+    if (note.done) return noteLine({ icon: "done", what: note.done });
+    const undo = kind.undo && note.items?.length;
+    return noteLine({
+      icon: kind.icon,
+      label: kind.label,
+      what: noteWhat(note),
+      actions: undo
+        ? [{
+            icon: "trash",
+            title: kind.undo.title,
+            run: async () => {
+              await onNoteAction(note);
+              note.done = kind.undo.done;
+              saveMessages(chatId, messages);
+              return note.done;
+            },
+          }]
+        : [],
+    });
   }
 
   /** In-reply card for a command Hermes holds until the user allows or denies it. */
   function renderApproval(request, onDone) {
-    const card = document.createElement("div");
-    card.className = "approval-card";
-    card.setAttribute("role", "group");
-    card.setAttribute("aria-label", "명령 실행 승인");
-    card.innerHTML = `
-      <p class="approval-title">이 명령을 실행할까요?</p>
-      ${request.description ? `<p class="approval-reason">${escapeHtml(request.description)}</p>` : ""}
-      ${request.command ? `<pre class="approval-command"><code>${escapeHtml(request.command)}</code></pre>` : ""}
-      <div class="approval-actions">
-        <button type="button" class="approval-deny" data-approval="deny">거부</button>
-        <button type="button" class="approval-allow" data-approval="allow">허용</button>
-      </div>`;
-    card.addEventListener("click", async (event) => {
-      const button = event.target.closest("[data-approval]");
-      if (!button) return;
-      const allow = button.dataset.approval === "allow";
-      card.querySelectorAll("button").forEach((item) => (item.disabled = true));
+    const answer = (allow) => async () => {
       try {
         await answerApproval(request, allow);
         onDone();
@@ -385,8 +442,16 @@ export function createChatApp({
         onDone();
         showNotice({ title: "명령 실행 승인", text: "이미 끝났거나 시간이 지난 요청입니다.", tone: "error" });
       }
+    };
+    const line = noteLine({
+      icon: "shield",
+      label: "실행해도 될까요",
+      what: [request.description, request.command].filter(Boolean).join(" — "),
+      actions: [{ text: "허용", run: answer(true) }, { text: "거절", run: answer(false) }],
     });
-    return card;
+    line.classList.add("approval-line");
+    line.setAttribute("aria-label", "명령 실행 승인");
+    return line;
   }
 
   function renderSessionDivider(message) {
@@ -414,7 +479,7 @@ export function createChatApp({
     refs.error.hidden = message.status !== "error";
     refs.error.textContent = message.errorMessage || "응답을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
     refs.footer.hidden = message.status === "streaming" || !message.content;
-    refs.note.textContent = message.note || "";
+    renderNotes(message);
     if (shouldFollow) scrollToBottom(true);
   }
 
@@ -855,8 +920,15 @@ export function createChatApp({
     resizeComposer();
   }
 
-  /** Short-lived result card in the conversation; not saved to the chat. */
+  /** A short-lived result in the conversation, not saved to the chat: a line, or a card for a command's rows. */
   function showNotice({ title, rows = [], text = "", tone = "" }) {
+    if (!rows.length) {
+      const line = noteLine({ icon: tone === "error" ? "alert" : "info", label: title, what: text, tone });
+      conversation.append(line);
+      emptyState.hidden = true;
+      scrollToBottom(true);
+      return line;
+    }
     const card = document.createElement("section");
     card.className = `notice-card${tone ? ` ${tone}` : ""}`;
     card.setAttribute("role", "status");
@@ -1036,7 +1108,7 @@ export function createChatApp({
       const [state, word] = run.approvalCard
         ? ["waiting", "승인 기다리는 중"]
         : activeTool
-          ? ["tool", `${activeTool} 실행 중`]
+          ? ["tool", TOOL_WORDS[activeTool] || `${activeTool} 실행 중`]
           : assistantMessage.content
             ? ["writing", "답변 쓰는 중"]
             : ["thinking", "생각 중"];
@@ -1215,9 +1287,32 @@ export function createChatApp({
       return runs.size > 0 || [...queues.values()].some((queue) => queue.length > 0) || Boolean(textarea.value.trim()) || attachments.length > 0;
     },
 
-    /** A short result card in the open chat (not saved with it). */
+    /** A short result line in the open chat (not saved with it). */
     notice(options) {
       showNotice(options);
+    },
+
+    /**
+     * What Crema did by itself (`{ kind, items | what }`, NOTE_KINDS), kept with chat `id`'s last reply. A note of
+     * the same kind not yet undone there takes the new items ("… 외 N개"). Without a chat or a reply it is a
+     * line in the open chat only.
+     */
+    addNote(id, note) {
+      const list = id === chatId ? messages : id ? loadMessages(id) : [];
+      const reply = [...list].reverse().find((message) => message.role === "assistant");
+      if (!reply) {
+        if (!id || id === chatId) {
+          conversation.append(noteFor(note));
+          emptyState.hidden = true;
+        }
+        return;
+      }
+      reply.notes ||= [];
+      const same = note.items && reply.notes.find((item) => item.kind === note.kind && !item.done && item.items);
+      if (same) same.items.push(...note.items);
+      else reply.notes.push(note);
+      saveMessages(id, list);
+      if (id === chatId) renderNotes(reply);
     },
 
     /** The open chat's name, shown at the top left (click or Ctrl+Alt+R renames it). */

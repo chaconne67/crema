@@ -1,4 +1,5 @@
 import { endpointMethod, freeProviders, saveProviderKey } from "./providers.js";
+import { noteLine } from "./note-line.js";
 
 // The AI setup guide: while it runs, the chat becomes one block — the step it is on ("2/4"), what to do
 // there, and the site's live page right under it (a second webview laid over the block's frame). Whenever
@@ -409,20 +410,17 @@ export function createGuide({
   }
 
   function doneCard({ id, guide }, connected) {
-    const card = document.createElement("section");
-    card.className = "notice-card guide-done";
-    card.setAttribute("role", "status");
-    card.innerHTML = "<span></span>";
     const features = guide.tool ? [guide.feature] : featuresOf(id);
-    card.firstChild.textContent = connected
-      ? `✓ ${guide.name} 연결 완료${features.length ? ` · 켜진 기능: ${features.join(" · ")}` : ""}`
-      : `${guide.name} 연결을 저장했지만 아직 쓸 수 있는지 확인하지 못했어요. 잠시 뒤 설정의 고급 > Provider에서 확인해 주세요.`;
-    if (connected && guide.free) {
-      const button = Object.assign(document.createElement("button"), { className: "secondary-button", type: "button", textContent: "자동 (무료 AI)로 쓰기" });
-      button.addEventListener("click", onUseAuto);
-      card.append(button);
-    }
-    return card;
+    const line = connected
+      ? noteLine({
+          icon: "done",
+          label: `${guide.name} 연결 완료`,
+          what: features.length ? `켜진 기능: ${features.join(" · ")}` : "",
+          actions: guide.free ? [{ text: "자동 (무료 AI)로 쓰기", run: async () => (onUseAuto(), "자동 (무료 AI)로 쓰고 있어요") }] : [],
+        })
+      : noteLine({ icon: "alert", label: `${guide.name} 연결을 저장했어요`, what: "쓸 수 있는지는 아직 확인하지 못했어요. 잠시 뒤 설정 › AI 연결 › Provider에서 확인해 주세요" });
+    line.classList.add("guide-done");
+    return line;
   }
 
   async function tick() {
@@ -555,16 +553,17 @@ export function createGuide({
 
   function fail(text) {
     stop();
-    showCard(Object.assign(document.createElement("section"), { className: "notice-card", textContent: text }));
+    showCard(noteLine({ icon: "alert", label: "설정 안내", what: text, tone: "error" }));
   }
 
   async function start(id) {
     const guide = GUIDES[id];
     if (!guide) return;
     if (!mayGuide()) {
-      showCard(Object.assign(document.createElement("section"), {
-        className: "notice-card",
-        textContent: `무료 플랜에서는 AI 설정 안내를 한 번만 쓸 수 있어요. ${guide.name}은(는) 설정 › 고급 › Provider에서 직접 연결할 수 있고, 구독하면 안내를 계속 쓸 수 있어요.`,
+      showCard(noteLine({
+        icon: "info",
+        label: "설정 안내",
+        what: `무료 플랜에서는 한 번만 쓸 수 있어요. ${guide.name}은(는) 설정 › AI 연결 › Provider에서 직접 연결할 수 있어요`,
       }));
       return;
     }

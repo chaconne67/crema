@@ -179,7 +179,8 @@ describe("AI setup guide flow", () => {
     expect(host.guideClose).toHaveBeenCalled();
     expect(shell.classList.contains("guiding")).toBe(false);
     expect($(".spotlight")).toBeNull();
-    expect(cards[0].textContent).toContain("✓ Gemini 연결 완료 · 켜진 기능: 대화 · 말하기");
+    expect(cards[0].querySelector(".auto-note-label").textContent).toBe("Gemini 연결 완료");
+    expect(cards[0].querySelector(".auto-note-what").textContent).toBe("켜진 기능: 대화 · 말하기");
     // A confirmed connection counts toward the free plan's one guided connection.
     expect(options.onGuided).toHaveBeenCalledTimes(1);
     cards[0].querySelector("button").click();
@@ -235,7 +236,8 @@ describe("AI setup guide flow", () => {
     $("[data-guide-put-button]").click();
     await vi.advanceTimersByTimeAsync(10);
     expect(host.hermesAdmin).toHaveBeenCalledWith("PUT", "/api/env", { key: "BRAVE_SEARCH_API_KEY", value: key });
-    expect(cards[0].textContent).toContain("✓ Brave 검색 연결 완료 · 켜진 기능: 웹 검색");
+    expect(cards[0].querySelector(".auto-note-label").textContent).toBe("Brave 검색 연결 완료");
+    expect(cards[0].querySelector(".auto-note-what").textContent).toBe("켜진 기능: 웹 검색");
     expect(cards[0].querySelector("button")).toBeNull();
     vi.useRealTimers();
   });
@@ -244,7 +246,7 @@ describe("AI setup guide flow", () => {
     options.mayGuide = () => false;
     await begin("gemini");
     expect(host.guideOpen).not.toHaveBeenCalled();
-    expect(cards.at(-1).textContent).toContain("무료 플랜에서는 AI 설정 안내를 한 번만");
+    expect(cards.at(-1).textContent).toContain("무료 플랜에서는 한 번만 쓸 수 있어요");
     expect(shell.classList.contains("guiding")).toBe(false);
   });
 
@@ -287,7 +289,7 @@ describe("AI setup guide flow", () => {
 
     status = "approved";
     await vi.advanceTimersByTimeAsync(2100);
-    expect(cards[0].textContent).toContain("✓ ChatGPT 구독 연결 완료");
+    expect(cards[0].querySelector(".auto-note-label").textContent).toBe("ChatGPT 구독 연결 완료");
     // Not a free AI: no switch to 자동 (무료 AI).
     expect(cards[0].querySelector("button")).toBeNull();
     vi.useRealTimers();
@@ -322,7 +324,7 @@ describe("AI setup guide flow", () => {
     await vi.advanceTimersByTimeAsync(1600);
     $("[data-guide-put-button]").click();
     await vi.advanceTimersByTimeAsync(10);
-    expect(cards[0].textContent).toContain("✓ Claude 구독 연결 완료");
+    expect(cards[0].querySelector(".auto-note-label").textContent).toBe("Claude 구독 연결 완료");
     vi.useRealTimers();
   });
 

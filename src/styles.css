@@ -290,12 +290,6 @@ button {
 }
 
 /* Crema's own words that started the chat again: quieter than the user's. */
-.user-message.from-crema {
-  color: var(--muted);
-  background: transparent;
-  border: 1px dashed var(--hairline);
-}
-
 .message-meta {
   display: flex;
   min-height: 28px;
@@ -908,12 +902,6 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 8px 12px;
-}
-
-.assistant-note {
-  align-self: center;
-  color: var(--soft-muted);
-  font-size: 12px;
 }
 
 .message-copy-button {
@@ -2932,82 +2920,6 @@ svg.zap {
   stroke-width: 1.2;
 }
 
-/* A command Hermes holds until the user allows or denies it ("승인 요청" mode). */
-.approval-card {
-  margin: 12px 0;
-  padding: 14px 16px;
-  color: var(--ink);
-  background: color-mix(in srgb, var(--on) 5%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--on) 45%, var(--hairline));
-  border-radius: 12px;
-  font-family: var(--font-ui);
-  font-size: 0.875rem;
-  line-height: 1.55;
-}
-
-.approval-title {
-  margin: 0;
-  font-weight: 700;
-}
-
-.approval-reason {
-  margin: 4px 0 0;
-  color: var(--muted);
-}
-
-.approval-command {
-  margin: 10px 0 0;
-  padding: 8px 10px;
-  overflow-x: auto;
-  background: var(--code-surface);
-  border-radius: 8px;
-  font-family: var(--font-code);
-  font-size: 0.8125rem;
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
-.approval-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.approval-actions button {
-  min-width: 64px;
-  padding: 6px 14px;
-  font: inherit;
-  font-weight: 600;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.approval-deny {
-  color: var(--ink);
-  background: transparent;
-  border: 1px solid var(--hairline);
-}
-
-.approval-deny:hover:not(:disabled) {
-  background: var(--row-hover);
-}
-
-.approval-allow {
-  color: var(--surface);
-  background: var(--ink);
-  border: 1px solid var(--ink);
-}
-
-.approval-allow:hover:not(:disabled) {
-  opacity: 0.85;
-}
-
-.approval-actions button:disabled {
-  cursor: default;
-  opacity: 0.5;
-}
-
 /* An image Hermes produced (`MEDIA:<path>` in a reply), shown in place of the path. */
 .media-image {
   margin: 12px 0;
@@ -3241,16 +3153,6 @@ svg.zap {
   margin-left: auto;
   margin-right: 12px;
   font-weight: 400;
-}
-
-/* In the chat: what a quiet chat left in the notebook, with an undo; this chat's turn with a shared file. */
-.notice-card.remembered,
-.notice-card.turn-card {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
 }
 
 /* Settings → 계정. */
@@ -3858,4 +3760,83 @@ svg.zap {
 
 .persona-form .text-button {
   align-self: center;
+}
+
+/* One quiet line for whatever Crema tells the user (note-line.js, docs/Crema-자동작업-알림-원칙-2026-10-03.md):
+   icon, what happened, what about, then an icon or small words. No box, no background. */
+.auto-note {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin: 6px 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.auto-note-icon {
+  display: inline-flex;
+  flex: none;
+  margin-right: -4px;
+  color: var(--soft-muted);
+}
+
+.auto-note-icon svg,
+.auto-note-action svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.auto-note-label {
+  flex: none;
+  font-weight: 700;
+}
+
+.auto-note-what {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--soft-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auto-note[data-tone="error"] .auto-note-what,
+.auto-note[data-tone="error"] .auto-note-icon {
+  color: var(--error);
+}
+
+.auto-note-action {
+  display: inline-flex;
+  flex: none;
+  padding: 0;
+  color: var(--soft-muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.auto-note-action.is-text {
+  font: inherit;
+  font-size: 0.75rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.auto-note-action:hover:not(:disabled) {
+  color: var(--muted);
+}
+
+.auto-note-action:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.assistant-notes:empty {
+  display: none;
 }

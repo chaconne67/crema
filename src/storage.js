@@ -59,7 +59,7 @@ export function saveMessages(chatId, messages) {
   writeJson(
     chatKey(chatId),
     // Attachments are kept by name and kind; an image also by its small copy (preview), never the original.
-    messages.map(({ id, role, content, createdAt, status, attachments, note, origin }) => ({
+    messages.map(({ id, role, content, createdAt, status, attachments, note, notes, origin }) => ({
       id,
       role,
       content,
@@ -67,6 +67,8 @@ export function saveMessages(chatId, messages) {
       status,
       ...(attachments?.length ? { attachments: attachments.map(({ kind, name, preview }) => ({ kind, name, ...(preview ? { preview } : {}) })) } : {}),
       ...(note ? { note } : {}),
+      // What Crema did by itself after this reply (app.js NOTE_KINDS), kept to show when the chat is opened again.
+      ...(notes?.length ? { notes } : {}),
       // "crema": Crema's own words that started the chat again, not the user's.
       ...(origin ? { origin } : {}),
     })),

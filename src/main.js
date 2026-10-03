@@ -1,3 +1,4 @@
+import { noteLine } from "./note-line.js";
 import "./fonts.css";
 import "./styles.css";
 
@@ -262,24 +263,9 @@ async function distill(chatId) {
   const result = await host
     .hermesAdmin("POST", "/api/crema/distill", { session_id: hermesSessionId(chatSessions(chat).at(-1)), ...route })
     .catch(() => null);
-  if (result?.written?.length) app.showCard(rememberedCard(chat, result.written));
-}
-
-function rememberedCard(chat, written) {
-  const card = document.createElement("section");
-  card.className = "notice-card remembered";
-  card.setAttribute("role", "status");
-  const line = document.createElement("span");
-  line.textContent = `‘${chat.title}’ 대화에서 기억함: ${written.map((page) => page.title).join(", ")}`;
-  const undo = Object.assign(document.createElement("button"), { className: "text-button", type: "button", textContent: "되돌리기" });
-  undo.addEventListener("click", async () => {
-    undo.disabled = true;
-    for (const page of written) await host.hermesAdmin("POST", "/api/crema/knowledge/undo", { slug: page.slug }).catch(() => null);
-    line.textContent = "되돌렸습니다.";
-    undo.remove();
-  });
-  card.append(line, undo);
-  return card;
+  if (result?.written?.length) {
+    app.addNote(chat.id, { kind: "remembered", items: result.written.map(({ title, slug }) => ({ title, slug })) });
+  }
 }
 
 // Chats that change the same file take turns (the engine's agent/crema_file_turns.py). Every few seconds the
@@ -372,47 +358,37 @@ function showTurnCard() {
   const name = fileName(entry.path);
   const turnsCall = (path, body) => host.hermesAdmin("POST", `/api/crema/turns/${path}`, body);
   const mine = entry.session_id;
-  const [text, choices] = {
-    wait: [`‘${other}’ 대화가 먼저 ${name}을(를) 고치고 있어요. 끝나면 이 대화가 이어서 합니다.`, [
+  const [icon, label, what, choices] = {
+    wait: ["wait", "기다리는 중", `‘${other}’ 대화가 먼저 ${name}을(를) 고치고 있어요. 끝나면 이어서 해요`, [
       ["이 대화 먼저", () => turnsCall("order", { first: mine, second: entry.holder_session })],
       ["기다리지 않기", () => turnsCall("release", { session_id: mine })],
     ]],
-    ask: [`‘${other}’ 대화와 이 대화가 ${name}을(를) 서로 다르게 바꾸려 해요. ${entry.reason} 어느 쪽이 먼저 할까요?`, [
+    ask: ["ask", "차례를 정해 주세요", `${name} — ‘${other}’ 대화와 서로 다르게 바꾸려 해요. ${entry.reason}`, [
       ["이 대화 먼저", () => turnsCall("order", { first: mine, second: entry.holder_session })],
       [`‘${other}’ 먼저`, () => turnsCall("order", { first: entry.holder_session, second: mine })],
     ]],
-    ready: [`이 대화가 ${name}을(를) 고칠 차례예요.`, [
+    ready: ["play", "차례가 왔어요", `${name}을(를) 이어서 고칠 수 있어요`, [
       ["이어서 하기", () => {
         autoWakes.delete(chat.id);
         return wakeChat(chat, entry);
       }],
     ]],
   }[kind];
-  const card = document.createElement("section");
-  card.className = "notice-card turn-card";
-  card.dataset.key = key;
-  card.setAttribute("role", "status");
-  const line = document.createElement("span");
-  line.textContent = text;
-  card.append(line);
-  for (const [label, act] of choices) {
-    const button = Object.assign(document.createElement("button"), { className: "text-button", type: "button", textContent: label });
-    button.addEventListener("click", async () => {
-      const buttons = [...card.querySelectorAll("button")];
-      for (const item of buttons) item.disabled = true;
-      try {
+  const line = noteLine({
+    icon,
+    label,
+    what,
+    actions: choices.map(([text, act]) => ({
+      text,
+      run: async () => {
         await act();
-      } catch {
-        line.textContent = `${text} (처리하지 못했습니다. 다시 눌러 주세요.)`;
-        for (const item of buttons) item.disabled = false;
-        return;
-      }
-      await readTurns();
-    });
-    card.append(button);
-  }
-  turnCard = card;
-  app.showCard(card);
+        await readTurns();
+      },
+    })),
+  });
+  line.dataset.key = key;
+  turnCard = line;
+  app.showCard(line);
 }
 
 function openChat(chatId) {
@@ -560,6 +536,11 @@ async function syncPlan() {
   const change = cremaAiChange(loadAccount()?.member?.models === true, config, others);
   if (change.put) await host.hermesAdmin("PUT", "/api/config", { config: change.put }).catch(() => {});
   if (change.remove) await host.hermesAdmin("DELETE", `/api/providers/custom-endpoints/${change.remove}`).catch(() => {});
+  // A grade's Crema AI put in or taken out changes what answers: said once, in the open chat.
+  if (change.put || change.remove) {
+    const what = change.remove ? "Crema AI 연결을 뺌 (등급에 없음)" : change.put.model ? "Crema AI 연결 · 기본 모델 → Crema AI (등급 포함)" : "Crema AI 연결 (등급 포함)";
+    app.addNote(workspace.activeChatId, { kind: "settings", what });
+  }
   if (change.put || change.remove) await refreshModels().catch(() => {});
   syncVoice();
 }
@@ -993,6 +974,14 @@ const app = createChatApp({
   },
   answerApproval: (request, allow) => host.answerApproval(request, allow),
   describeServed,
+  // Undoing what a line under a reply says Crema did by itself.
+  async onNoteAction(note) {
+    if (note.kind !== "remembered") return;
+    const undone = await Promise.all(
+      note.items.map((item) => host.hermesAdmin("POST", "/api/crema/knowledge/undo", { slug: item.slug }).catch(() => null)),
+    );
+    if (undone.some((result) => !result)) throw new Error("undo");
+  },
   canTranscribe: () => connected,
   onVoice: async () => {
     if (!voiceIncluded()) return false;
@@ -1181,7 +1170,7 @@ function installUpdate() {
   if (updateReady && Date.now() - lastUse >= UPDATE_REST_MS && !app.busy()) host.updateInstall(updateReady).catch(() => {});
 }
 host.updateDone().then((version) => {
-  if (version) app.notice({ title: "업데이트", text: `Crema ${version}로 업데이트했습니다.` });
+  if (version) app.addNote(workspace.activeChatId, { kind: "updated", what: `Crema ${version}` });
 });
 setTimeout(fetchUpdate, 60 * 1000);
 setInterval(fetchUpdate, UPDATE_EVERY_MS);

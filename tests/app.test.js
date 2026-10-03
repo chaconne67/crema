@@ -72,8 +72,9 @@ describe("chat app", () => {
     await vi.waitFor(() => expect(sent).toHaveLength(2));
     expect(sent[1]).toMatchObject({ conversationId: "chat-a" });
     expect(sent[1].content).toContain("이 대화의 차례입니다.");
-    await vi.waitFor(() => expect(document.querySelector(".user-message.from-crema")?.getAttribute("aria-label")).toBe("Crema 안내"));
-    expect(document.querySelectorAll(".user-message:not(.from-crema)")).toHaveLength(1);
+    // Crema's words show as a quiet line, not as the user's bubble.
+    await vi.waitFor(() => expect(document.querySelector(".turn-crema .auto-note-what")?.textContent).toBe("이 대화의 차례입니다."));
+    expect(document.querySelectorAll(".user-message")).toHaveLength(1);
 
     app.wake("chat-b", "[Crema] 다른 대화의 차례입니다.");
     await vi.waitFor(() => expect(sent).toHaveLength(3));
@@ -81,6 +82,40 @@ describe("chat app", () => {
     await vi.waitFor(() =>
       expect(JSON.parse(window.localStorage.getItem("agent-client:chat:chat-b"))[0]).toMatchObject({ role: "user", origin: "crema" }),
     );
+  });
+
+  it("keeps what Crema remembered as one quiet line under the reply, undone with the trash icon", async () => {
+    const client = {
+      async *streamReply() {
+        yield "답";
+      },
+    };
+    const onNoteAction = vi.fn(async () => {});
+    const app = createChatApp({ client, host: { openLink: vi.fn() }, onNoteAction });
+    app.mount(document.querySelector("#app"));
+    app.showConversation("chat-a");
+    submit("질문");
+    await vi.waitFor(() => expect(document.querySelector(".assistant-footer").hidden).toBe(false));
+
+    // A second note of the same kind joins the first: one line, "… 외 1개".
+    app.addNote("chat-a", { kind: "remembered", items: [{ title: "지침 파일 구조", slug: "a" }] });
+    app.addNote("chat-a", { kind: "remembered", items: [{ title: "배포 순서", slug: "b" }] });
+    const lines = document.querySelectorAll(".assistant-notes .auto-note");
+    expect(lines).toHaveLength(1);
+    expect(lines[0].querySelector(".auto-note-label").textContent).toBe("기록해뒀어요");
+    expect(lines[0].querySelector(".auto-note-what").textContent).toBe("지침 파일 구조 외 1개");
+    const trash = lines[0].querySelector(".auto-note-action");
+    expect(trash.getAttribute("aria-label")).toBe("기억 저장 취소");
+    expect(trash.textContent).toBe("");
+
+    trash.click();
+    await vi.waitFor(() => expect(document.querySelector(".assistant-notes .auto-note-what").textContent).toBe("기록을 취소했어요"));
+    expect(onNoteAction).toHaveBeenCalledWith(expect.objectContaining({ kind: "remembered", items: [{ title: "지침 파일 구조", slug: "a" }, { title: "배포 순서", slug: "b" }] }));
+    // Kept with the chat: opened again, the line says it was undone.
+    app.showConversation("chat-b");
+    app.showConversation("chat-a");
+    expect(document.querySelector(".assistant-notes .auto-note-what").textContent).toBe("기록을 취소했어요");
+    expect(document.querySelector(".assistant-notes .auto-note-action")).toBeNull();
   });
 
   it("notes under an answer which Provider answered instead, and keeps the note", async () => {
@@ -95,7 +130,8 @@ describe("chat app", () => {
     app.mount(document.querySelector("#app"));
     app.showConversation("chat-a");
     submit("질문");
-    await vi.waitFor(() => expect(document.querySelector(".assistant-note").textContent).toBe("대신 답한 AI: Groq · openai/gpt-oss-120b"));
+    await vi.waitFor(() => expect(document.querySelector(".assistant-notes .auto-note-label")?.textContent).toBe("다른 AI가 답했어요"));
+    expect(document.querySelector(".assistant-notes .auto-note-what").textContent).toBe("Groq · openai/gpt-oss-120b");
     expect(describeServed).toHaveBeenCalledWith("chat-a", { provider: "groq", model: "openai/gpt-oss-120b" });
     const stored = JSON.parse(window.localStorage.getItem("agent-client:chat:chat-a"));
     expect(stored.at(-1).note).toBe("대신 답한 AI: Groq · openai/gpt-oss-120b");
@@ -335,7 +371,7 @@ describe("chat app", () => {
     expect(onCommand).toHaveBeenLastCalledWith("model", "gpt-6-luna", expect.any(Object));
 
     submit("/stop");
-    const notices = [...document.querySelectorAll(".notice-card")];
+    const notices = [...document.querySelectorAll(".auto-note")];
     expect(notices.at(-1).textContent).toContain("진행 중인 답변이 없습니다.");
     expect(document.querySelectorAll(".turn")).toHaveLength(0);
   });
@@ -380,7 +416,7 @@ describe("chat app", () => {
     expect(mic.hidden).toBe(false);
     mic.click();
     expect(getUserMedia).not.toHaveBeenCalled();
-    expect(document.querySelector(".notice-card").textContent).toContain("받아쓰기 서비스를 연결해야 합니다");
+    expect(document.querySelector(".auto-note").textContent).toContain("받아쓰기 서비스를 연결해야 합니다");
   });
 
   it("gives the mic to the built-in Thock with the input field focused", async () => {
@@ -402,7 +438,7 @@ describe("chat app", () => {
     await vi.waitFor(() => expect(onVoice).toHaveBeenCalled());
     expect(focused).toBe(document.querySelector("#prompt"));
     expect(getUserMedia).not.toHaveBeenCalled();
-    expect(document.querySelector(".notice-card")).toBeNull();
+    expect(document.querySelector(".auto-note")).toBeNull();
     const mic = document.querySelector("[data-mic]");
     await vi.waitFor(() => expect(mic.dataset.state).toBe("listening"));
     mic.click();
